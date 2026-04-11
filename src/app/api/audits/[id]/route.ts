@@ -120,7 +120,9 @@ export async function DELETE(req: Request, props: { params: Promise<{ id: string
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (session.user.role !== 'Administrator') {
+    const canDeleteAudits = session.user.role === 'Business Operations';
+
+    if (!canDeleteAudits) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

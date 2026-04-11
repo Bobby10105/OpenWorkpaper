@@ -24,12 +24,14 @@ export async function POST(req: Request) {
     await login({ 
       id: user.id, 
       username: user.username, 
-      role: user.role
+      role: user.role,
+      mustChangePassword: user.mustChangePassword
     });
 
     return NextResponse.json({ 
       success: true, 
-      role: user.role
+      role: user.role,
+      mustChangePassword: user.mustChangePassword
     });
   } catch (error) {
     console.error('Login error:', error);

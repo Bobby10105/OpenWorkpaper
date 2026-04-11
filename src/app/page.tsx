@@ -37,13 +37,17 @@ export default async function Dashboard() {
   const session = await getSession();
   const user = session?.user;
 
-  // Default filter for non-logged in or non-admin users
+  // Global visibility for Business Operations
+  const isGlobalManager = user?.role === 'Business Operations';
+
+  // Default filter for non-logged in or non-manager users
   let whereClause: any = {};
   
   if (!user) {
     // If no user session, show nothing (middleware should ideally prevent this)
     whereClause = { id: 'none' };
-  } else if (user.role !== 'Administrator') {
+  } else if (!isGlobalManager) {
+    // IT Administrator and regular auditors only see assigned audits
     whereClause = {
       teamMembers: {
         some: {
@@ -70,7 +74,7 @@ export default async function Dashboard() {
             <RotateCcw className="w-4 h-4" />
             <span>Refresh</span>
           </Link>
-          {user?.role === 'Administrator' && (
+          {isGlobalManager && (
             <Link href="/audits/new" className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors shadow-sm">
               <PlusCircle className="w-5 h-5" />
               <span>New Audit</span>
@@ -81,7 +85,7 @@ export default async function Dashboard() {
 
       {audits.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
-          {user?.role === 'Administrator' 
+          {isGlobalManager 
             ? "No audits found. Create a new one to get started." 
             : "No audits assigned to you yet."}
         </div>

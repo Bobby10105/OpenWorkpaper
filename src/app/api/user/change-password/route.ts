@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getSession } from '@/lib/auth';
+import { getSession, logout } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 
 export async function POST(req: Request) {
@@ -27,9 +27,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Invalid current password' }, { status: 400 });
       }
     } else {
-        // If user was created via SSO and has no password, we might want to let them set one
-        // or prevent them from changing it if we want to force SSO.
-        // For now, if they have no password, they can't "change" it via this method.
         return NextResponse.json({ error: 'Password change not available for SSO users' }, { status: 400 });
     }
 
@@ -37,8 +34,14 @@ export async function POST(req: Request) {
 
     await prisma.user.update({
       where: { id: user.id },
-      data: { password: hashedPassword },
+      data: { 
+        password: hashedPassword,
+        mustChangePassword: false // Clear the force change flag
+      },
     });
+
+    // Clear the session - user must log back in with new password
+    await logout();
 
     // Log the action
     await prisma.auditLog.create({
@@ -46,7 +49,7 @@ export async function POST(req: Request) {
         action: 'UPDATE',
         entityType: 'USER',
         entityId: user.id,
-        details: 'User changed their password',
+        details: 'User changed their password (session terminated)',
         performedBy: user.username,
       },
     });

@@ -48,7 +48,8 @@ AMSOS uses a granular **Role-Based Access Control (RBAC)** model to ensure data 
 
 | Role | Capabilities |
 | :--- | :--- |
-| **Administrator** | Full system access. Can manage the user directory (add/import/delete users) and delete entire audits. |
+| **IT Administrator** | Identity Management. Can manage the user directory (add/import/delete users). Restricted from managing audit data. |
+| **Business Operations** | Data Management. Can create/delete audits and manage the Audit Program Template Library. |
 | **Audit Partner** | Senior management role. Can create, edit, and sign off on any audit they are assigned to. |
 | **Audit Director** | Senior management role. Can create, edit, and sign off on any audit they are assigned to. |
 | **Audit Manager** | Management role. Can create, edit, and sign off on any audit they are assigned to. |
@@ -66,8 +67,8 @@ Key team roles include:
 *   **Specialist**: Subject matter experts (e.g., IT, Actuarial) providing focused support to the audit.
 
 ### Access Control Rules
-*   **Audit Visibility**: Non-administrators can **only** see and access audits to which they have been explicitly added as a **Team Member**.
-*   **Audit Deletion**: A safety-first approach restricts audit deletion strictly to the **Administrator** role.
+*   **Audit Visibility**: Users (except Business Operations) can **only** see and access audits to which they have been explicitly added as a **Team Member**.
+*   **Audit Deletion**: A safety-first approach restricts audit deletion strictly to the **Business Operations** role.
 *   **Review Workflow**: While any role can be assigned to an audit, typically senior roles (Partner, Director, Manager) perform the final "Reviewed By" sign-off.
 *   **Audit Logs**: All sensitive actions (logins, deletions, user changes) are tracked in the system-wide Audit Logs for compliance.
 
@@ -159,10 +160,10 @@ npm run start
 
 ### 🔑 Initial Login
 Once running, sign in with:
-*   **Username**: `admin`
-*   **Password**: `admin`
+*   **IT Administrator**: `it.admin` / `admin`
+*   **Business Operations**: `biz.ops` / `admin`
 
-**⚠️ Security Note:** Immediately create your own administrative account and delete the default `admin` user to secure your audit environment.
+**⚠️ Security Note:** Immediately change the passwords for these default accounts to secure your audit environment.
 
 ## 👔 Business Readiness
 
@@ -197,10 +198,10 @@ server {
 
 ## 💻 Management
 
-*   **Password Management**: Users can securely change their own passwords by clicking their profile icon in the navigation bar.
-*   **User Directory**: Accessible to all users to view the team, but only **Administrators** can add, delete, or bulk-import users via CSV.
+*   **Password Management**: Users can securely change their own passwords by clicking their profile icon in the navigation bar. **New users created by an IT Administrator are automatically forced to change their password upon their first login to ensure account security.**
+*   **User Directory**: Accessible to all users to view the team, but only **IT Administrators** can add, delete, or bulk-import users via CSV.
 *   **Audit Logging**: Key actions (Logins, Deletions, User Changes) are tracked in the system Audit Logs.
-*   **Audit Deletion**: Restricted to the **Administrator** role to prevent accidental data loss of official audit records.
+*   **Audit Deletion**: Restricted to the **Business Operations** role to prevent accidental data loss of official audit records.
 
 ## 📁 Project Structure
 

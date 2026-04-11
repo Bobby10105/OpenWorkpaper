@@ -35,7 +35,7 @@ export default function TemplateManagementPage() {
         const sessionData = await sessionRes.json();
         setUser(sessionData.user);
         
-        if (sessionData.user.role !== 'Administrator') {
+        if (sessionData.user.role !== 'Business Operations') {
           setLoading(false);
           return;
         }
@@ -104,13 +104,13 @@ export default function TemplateManagementPage() {
     }
   };
 
-  if (user && user.role !== 'Administrator') {
+  if (user && user.role !== 'Business Operations') {
     return (
       <div className="max-w-2xl mx-auto py-20 text-center">
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-10 shadow-sm">
           <ShieldAlert className="w-16 h-16 text-amber-500 mx-auto mb-6" />
           <h1 className="text-2xl font-black text-gray-900 uppercase tracking-tight mb-4">Access Restricted</h1>
-          <p className="text-gray-600 mb-8 font-medium">Only system administrators can manage the Audit Program Template Library.</p>
+          <p className="text-gray-600 mb-8 font-medium">Only Business Operations can manage the Audit Program Template Library.</p>
           <button 
             onClick={() => router.push('/')}
             className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all shadow-md active:scale-95"

@@ -28,6 +28,7 @@ export async function GET() {
         id: true,
         username: true,
         role: true,
+        mustChangePassword: true,
         createdAt: true,
       },
       orderBy: { createdAt: 'desc' },
@@ -44,7 +45,9 @@ export async function POST(req: Request) {
   try {
     const adminUser = await getSessionUser();
     
-    if (adminUser?.role !== 'Administrator') {
+    const canManageUsers = adminUser?.role === 'IT Administrator';
+    
+    if (!canManageUsers) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -69,6 +72,7 @@ export async function POST(req: Request) {
         username,
         password: hashedPassword,
         role,
+        mustChangePassword: true, // Force password change on first login
       },
     });
 

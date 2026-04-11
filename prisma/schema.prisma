@@ -12,6 +12,7 @@ model User {
   username           String   @unique
   password           String?
   role               String
+  mustChangePassword Boolean  @default(false)
   ssoProvider        String?
   ssoId              String?  @unique
   createdAt          DateTime @default(now())

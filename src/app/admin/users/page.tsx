@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { UserPlus, Trash2, Shield, Loader2, AlertCircle, Users, FileUp, Download } from 'lucide-react';
+import { UserPlus, Trash2, Shield, Loader2, AlertCircle, Users, FileUp, Download, KeyRound } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Papa from 'papaparse';
 
@@ -9,6 +9,7 @@ interface User {
   id: string;
   username: string;
   role: string;
+  mustChangePassword: boolean;
   createdAt: string;
 }
 
@@ -53,7 +54,7 @@ export default function UserManagementPage() {
     }
   };
 
-  const isAdmin = currentUser?.role === 'Administrator';
+  const isAdmin = currentUser?.role === 'IT Administrator';
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,7 +76,7 @@ export default function UserManagementPage() {
       setUsers([data, ...users]);
       setIsAdding(false);
       setFormData({ username: '', password: '', role: 'Auditor' });
-      setSuccess(`User ${data.username} created successfully.`);
+      setSuccess(`User ${data.username} created successfully. They will be prompted to change their password on first login.`);
     } catch (err: any) {
       setError(err.message);
       console.error('User creation error:', err);
@@ -107,7 +108,7 @@ export default function UserManagementPage() {
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || 'Bulk import failed');
           
-          setSuccess(`Import complete: ${data.created} users created, ${data.skipped} skipped (already exists).`);
+          setSuccess(`Import complete: ${data.created} users created, ${data.skipped} skipped. All new users must change their password on first login.`);
           fetchSessionAndUsers();
         } catch (err: any) {
           setError(err.message);
@@ -127,12 +128,13 @@ export default function UserManagementPage() {
     if (users.length === 0) return;
     
     // Header
-    const headers = ["username", "role", "createdAt"];
+    const headers = ["username", "role", "mustChangePassword", "createdAt"];
     
     // Data rows
     const rows = users.map(user => [
       user.username,
       user.role,
+      user.mustChangePassword ? "Yes" : "No",
       new Date(user.createdAt).toLocaleDateString()
     ]);
     
@@ -151,7 +153,7 @@ export default function UserManagementPage() {
   };
 
   const downloadTemplate = () => {
-    const csvContent = "username,role,password\nuser1@company.com,Auditor,Welcome123!\nadmin1@company.com,Administrator,Welcome123!";
+    const csvContent = "username,role,password\nuser1@company.com,Auditor,Welcome123!\nadmin1@company.com,IT Administrator,Welcome123!";
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -191,7 +193,7 @@ export default function UserManagementPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto pb-20">
+    <div className="max-w-6xl mx-auto pb-20">
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div className="flex items-center space-x-3">
           <div className="bg-indigo-900 p-2 rounded-lg shadow-md">
@@ -298,7 +300,8 @@ export default function UserManagementPage() {
                 <option value="Audit Manager">Audit Manager</option>
                 <option value="Audit Director">Audit Director</option>
                 <option value="Audit Partner">Audit Partner</option>
-                <option value="Administrator">Administrator</option>
+                <option value="Business Operations">Business Operations</option>
+                <option value="IT Administrator">IT Administrator</option>
               </select>
             </div>
             <button
@@ -318,6 +321,7 @@ export default function UserManagementPage() {
             <tr className="bg-gray-50 border-b border-gray-200">
               <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest">User</th>
               <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest">Role</th>
+              <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest text-center">Account Status</th>
               <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest">Created</th>
               {isAdmin && <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest text-right">Actions</th>}
             </tr>
@@ -335,11 +339,22 @@ export default function UserManagementPage() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
-                    user.role === 'Administrator' ? 'bg-purple-50 text-purple-700' : 
+                    user.role === 'IT Administrator' ? 'bg-purple-50 text-purple-700' : 
+                    user.role === 'Business Operations' ? 'bg-indigo-50 text-indigo-700' :
                     (user.role === 'Audit Manager' || user.role === 'Audit Director' || user.role === 'Audit Partner') ? 'bg-blue-50 text-blue-700' : 'bg-green-50 text-green-700'
                   }`}>
                     {user.role}
                   </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-center">
+                  {user.mustChangePassword ? (
+                    <span className="inline-flex items-center space-x-1 px-2.5 py-1 bg-amber-50 text-amber-700 text-[10px] font-black uppercase tracking-tighter rounded-md border border-amber-100 animate-pulse">
+                      <KeyRound className="w-3 h-3" />
+                      <span>Must Change Password</span>
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">Verified</span>
+                  )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 tabular-nums">
                   {new Date(user.createdAt).toLocaleDateString()}
@@ -365,7 +380,7 @@ export default function UserManagementPage() {
 
       <div className="mt-6 flex items-center space-x-2 text-xs text-gray-400 italic bg-gray-100/50 p-3 rounded-lg border border-dashed border-gray-200">
         <Users className="w-3 h-3" />
-        <span>User passwords are securely hashed using bcrypt at rest. {isAdmin ? 'You have administrative access to manage users.' : 'Only administrators can manage system users.'}</span>
+        <span>User passwords are securely hashed using bcrypt at rest. {isAdmin ? 'You have administrative access to manage users.' : 'Only IT administrators can manage system users.'}</span>
       </div>
     </div>
   );

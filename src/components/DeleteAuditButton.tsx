@@ -14,8 +14,9 @@ export default function DeleteAuditButton({
   const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
 
-  // Only show the delete button to Administrators
-  if (userRole !== 'Administrator') {
+  // Only show the delete button to Business Operations
+  const canDelete = userRole === 'Business Operations';
+  if (!canDelete) {
     return null;
   }
 

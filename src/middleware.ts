@@ -54,7 +54,22 @@ export async function middleware(request: NextRequest) {
   }
 
   try {
-    await decrypt(session);
+    const decrypted = await decrypt(session);
+    const user = (decrypted as any).user;
+
+    // Check if user must change password
+    if (user?.mustChangePassword && 
+        pathname !== '/settings/password' && 
+        pathname !== '/api/user/change-password' &&
+        pathname !== '/api/logout') {
+      const passwordUrl = new URL('/settings/password', request.url);
+      const redirectResponse = NextResponse.redirect(passwordUrl);
+      response.headers.forEach((value, key) => {
+        redirectResponse.headers.set(key, value);
+      });
+      return redirectResponse;
+    }
+
     return response;
   } catch (error) {
     console.error('[Middleware] Session decryption failed:', error);

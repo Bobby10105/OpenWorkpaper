@@ -9,6 +9,11 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Role-based access: Only Business Operations can manage team assignments
+    if (session.user.role !== 'Business Operations') {
+      return NextResponse.json({ error: 'Forbidden: Only Business Operations can manage team members' }, { status: 403 });
+    }
+
     const params = await props.params;
     const data = await req.json();
 
@@ -49,6 +54,11 @@ export async function DELETE(req: Request, props: { params: Promise<{ id: string
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Role-based access: Only Business Operations can manage team assignments
+    if (session.user.role !== 'Business Operations') {
+      return NextResponse.json({ error: 'Forbidden: Only Business Operations can manage team members' }, { status: 403 });
     }
 
     const params = await props.params;

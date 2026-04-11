@@ -10,9 +10,11 @@ export async function GET() {
 
   const { user } = session;
 
+  const isGlobalManager = user.role === 'Business Operations';
+
   let whereClause = {};
   
-  if (user.role !== 'Administrator') {
+  if (!isGlobalManager) {
     whereClause = {
       teamMembers: {
         some: {
@@ -32,6 +34,13 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const session = await getSession();
+  
+  const canCreateAudits = session?.user?.role === 'Business Operations';
+  
+  if (!canCreateAudits) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   const data = await req.json();
   const audit = await prisma.audit.create({
     data: {

@@ -21,10 +21,6 @@ export default async function RootLayout({
   const session = await getSession();
   const user = session?.user;
 
-  if (user) {
-    console.log(`[Layout] User: ${user.username}, Role: ${user.role}, IsAdmin: ${user.role === 'Administrator'}`);
-  }
-
   return (
     <html lang="en">
       <body className={`${inter.className} bg-gray-50 min-h-screen flex flex-col`}>
@@ -47,30 +43,32 @@ export default async function RootLayout({
                     <Home className="h-4 w-4" />
                     <span>Dashboard</span>
                   </Link>
-                  {user.role?.toLowerCase().trim() === 'administrator' && (
-                    <>
-                      <Link
-                        href="/audit-logs"
-                        className="flex items-center space-x-2 text-blue-100 hover:text-white transition-colors text-sm font-medium bg-blue-800/40 hover:bg-blue-800/60 px-3 py-2 rounded-lg"
-                      >
-                        <ClipboardList className="h-4 w-4" />
-                        <span>Logs</span>
-                      </Link>
-                      <Link 
-                        href="/admin/users" 
-                        className="flex items-center space-x-2 text-blue-100 hover:text-white transition-colors text-sm font-medium bg-blue-800/40 hover:bg-blue-800/60 px-3 py-2 rounded-lg"
-                      >
-                        <Users className="h-4 w-4" />
-                        <span>User Directory</span>
-                      </Link>
-                      <Link 
-                        href="/admin/templates" 
-                        className="flex items-center space-x-2 text-blue-100 hover:text-white transition-colors text-sm font-medium bg-blue-800/40 hover:bg-blue-800/60 px-3 py-2 rounded-lg"
-                      >
-                        <BookOpen className="h-4 w-4" />
-                        <span>Templates</span>
-                      </Link>
-                    </>
+                  {(user.role === 'IT Administrator' || user.role === 'Business Operations') && (
+                    <Link
+                      href="/audit-logs"
+                      className="flex items-center space-x-2 text-blue-100 hover:text-white transition-colors text-sm font-medium bg-blue-800/40 hover:bg-blue-800/60 px-3 py-2 rounded-lg"
+                    >
+                      <ClipboardList className="h-4 w-4" />
+                      <span>Logs</span>
+                    </Link>
+                  )}
+                  {user.role === 'IT Administrator' && (
+                    <Link 
+                      href="/admin/users" 
+                      className="flex items-center space-x-2 text-blue-100 hover:text-white transition-colors text-sm font-medium bg-blue-800/40 hover:bg-blue-800/60 px-3 py-2 rounded-lg"
+                    >
+                      <Users className="h-4 w-4" />
+                      <span>User Directory</span>
+                    </Link>
+                  )}
+                  {user.role === 'Business Operations' && (
+                    <Link 
+                      href="/admin/templates" 
+                      className="flex items-center space-x-2 text-blue-100 hover:text-white transition-colors text-sm font-medium bg-blue-800/40 hover:bg-blue-800/60 px-3 py-2 rounded-lg"
+                    >
+                      <BookOpen className="h-4 w-4" />
+                      <span>Templates</span>
+                    </Link>
                   )}
                 </nav>
               )}

@@ -20,7 +20,7 @@ export async function decrypt(input: string): Promise<JWTPayload> {
   return payload;
 }
 
-export async function getSession(): Promise<{ user: { id: string; username: string; role: string } } | null> {
+export async function getSession(): Promise<{ user: { id: string; username: string; role: string; mustChangePassword: boolean } } | null> {
   try {
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get('session')?.value;
@@ -36,7 +36,7 @@ export async function getSession(): Promise<{ user: { id: string; username: stri
   }
 }
 
-export async function login(user: { id: string; username: string; role: string }) {
+export async function login(user: { id: string; username: string; role: string; mustChangePassword: boolean }) {
   const expires = new Date(Date.now() + SESSION_DURATION * 1000);
   const session = await encrypt({ user, expires });
 

@@ -165,7 +165,7 @@ export default function ProcedureList({
           </button>
         </div>
 
-        {(groups.length > 0 || ungroupedProcedures.length > 0) && user?.role === 'Administrator' && (
+        {(groups.length > 0 || ungroupedProcedures.length > 0) && user?.role === 'Business Operations' && (
           <button
             onClick={handleClearAll}
             disabled={creating}
@@ -261,7 +261,7 @@ export default function ProcedureList({
                       procedure={proc} 
                       nomenclature={`${groupNomenclature}.${getLetter(procIndex)}`}
                       onDelete={() => handleDeleteProcedure(proc.id)} 
-                      user={user as any}
+                      user={user}
                     />
                   ))}
                   
@@ -294,7 +294,7 @@ export default function ProcedureList({
                     procedure={proc} 
                     nomenclature={`${phaseNum}.?.${index + 1}`}
                     onDelete={() => handleDeleteProcedure(proc.id)} 
-                    user={user as any}
+                    user={user}
                   />
                 ))}
               </div>

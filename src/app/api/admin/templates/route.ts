@@ -44,7 +44,9 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const session = await getSession();
-    if (!session || session.user.role !== 'Administrator') {
+    const canManageTemplates = session?.user?.role === 'Business Operations';
+
+    if (!session || !canManageTemplates) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

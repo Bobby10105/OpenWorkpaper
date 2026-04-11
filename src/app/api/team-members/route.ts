@@ -9,6 +9,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Role-based access: Only Business Operations can manage team assignments
+    if (session.user.role !== 'Business Operations') {
+      return NextResponse.json({ error: 'Forbidden: Only Business Operations can manage team members' }, { status: 403 });
+    }
+
     let data;
     try {
       data = await req.json();

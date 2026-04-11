@@ -30,14 +30,15 @@ export default async function AuditDetail(props: { params: Promise<{ id: string 
       notFound();
     }
 
-    // Access Control: Only allow team members or Administrators
-    if (userRole !== 'Administrator') {
+    // Access Control: Only allow team members or Business Operations
+    const isGlobalManager = userRole === 'Business Operations';
+    if (!isGlobalManager) {
       const isMember = audit.teamMembers.some(m => m.userId === user.id);
       if (!isMember) {
         return (
           <div className="p-8 text-center bg-yellow-50 rounded-xl border border-yellow-200 text-yellow-800">
             <h1 className="text-2xl font-bold mb-2">Access Denied</h1>
-            <p className="mb-4">You are not authorized to view this audit. Please contact the administrator if you believe this is an error.</p>
+            <p className="mb-4">You are not authorized to view this audit. Please contact Business Operations if you believe this is an error.</p>
             <div className="mt-6">
               <Link href="/" className="text-blue-600 underline font-medium">Return to Dashboard</Link>
             </div>

@@ -5,20 +5,33 @@ const prisma = new PrismaClient();
 async function main() {
   const hashedPassword = await bcrypt.hash('admin', 10);
   
-  const admin = await prisma.user.upsert({
-    where: { username: 'admin' },
-    update: {},
+  // Create IT Administrator (Identity Management)
+  const itAdmin = await prisma.user.upsert({
+    where: { username: 'it.admin' },
+    update: { role: 'IT Administrator', mustChangePassword: false },
     create: {
-      username: 'admin',
+      username: 'it.admin',
       password: hashedPassword,
-      role: 'Administrator',
+      role: 'IT Administrator',
+      mustChangePassword: false,
     },
   });
 
-  console.log({ admin });
-  console.log('Seed successful: Default admin user is ready.');
-  console.log('Username: admin');
-  console.log('Password: admin');
+  // Create Business Operations (Data Management)
+  const bizOps = await prisma.user.upsert({
+    where: { username: 'biz.ops' },
+    update: { role: 'Business Operations', mustChangePassword: false },
+    create: {
+      username: 'biz.ops',
+      password: hashedPassword,
+      role: 'Business Operations',
+      mustChangePassword: false,
+    },
+  });
+
+  console.log('Seed successful: Roles separated.');
+  console.log('IT Administrator: it.admin / admin');
+  console.log('Business Operations: biz.ops / admin');
 }
 
 main()

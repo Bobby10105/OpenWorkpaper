@@ -87,6 +87,7 @@ export async function GET(req: Request) {
             role: 'User',
             ssoId: payload.sub,
             ssoProvider: 'Agency SSO',
+            mustChangePassword: false, // SSO users don't manage passwords here
           },
         });
       }
@@ -97,6 +98,7 @@ export async function GET(req: Request) {
       id: user.id,
       username: user.username,
       role: user.role,
+      mustChangePassword: user.mustChangePassword,
     });
 
     // Log the SSO login

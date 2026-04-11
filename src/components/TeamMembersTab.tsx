@@ -18,13 +18,23 @@ interface SystemUser {
   role: string;
 }
 
-export default function TeamMembersTab({ auditId, initialTeamMembers }: { auditId: string, initialTeamMembers: any[] }) {
+export default function TeamMembersTab({ 
+  auditId, 
+  initialTeamMembers,
+  user
+}: { 
+  auditId: string, 
+  initialTeamMembers: any[],
+  user?: { username: string; role: string; id: string }
+}) {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(initialTeamMembers);
   const [systemUsers, setSystemUsers] = useState<SystemUser[]>([]);
   const [creating, setCreating] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [error, setError] = useState('');
   const router = useRouter();
+
+  const isBusinessOps = user?.role === 'Business Operations';
 
   // Fetch system users on mount
   useEffect(() => {
@@ -50,6 +60,7 @@ export default function TeamMembersTab({ auditId, initialTeamMembers }: { auditI
   }, [initialTeamMembers]);
 
   const handleAddMember = async () => {
+    if (!isBusinessOps) return;
     setCreating(true);
     setError('');
     try {
@@ -76,10 +87,12 @@ export default function TeamMembersTab({ auditId, initialTeamMembers }: { auditI
   };
 
   const handleUpdateMember = (id: string, updates: Partial<TeamMember>) => {
+    if (!isBusinessOps) return;
     setTeamMembers(prev => prev.map(m => m.id === id ? { ...m, ...updates } : m));
   };
 
   const handleSaveMember = async (memberId: string, manualMember?: TeamMember) => {
+    if (!isBusinessOps) return;
     const member = manualMember || teamMembers.find(m => m.id === memberId);
     if (!member) return;
 
@@ -100,6 +113,7 @@ export default function TeamMembersTab({ auditId, initialTeamMembers }: { auditI
   };
 
   const handleDeleteMember = async (id: string, name: string) => {
+    if (!isBusinessOps) return;
     if (!confirm(`Are you sure you want to remove "${name || 'this member'}"?`)) return;
     setError('');
     try {
@@ -119,6 +133,7 @@ export default function TeamMembersTab({ auditId, initialTeamMembers }: { auditI
   };
 
   const handleUserSelect = (memberId: string, username: string) => {
+    if (!isBusinessOps) return;
     const selectedUser = systemUsers.find(u => u.username === username);
     if (!selectedUser) {
       handleUpdateMember(memberId, { email: username });
@@ -147,14 +162,16 @@ export default function TeamMembersTab({ auditId, initialTeamMembers }: { auditI
           <h3 className="text-lg font-bold text-gray-800 uppercase tracking-wide">Audit Team</h3>
           <p className="text-xs text-gray-500 mt-1">Assign users to give them access to this audit.</p>
         </div>
-        <button
-          onClick={handleAddMember}
-          disabled={creating}
-          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-sm font-bold"
-        >
-          {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-          <span>Add Team Member</span>
-        </button>
+        {isBusinessOps && (
+          <button
+            onClick={handleAddMember}
+            disabled={creating}
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-sm font-bold"
+          >
+            {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+            <span>Add Team Member</span>
+          </button>
+        )}
       </div>
 
       {error && (
@@ -169,7 +186,7 @@ export default function TeamMembersTab({ auditId, initialTeamMembers }: { auditI
           <div className="text-center py-16 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
             <User className="w-12 h-12 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500 font-medium text-lg">No team members assigned yet.</p>
-            <p className="text-gray-400 text-sm mt-1">Click the button above to start building your team.</p>
+            <p className="text-gray-400 text-sm mt-1">{isBusinessOps ? 'Click the button above to start building your team.' : 'Team members will appear here once assigned.'}</p>
           </div>
         ) : (
           teamMembers.map((member) => (
@@ -177,34 +194,46 @@ export default function TeamMembersTab({ auditId, initialTeamMembers }: { auditI
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="flex flex-col">
                   <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 flex items-center">
-                    <Mail className="w-3 h-3 mr-1" /> Select User
+                    <Mail className="w-3 h-3 mr-1" /> {isBusinessOps ? 'Select User' : 'User'}
                   </label>
-                  <select
-                    value={member.email || ''}
-                    onChange={(e) => handleUserSelect(member.id, e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-gray-800 appearance-none font-medium"
-                  >
-                    <option value="">Choose a System User...</option>
-                    {systemUsers.map(u => (
-                      <option key={u.id} value={u.username}>
-                        {u.username} ({u.role})
-                      </option>
-                    ))}
-                    <option value="custom">-- Custom / Other --</option>
-                  </select>
+                  {isBusinessOps ? (
+                    <select
+                      value={member.email || ''}
+                      onChange={(e) => handleUserSelect(member.id, e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-gray-800 appearance-none font-medium"
+                    >
+                      <option value="">Choose a System User...</option>
+                      {systemUsers.map(u => (
+                        <option key={u.id} value={u.username}>
+                          {u.username} ({u.role})
+                        </option>
+                      ))}
+                      <option value="custom">-- Custom / Other --</option>
+                    </select>
+                  ) : (
+                    <div className="px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-gray-700 font-medium">
+                      {member.email || 'No email specified'}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex flex-col">
                   <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 flex items-center">
                     <User className="w-3 h-3 mr-1" /> Display Name
                   </label>
-                  <input
-                    value={member.name || ''}
-                    onChange={(e) => handleUpdateMember(member.id, { name: e.target.value })}
-                    onBlur={() => handleSaveMember(member.id)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-gray-800 font-semibold"
-                    placeholder="Full Name"
-                  />
+                  {isBusinessOps ? (
+                    <input
+                      value={member.name || ''}
+                      onChange={(e) => handleUpdateMember(member.id, { name: e.target.value })}
+                      onBlur={() => handleSaveMember(member.id)}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-gray-800 font-semibold"
+                      placeholder="Full Name"
+                    />
+                  ) : (
+                    <div className="px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-gray-700 font-semibold">
+                      {member.name || 'Anonymous Member'}
+                    </div>
+                  )}
                 </div>
                 
                 <div className="flex flex-col">
@@ -212,36 +241,45 @@ export default function TeamMembersTab({ auditId, initialTeamMembers }: { auditI
                     <Briefcase className="w-3 h-3 mr-1" /> Audit Role
                   </label>
                   <div className="flex space-x-2">
-                    <select
-                      value={member.role || ''}
-                      onChange={(e) => {
-                        const newRole = e.target.value;
-                        handleUpdateMember(member.id, { role: newRole });
-                        // Trigger save immediately for select
-                        const memberToSave = teamMembers.find(m => m.id === member.id);
-                        if (memberToSave) {
-                          handleSaveMember(member.id, { ...memberToSave, role: newRole });
-                        }
-                      }}
-                      className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-gray-800 appearance-none"
-                    >
-                      <option value="">Select Role</option>
-                      <option value="Audit Director">Audit Director</option>
-                      <option value="Audit Partner">Audit Partner</option>
-                      <option value="Audit Manager">Audit Manager</option>
-                      <option value="Lead Auditor">Lead Auditor</option>
-                      <option value="Senior Auditor">Senior Auditor</option>
-                      <option value="Staff Auditor">Staff Auditor</option>
-                      <option value="Specialist">Specialist</option>
-                      <option value="Quality Reviewer">Quality Reviewer</option>
-                    </select>
-                    <button
-                      onClick={() => handleDeleteMember(member.id, member.name)}
-                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      title="Remove Member"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
+                    {isBusinessOps ? (
+                      <select
+                        value={member.role || ''}
+                        onChange={(e) => {
+                          const newRole = e.target.value;
+                          handleUpdateMember(member.id, { role: newRole });
+                          // Trigger save immediately for select
+                          const memberToSave = teamMembers.find(m => m.id === member.id);
+                          if (memberToSave) {
+                            handleSaveMember(member.id, { ...memberToSave, role: newRole });
+                          }
+                        }}
+                        className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-gray-800 appearance-none"
+                      >
+                        <option value="">Select Role</option>
+                        <option value="Audit Director">Audit Director</option>
+                        <option value="Audit Partner">Audit Partner</option>
+                        <option value="Audit Manager">Audit Manager</option>
+                        <option value="Lead Auditor">Lead Auditor</option>
+                        <option value="Senior Auditor">Senior Auditor</option>
+                        <option value="Staff Auditor">Staff Auditor</option>
+                        <option value="Specialist">Specialist</option>
+                        <option value="Quality Reviewer">Quality Reviewer</option>
+                      </select>
+                    ) : (
+                      <div className="flex-1 px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-gray-700">
+                        {member.role || 'Not assigned'}
+                      </div>
+                    )}
+                    
+                    {isBusinessOps && (
+                      <button
+                        onClick={() => handleDeleteMember(member.id, member.name)}
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Remove Member"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

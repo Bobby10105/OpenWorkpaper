@@ -18,7 +18,7 @@ export default function AuditTabs({
   user 
 }: { 
   audit: AuditWithRelations, 
-  user?: { username: string; role: string } 
+  user?: { username: string; role: string; id: string } 
 }) {
   const [activePhase, setActivePhase] = useState(PHASES[0]);
 
@@ -56,7 +56,7 @@ export default function AuditTabs({
         {activePhase === 'Milestones' ? (
           <MilestonesTab audit={audit} />
         ) : activePhase === 'Team Members' ? (
-          <TeamMembersTab auditId={audit.id} initialTeamMembers={audit.teamMembers} />
+          <TeamMembersTab auditId={audit.id} initialTeamMembers={audit.teamMembers} user={user} />
         ) : (
           <ProcedureList 
             key={activePhase}

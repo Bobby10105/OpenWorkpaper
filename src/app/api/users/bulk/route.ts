@@ -6,7 +6,10 @@ import bcrypt from 'bcryptjs';
 export async function POST(req: Request) {
   try {
     const session = await getSession();
-    if (session?.user?.role !== 'Administrator') {
+    
+    const canManageUsers = session?.user?.role === 'IT Administrator';
+    
+    if (!canManageUsers) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -49,6 +52,7 @@ export async function POST(req: Request) {
             username,
             password: hashedPassword,
             role,
+            mustChangePassword: true, // Force password change on first login
           },
         });
 

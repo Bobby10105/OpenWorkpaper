@@ -45,7 +45,9 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
 export async function PUT(req: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   const session = await getSession();
-  if (!session || session.user.role !== 'Administrator') {
+  const canManageTemplates = session?.user?.role === 'Business Operations';
+
+  if (!session || !canManageTemplates) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -113,7 +115,9 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
 export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   const session = await getSession();
-  if (!session || session.user.role !== 'Administrator') {
+  const canManageTemplates = session?.user?.role === 'Business Operations';
+
+  if (!session || !canManageTemplates) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

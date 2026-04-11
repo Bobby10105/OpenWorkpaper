@@ -10,7 +10,9 @@ export async function DELETE(
     const session = await getSession();
     const params = await props.params;
 
-    if (session?.user?.role !== 'Administrator') {
+    const canManageUsers = session?.user?.role === 'IT Administrator';
+
+    if (!canManageUsers) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
