@@ -71,12 +71,13 @@ export async function GET(req: Request) {
       });
 
       if (user) {
-        // Link existing user to SSO
+        // Link existing user to SSO and clear mustChangePassword
         user = await prisma.user.update({
           where: { id: user.id },
           data: {
             ssoId: payload.sub,
             ssoProvider: 'Agency SSO',
+            mustChangePassword: false, // SSO users don't manage passwords here
           },
         });
       } else {
