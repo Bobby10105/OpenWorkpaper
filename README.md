@@ -84,6 +84,7 @@ Key team roles include:
 *   **Database**: SQLite (via [Prisma ORM](https://www.prisma.io/))
 *   **Styling**: Tailwind CSS
 *   **Auth**: JWT-based session management + OpenID Connect (OIDC)
+*   **Password Hashing**: [bcryptjs](https://www.npmjs.com/package/bcryptjs) (Cost Factor: 10)
 *   **Export**: docx.js
 
 ![Comments and Attachments](docs/images/review_comments.png)
