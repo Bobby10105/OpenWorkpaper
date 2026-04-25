@@ -16,13 +16,14 @@ This software was "vibe-coded" by a CPA with 10 years of audit experience who wa
 **Contributions are welcomed!** Whether you are an auditor with feature ideas or a developer looking to help, please feel free to open an issue or submit a pull request.
 
 ![Audit View](docs/images/audit_view.png)
-*Audit Detail View featuring milestone tracking, team member management, and phase-based procedure navigation.*
+*Audit Detail View featuring PBC tracking, milestone management, and phase-based procedure navigation.*
 
 ## 🚀 Key Features
 
 *   **Project Dashboard**: Personalized overview of all active audits with high-impact analytics including **"Assigned to You"** metrics and **Next 7 Days** deadline drill-downs.
 *   **Three-Phase Workflow**: Standardized sections for Planning, Fieldwork, and Reporting.
 *   **Procedure Assignments**: Assign individual procedures to specific team members to clarify ownership and streamline the review process.
+*   **PBC Tracking**: Centralize client information requests. **Upload and download a master PBC spreadsheet** to track status and ownership in one place.
 *   **Audit Program Templates**: Create and manage a library of standard audit programs. Instantly import sets of procedures and purposes into any phase to standardize documentation and save time.
 *   **Hierarchical Organization**: Organize procedures into **Procedure Groups** (e.g., "Payroll", "Revenue"). 
 *   **Smart Numbering**: Automatic professional nomenclature (Groups: **1.1**, Procedures: **1.1.a**, Attachments: **1.1.a.1**).
