@@ -14,6 +14,13 @@ export async function GET(
       where: { id: params.id },
       include: {
         teamMembers: true,
+        procedureGroups: {
+          include: {
+            procedures: {
+              include: { attachments: true }
+            }
+          }
+        },
         procedures: {
           include: { attachments: true }
         }
@@ -29,9 +36,21 @@ export async function GET(
     // Add audit data as JSON
     zip.file('audit_data.json', JSON.stringify(audit, null, 2));
 
-    // Add attachments
     const publicDir = path.join(process.cwd(), 'public');
-    
+
+    // Add milestone attachment if exists
+    if (audit.milestoneAttachmentUrl) {
+      const fullPath = path.join(publicDir, audit.milestoneAttachmentUrl);
+      try {
+        const fileBuffer = await fs.readFile(fullPath);
+        const diskFilename = path.basename(audit.milestoneAttachmentUrl);
+        zip.file(`attachments/${diskFilename}`, fileBuffer);
+      } catch (err) {
+        console.warn(`Could not read milestone file: ${fullPath}`, err);
+      }
+    }
+
+    // Add procedure attachments
     for (const procedure of audit.procedures) {
       for (const attachment of procedure.attachments) {
         // attachment.filepath is like "/uploads/..."
@@ -39,7 +58,8 @@ export async function GET(
         try {
           const fileBuffer = await fs.readFile(fullPath);
           // Store in a flat 'attachments' folder inside the zip
-          zip.file(`attachments/${attachment.filename}`, fileBuffer);
+          const diskFilename = path.basename(attachment.filepath);
+          zip.file(`attachments/${diskFilename}`, fileBuffer);
         } catch (err) {
           console.warn(`Could not read file: ${fullPath}`, err);
         }

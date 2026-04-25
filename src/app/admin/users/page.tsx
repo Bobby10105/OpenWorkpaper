@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { UserPlus, Trash2, Shield, Loader2, AlertCircle, Users, FileUp, Download, KeyRound } from 'lucide-react';
+import { UserPlus, Trash2, Shield, Loader2, AlertCircle, Users, FileUp, Download, KeyRound, User as UserIcon, Mail, Briefcase, ChevronDown, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Papa from 'papaparse';
 
@@ -31,7 +31,6 @@ export default function UserManagementPage() {
 
   const fetchSessionAndUsers = async () => {
     try {
-      // Fetch session first to know the role
       const sessionRes = await fetch('/api/auth/session');
       if (sessionRes.ok) {
         const sessionData = await sessionRes.json();
@@ -76,7 +75,7 @@ export default function UserManagementPage() {
       setUsers([data, ...users]);
       setIsAdding(false);
       setFormData({ username: '', password: '', role: 'Auditor' });
-      setSuccess(`User ${data.username} created successfully. They will be prompted to change their password on first login.`);
+      setSuccess(`User ${data.username} created successfully.`);
     } catch (err: any) {
       setError(err.message);
       console.error('User creation error:', err);
@@ -108,7 +107,7 @@ export default function UserManagementPage() {
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || 'Bulk import failed');
           
-          setSuccess(`Import complete: ${data.created} users created, ${data.skipped} skipped. All new users must change their password on first login.`);
+          setSuccess(`Import complete: ${data.created} users created.`);
           fetchSessionAndUsers();
         } catch (err: any) {
           setError(err.message);
@@ -124,263 +123,215 @@ export default function UserManagementPage() {
     });
   };
 
-  const exportUsersToCSV = () => {
-    if (users.length === 0) return;
-    
-    // Header
-    const headers = ["username", "role", "mustChangePassword", "createdAt"];
-    
-    // Data rows
-    const rows = users.map(user => [
-      user.username,
-      user.role,
-      user.mustChangePassword ? "Yes" : "No",
-      new Date(user.createdAt).toLocaleDateString()
-    ]);
-    
-    const csvContent = [
-      headers.join(","),
-      ...rows.map(row => row.join(","))
-    ].join("\n");
-    
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `user_directory_${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
-
-  const downloadTemplate = () => {
-    const csvContent = "username,role,password\nuser1@company.com,Auditor,Welcome123!\nadmin1@company.com,IT Administrator,Welcome123!";
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'user_import_template.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
-
   const handleDeleteUser = async (id: string, username: string) => {
     if (!isAdmin) return;
-    if (id === currentUser?.id) {
-      alert("You cannot delete your own account.");
-      return;
-    }
-    if (!confirm(`Are you sure you want to delete user "${username}"?`)) return;
-    
+    if (!confirm(`Are you sure you want to revoke access for "${username}"?`)) return;
+
     try {
-      const res = await fetch(`/api/users/${id}`, { method: 'DELETE' });
-      if (!res.ok) {
+      const res = await fetch(`/api/users/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        setUsers(users.filter(u => u.id !== id));
+        setSuccess(`User ${username} removed successfully.`);
+      } else {
         const data = await res.json();
-        throw new Error(data.error || 'Failed to delete user');
+        setError(data.error || 'Failed to delete user');
       }
-      setUsers(users.filter(u => u.id !== id));
-      setSuccess(`User ${username} deleted.`);
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err) {
+      setError('An unexpected error occurred.');
     }
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-900" />
+        <Loader2 className="w-10 h-10 animate-spin text-blue-600" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto pb-20">
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-        <div className="flex items-center space-x-3">
-          <div className="bg-indigo-900 p-2 rounded-lg shadow-md">
-            <Shield className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">User Directory</h1>
-            <p className="text-sm text-gray-500 font-medium">View system access and roles</p>
-          </div>
+    <div className="max-w-6xl mx-auto space-y-10 pb-20 px-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-2">
+        <div className="space-y-1">
+          <h1 className="text-4xl font-bold text-slate-900 tracking-tight leading-none flex items-center">
+            <Users className="w-8 h-8 mr-4 text-blue-600 shadow-lg shadow-blue-100" />
+            User Directory
+          </h1>
+          <p className="text-slate-500 font-medium">Manage enterprise-wide access, identities, and functional roles.</p>
         </div>
         
         {isAdmin && (
           <div className="flex items-center space-x-3">
             <button
-              onClick={exportUsersToCSV}
-              className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
-              title="Export Current Directory"
-            >
-              <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Export Directory</span>
-            </button>
-            <button
-              onClick={downloadTemplate}
-              className="flex items-center space-x-2 px-4 py-2 bg-white text-gray-600 rounded-lg hover:bg-gray-50 transition-colors text-xs font-medium border border-gray-200"
-              title="Download Import Template"
-            >
-              <FileUp className="w-3 h-3" />
-              <span className="hidden sm:inline">Template</span>
-            </button>
-            <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center space-x-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors text-sm font-medium border border-indigo-100"
+              className="flex items-center space-x-2 px-5 py-2.5 bg-slate-50 text-slate-700 rounded-xl hover:bg-slate-100 transition-all border border-slate-200 active:scale-95 text-sm font-bold uppercase tracking-tight"
             >
-              <FileUp className="w-4 h-4" />
-              <span>Import CSV</span>
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleFileUpload} 
-                className="hidden" 
-                accept=".csv"
-              />
+              <FileUp className="w-4 h-4 text-blue-600" />
+              <span>Bulk Import</span>
+              <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept=".csv" />
             </button>
             <button
               onClick={() => setIsAdding(!isAdding)}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm text-sm font-medium"
+              className="flex items-center space-x-2 px-6 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-500 transition-all shadow-xl shadow-blue-600/20 font-bold text-sm active:scale-95 border border-blue-400/20"
             >
-              <UserPlus className="w-4 h-4" />
-              <span>{isAdding ? 'Cancel' : 'Add User'}</span>
+              {isAdding ? <X className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+              <span>{isAdding ? 'Cancel' : 'Provision User'}</span>
             </button>
           </div>
         )}
       </div>
 
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-3 text-red-700 animate-in fade-in slide-in-from-top-2">
-          <AlertCircle className="w-5 h-5" />
-          <p className="text-sm font-medium">{error}</p>
-        </div>
-      )}
-
-      {success && (
-        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center space-x-3 text-green-700 animate-in fade-in slide-in-from-top-2">
-          <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
-            <Loader2 className="w-3 h-3 text-white" />
-          </div>
-          <p className="text-sm font-medium">{success}</p>
+      {(error || success) && (
+        <div className="space-y-4">
+          {error && (
+            <div className="p-5 bg-red-50 border border-red-200 rounded-[2rem] flex items-center space-x-4 text-red-600 animate-shake">
+              <AlertCircle className="w-5 h-5 shrink-0" />
+              <p className="text-sm font-semibold">{error}</p>
+            </div>
+          )}
+          {success && (
+            <div className="p-5 bg-emerald-50 border border-emerald-200 rounded-[2rem] flex items-center space-x-4 text-emerald-600 animate-in fade-in">
+              <Shield className="w-5 h-5 shrink-0" />
+              <p className="text-sm font-semibold">{success}</p>
+            </div>
+          )}
         </div>
       )}
 
       {isAdmin && isAdding && (
-        <div className="mb-8 bg-white p-6 rounded-xl shadow-sm border border-blue-100 animate-in fade-in slide-in-from-top-4 duration-200">
-          <form onSubmit={handleAddUser} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Username / Email</label>
-              <input
-                required
-                value={formData.username}
-                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 focus:bg-white"
-                placeholder="e.g. j.doe@company.com"
-              />
+        <div className="bg-white/80 backdrop-blur-3xl rounded-[2.5rem] border border-slate-200 p-8 shadow-2xl animate-in fade-in slide-in-from-top-6 duration-500 overflow-hidden">
+          <form onSubmit={handleAddUser} className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
+            <div className="flex flex-col">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">Identity Mapping</label>
+              <div className="relative group/input">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within/input:text-blue-600 transition-colors" />
+                <input
+                  required
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  className="w-full pl-12 pr-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all text-slate-900 font-semibold outline-none shadow-inner"
+                  placeholder="j.doe@company.com"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Initial Password</label>
-              <input
-                required
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 focus:bg-white"
-                placeholder="••••••••"
-              />
+            <div className="flex flex-col">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">Security Token</label>
+              <div className="relative group/input">
+                <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within/input:text-blue-600 transition-colors" />
+                <input
+                  required
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="w-full pl-12 pr-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all text-slate-900 font-semibold outline-none shadow-inner"
+                  placeholder="••••••••"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Role</label>
-              <select
-                value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none appearance-none bg-gray-50 focus:bg-white"
-              >
-                <option value="Auditor">Auditor</option>
-                <option value="Specialist">Specialist</option>
-                <option value="Audit Manager">Audit Manager</option>
-                <option value="Audit Director">Audit Director</option>
-                <option value="Audit Partner">Audit Partner</option>
-                <option value="Business Operations">Business Operations</option>
-                <option value="IT Administrator">IT Administrator</option>
-              </select>
+            <div className="flex flex-col">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">Access Tier</label>
+              <div className="relative group/select">
+                <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within/select:text-blue-600 transition-colors" />
+                <select
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  className="w-full pl-12 pr-10 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all text-slate-900 appearance-none font-semibold text-sm outline-none shadow-inner"
+                >
+                  <option value="Auditor">Auditor</option>
+                  <option value="Specialist">Specialist</option>
+                  <option value="Audit Manager">Audit Manager</option>
+                  <option value="Audit Director">Audit Director</option>
+                  <option value="Audit Partner">Audit Partner</option>
+                  <option value="Business Operations">Business Operations</option>
+                  <option value="IT Administrator">IT Administrator</option>
+                </select>
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              </div>
             </div>
             <button
               disabled={submitting}
               type="submit"
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-bold transition-colors h-[42px]"
+              className="w-full py-3.5 bg-blue-600 text-white rounded-2xl hover:bg-blue-500 disabled:opacity-50 font-bold transition-all shadow-xl shadow-blue-600/20 active:scale-95 border border-blue-400/20"
             >
-              {submitting ? 'Creating...' : 'Create User'}
+              {submitting ? 'Provisioning...' : 'Provision User'}
             </button>
           </form>
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest">User</th>
-              <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest">Role</th>
-              <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest text-center">Account Status</th>
-              <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest">Created</th>
-              {isAdmin && <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest text-right">Actions</th>}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {users.map((user) => (
-              <tr key={user.id} className="hover:bg-gray-50/50 transition-colors group">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-xs text-blue-700 font-bold border border-blue-200 group-hover:bg-blue-200 transition-colors">
-                      {user.username.charAt(0).toUpperCase()}
+      <div className="bg-white/80 backdrop-blur-3xl rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200">
+                <th className="px-8 py-5 text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Identity</th>
+                <th className="px-8 py-5 text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Access tier</th>
+                <th className="px-8 py-5 text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] text-center">Status</th>
+                <th className="px-8 py-5 text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Created</th>
+                {isAdmin && <th className="px-8 py-5 text-right"></th>}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {users.map((user) => (
+                <tr key={user.id} className="hover:bg-slate-50/50 transition-colors group">
+                  <td className="px-8 py-6 whitespace-nowrap">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-10 h-10 bg-blue-50 rounded-2xl flex items-center justify-center text-sm text-blue-600 font-bold border border-blue-200 group-hover:scale-110 transition-transform">
+                        {user.username.charAt(0).toUpperCase()}
+                      </div>
+                      <span className="text-base font-semibold text-slate-900">{user.username}</span>
                     </div>
-                    <span className="text-sm font-medium text-gray-900">{user.username}</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
-                    user.role === 'IT Administrator' ? 'bg-purple-50 text-purple-700' : 
-                    user.role === 'Business Operations' ? 'bg-indigo-50 text-indigo-700' :
-                    (user.role === 'Audit Manager' || user.role === 'Audit Director' || user.role === 'Audit Partner') ? 'bg-blue-50 text-blue-700' : 'bg-green-50 text-green-700'
-                  }`}>
-                    {user.role}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-center">
-                  {user.mustChangePassword ? (
-                    <span className="inline-flex items-center space-x-1 px-2.5 py-1 bg-amber-50 text-amber-700 text-[10px] font-black uppercase tracking-tighter rounded-md border border-amber-100 animate-pulse">
-                      <KeyRound className="w-3 h-3" />
-                      <span>Must Change Password</span>
+                  </td>
+                  <td className="px-8 py-6 whitespace-nowrap">
+                    <span className={`inline-flex px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                      user.role === 'IT Administrator' ? 'bg-purple-50 text-purple-600 border-purple-200' : 
+                      user.role === 'Business Operations' ? 'bg-indigo-50 text-indigo-600 border-indigo-200' :
+                      'bg-blue-50 text-blue-600 border-blue-200'
+                    }`}>
+                      {user.role}
                     </span>
-                  ) : (
-                    <span className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">Verified</span>
-                  )}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 tabular-nums">
-                  {new Date(user.createdAt).toLocaleDateString()}
-                </td>
-                {isAdmin && (
-                  <td className="px-6 py-4 whitespace-nowrap text-right">
-                    {user.id !== currentUser?.id && (
-                      <button
-                        onClick={() => handleDeleteUser(user.id, user.username)}
-                        className="p-2 text-gray-400 hover:text-red-600 transition-colors rounded-full hover:bg-red-50"
-                        title="Delete User"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                  </td>
+                  <td className="px-8 py-6 whitespace-nowrap text-center">
+                    {user.mustChangePassword ? (
+                      <span className="inline-flex items-center space-x-1.5 px-3 py-1 bg-amber-50 text-amber-600 text-[9px] font-bold uppercase tracking-widest rounded-full border border-amber-200 animate-pulse">
+                        <KeyRound className="w-3 h-3" />
+                        <span>Reset Required</span>
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Verified</span>
                     )}
                   </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  <td className="px-8 py-6 whitespace-nowrap text-sm text-slate-500 font-mono">
+                    {new Date(user.createdAt).toLocaleDateString()}
+                  </td>
+                  {isAdmin && (
+                    <td className="px-8 py-6 whitespace-nowrap text-right">
+                      {user.id !== currentUser?.id ? (
+                        <button
+                          onClick={() => handleDeleteUser(user.id, user.username)}
+                          className="p-2.5 text-slate-400 hover:text-red-600 transition-all rounded-xl hover:bg-red-50 active:scale-90"
+                          title="Revoke Account"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      ) : (
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mr-2 italic">Current Session</span>
+                      )}
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <div className="mt-6 flex items-center space-x-2 text-xs text-gray-400 italic bg-gray-100/50 p-3 rounded-lg border border-dashed border-gray-200">
-        <Users className="w-3 h-3" />
-        <span>User passwords are securely hashed using bcrypt at rest. {isAdmin ? 'You have administrative access to manage users.' : 'Only IT administrators can manage system users.'}</span>
+      <div className="flex items-center justify-center space-x-3 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] pt-4">
+        <Shield className="w-3 h-3" />
+        <span>Enterprise Identity Protocol • Secure Hash Protection</span>
       </div>
     </div>
   );

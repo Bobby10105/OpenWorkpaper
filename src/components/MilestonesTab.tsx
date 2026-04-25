@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Save, Calendar, Upload, FileSpreadsheet, Trash2, Loader2 } from 'lucide-react';
+import { Save, Calendar, Upload, FileSpreadsheet, Trash2, Loader2, RefreshCw } from 'lucide-react';
 import type { Audit } from '@prisma/client';
 
 const formatDateForInput = (date: Date | null | undefined) => {
@@ -156,63 +156,75 @@ export default function MilestonesTab({ audit }: { audit: Audit }) {
   ];
 
   return (
-    <div className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="space-y-6">
-          <h3 className="text-lg font-bold text-gray-800 border-b pb-2">Milestone Dates</h3>
-          {milestones.map((milestone) => (
-            <div key={milestone.name} className="flex flex-col">
-              <label className="text-sm font-bold text-gray-700 mb-2 tracking-wide uppercase flex items-center">
-                <Calendar className="w-4 h-4 mr-2 text-blue-500" />
-                {milestone.label}
-              </label>
-              <input
-                name={milestone.name}
-                type="date"
-                value={data[milestone.name as keyof typeof data]}
-                onChange={handleChange}
-                className="max-w-xs w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 hover:bg-white transition-colors text-gray-800"
-              />
-            </div>
-          ))}
-          <div className="flex pt-2">
+    <div className="space-y-10">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-12">
+        <div className="space-y-8">
+          <div className="border-b border-gray-100 pb-4">
+            <h3 className="text-xl font-bold text-gray-900 tracking-tight">Timeline Management</h3>
+            <p className="text-gray-500 text-sm mt-1">Define key operational dates for this engagement.</p>
+          </div>
+          
+          <div className="space-y-8">
+            {milestones.map((milestone) => (
+              <div key={milestone.name} className="flex flex-col group">
+                <label className="text-[10px] font-bold text-gray-400 mb-3 tracking-[0.15em] uppercase flex items-center group-hover:text-blue-600 transition-colors">
+                  <Calendar className="w-4 h-4 mr-2.5 text-blue-600" />
+                  {milestone.label}
+                </label>
+                <input
+                  name={milestone.name}
+                  type="date"
+                  value={data[milestone.name as keyof typeof data]}
+                  onChange={handleChange}
+                  className="max-w-md w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500/50 focus:border-transparent hover:bg-white transition-all text-sm font-semibold text-gray-900 outline-none shadow-inner"
+                />
+              </div>
+            ))}
+          </div>
+          
+          <div className="flex pt-4">
             <button
               type="button"
               onClick={handleSave}
               disabled={saving}
-              className="flex items-center space-x-2 px-6 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 shadow-md"
+              className="flex items-center space-x-2 px-10 py-3.5 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-all shadow-xl shadow-blue-200 disabled:opacity-50 active:scale-95 border border-blue-500 tracking-wider uppercase text-xs"
             >
               {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-              <span>{saving ? 'Saving...' : 'Save Dates'}</span>
+              <span>{saving ? 'Syncing...' : 'Update Timeline'}</span>
             </button>
           </div>
         </div>
 
-        <div className="space-y-6">
-          <h3 className="text-lg font-bold text-gray-800 border-b pb-2">Detailed Milestones Spreadsheet</h3>
-          <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl p-6 flex flex-col items-center justify-center space-y-4">
+        <div className="space-y-8">
+          <div className="border-b border-gray-100 pb-4">
+            <h3 className="text-xl font-bold text-gray-900 tracking-tight">Detailed Milestone Data</h3>
+            <p className="text-gray-500 text-sm mt-1">Supplementary tracking via project spreadsheet.</p>
+          </div>
+          
+          <div className="bg-white rounded-[2.5rem] border-2 border-dashed border-gray-100 p-10 flex flex-col items-center justify-center space-y-6 shadow-inner transition-all hover:bg-gray-50 hover:border-gray-300">
             {attachmentUrl ? (
-              <div className="w-full space-y-4">
-                <div className="flex items-center p-4 bg-white rounded-lg border border-blue-100 shadow-sm">
-                  <div className="p-3 bg-blue-50 rounded-lg mr-4">
+              <div className="w-full space-y-6">
+                <div className="flex items-center p-6 bg-white rounded-3xl border border-gray-100 shadow-xl">
+                  <div className="p-4 bg-blue-50 rounded-2xl mr-5 shadow-inner border border-blue-100">
                     <FileSpreadsheet className="w-8 h-8 text-blue-600" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-gray-900 truncate">
+                    <p className="text-sm font-bold text-gray-900 truncate mb-1">
                       {attachmentName || 'Milestone Details'}
                     </p>
                     <a
-                      href={attachmentUrl}
+                      href={`/api/audits/${audit.id}/milestone`}
                       download={attachmentName || 'milestones.xlsx'}
-                      className="text-xs text-blue-600 hover:underline font-medium"
+                      className="inline-flex items-center text-xs text-blue-600 hover:text-blue-700 font-bold transition-colors uppercase tracking-widest"
                     >
-                      Download Spreadsheet
+                      <Upload className="w-3 h-3 mr-1.5 rotate-180" />
+                      Download Data
                     </a>
                   </div>
                   <button
                     type="button"
                     onClick={handleDeleteAttachment}
-                    className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                    className="p-3 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-2xl transition-all active:scale-90"
                     title="Remove attachment"
                   >
                     <Trash2 className="w-5 h-5" />
@@ -223,30 +235,30 @@ export default function MilestonesTab({ audit }: { audit: Audit }) {
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploading}
-                    className="text-sm text-blue-600 hover:text-blue-800 font-semibold flex items-center space-x-1"
+                    className="text-[11px] text-gray-400 hover:text-blue-600 font-bold flex items-center space-x-2 transition-all uppercase tracking-widest px-4 py-2 rounded-xl hover:bg-gray-50"
                   >
-                    <Upload className="w-4 h-4" />
-                    <span>Replace Spreadsheet</span>
+                    <RefreshCw className={`w-4 h-4 ${uploading ? 'animate-spin' : ''}`} />
+                    <span>Replace Master File</span>
                   </button>
                 </div>
               </div>
             ) : (
               <>
-                <div className="p-4 bg-blue-50 rounded-full">
-                  <FileSpreadsheet className="w-10 h-10 text-blue-400" />
+                <div className="p-6 bg-blue-50 rounded-full border border-blue-100 shadow-sm">
+                  <FileSpreadsheet className="w-12 h-12 text-blue-400" />
                 </div>
-                <div className="text-center">
-                  <p className="text-sm font-bold text-gray-700">No spreadsheet attached</p>
-                  <p className="text-xs text-gray-500 mt-1">Upload a .xlsx or .csv with more milestone details</p>
+                <div className="text-center space-y-2">
+                  <p className="text-base font-bold text-gray-900 tracking-tight">No Master File Attached</p>
+                  <p className="text-sm text-gray-500 max-w-[200px] leading-relaxed">Upload a .xlsx or .csv for granular task tracking.</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
-                  className="flex items-center space-x-2 px-6 py-2.5 bg-white border border-blue-600 text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50"
+                  className="flex items-center space-x-3 px-8 py-3.5 bg-white border border-gray-200 text-gray-700 font-bold rounded-2xl hover:bg-gray-50 transition-all disabled:opacity-50 shadow-lg active:scale-95 text-xs uppercase tracking-wider"
                 >
-                  {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
-                  <span>{uploading ? 'Uploading...' : 'Upload Spreadsheet'}</span>
+                  {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5 text-blue-600" />}
+                  <span>{uploading ? 'Processing...' : 'Upload Spreadsheet'}</span>
                 </button>
               </>
             )}
@@ -258,9 +270,14 @@ export default function MilestonesTab({ audit }: { audit: Audit }) {
               accept=".xlsx,.xls,.csv"
             />
           </div>
-          <p className="text-xs text-gray-500 italic">
-            Tip: Use a spreadsheet to track granular milestones, task assignments, and completion percentages.
-          </p>
+          <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 flex items-start space-x-3 shadow-inner">
+            <div className="bg-blue-100 p-1 rounded-md shrink-0">
+              <Calendar className="w-3 h-3 text-blue-600" />
+            </div>
+            <p className="text-[11px] text-gray-500 italic leading-relaxed">
+              Recommended: Use a structured spreadsheet to track individual task assignments, percent complete, and resource allocation across the audit lifecycle.
+            </p>
+          </div>
         </div>
       </div>
     </div>

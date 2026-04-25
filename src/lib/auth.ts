@@ -2,7 +2,12 @@ import { SignJWT, jwtVerify, JWTPayload } from 'jose';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
-const secretKey = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback-secret-for-dev-only');
+const secretValue = process.env.JWT_SECRET;
+if (!secretValue && process.env.NODE_ENV === 'production') {
+  console.warn('[Auth] WARNING: JWT_SECRET is not set in production. Using insecure fallback.');
+}
+
+const secretKey = new TextEncoder().encode(secretValue || 'fallback-secret-for-dev-only');
 const SESSION_DURATION = parseInt(process.env.SESSION_DURATION_SECONDS || '3600', 10); // Default 1 hour
 
 export async function encrypt(payload: JWTPayload) {
@@ -14,10 +19,20 @@ export async function encrypt(payload: JWTPayload) {
 }
 
 export async function decrypt(input: string): Promise<JWTPayload> {
-  const { payload } = await jwtVerify(input, secretKey, {
-    algorithms: ['HS256'],
-  });
-  return payload;
+  try {
+    const { payload } = await jwtVerify(input, secretKey, {
+      algorithms: ['HS256'],
+    });
+    return payload;
+  } catch (error: any) {
+    if (error.code === 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED') {
+      throw new Error('Invalid session signature. The secret key may have changed.');
+    }
+    if (error.code === 'ERR_JWT_EXPIRED') {
+      throw new Error('Session has expired.');
+    }
+    throw error;
+  }
 }
 
 export async function getSession(): Promise<{ user: { id: string; username: string; role: string; mustChangePassword: boolean } } | null> {
@@ -30,8 +45,13 @@ export async function getSession(): Promise<{ user: { id: string; username: stri
     const decrypted = await decrypt(sessionCookie);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return decrypted as any;
-  } catch (error) {
-    console.error('[Auth] Session error:', error);
+  } catch (error: any) {
+    // Only log significant errors, not common ones like expiration or signature mismatch from old cookies
+    if (!error.message.includes('Invalid session signature') && !error.message.includes('expired')) {
+      console.error('[Auth] Session retrieval error:', error);
+    } else {
+      console.debug(`[Auth] ${error.message}`);
+    }
     return null;
   }
 }
@@ -42,10 +62,6 @@ export async function login(user: { id: string; username: string; role: string; 
 
   const cookieStore = await cookies();
   
-  // CRITICAL DOCKER FIX:
-  // In production mode, Next.js defaults to 'secure: true' for cookies.
-  // This causes browsers to REJECT the cookie on http://localhost:3000.
-  // We explicitly disable 'secure' if we are not on an https connection.
   const isProduction = process.env.NODE_ENV === 'production';
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
   const isSecureEnv = baseUrl.startsWith('https://');
@@ -53,7 +69,7 @@ export async function login(user: { id: string; username: string; role: string; 
   cookieStore.set('session', session, { 
     expires, 
     httpOnly: true, 
-    secure: isProduction && isSecureEnv, // Only true if both production AND explicit https
+    secure: isProduction && isSecureEnv,
     sameSite: 'lax',
     path: '/',
   });
@@ -76,22 +92,27 @@ export async function updateSession(request: NextRequest) {
   const session = request.cookies.get('session')?.value;
   if (!session) return;
 
-  const parsed = await decrypt(session);
-  const expires = new Date(Date.now() + SESSION_DURATION * 1000);
-  parsed.expires = expires;
-  
-  const isProduction = process.env.NODE_ENV === 'production';
-  const isSecureEnv = request.nextUrl.protocol === 'https:';
+  try {
+    const parsed = await decrypt(session);
+    const expires = new Date(Date.now() + SESSION_DURATION * 1000);
+    parsed.expires = expires;
+    
+    const isProduction = process.env.NODE_ENV === 'production';
+    const isSecureEnv = request.nextUrl.protocol === 'https:';
 
-  const res = NextResponse.next();
-  res.cookies.set({
-    name: 'session',
-    value: await encrypt(parsed),
-    httpOnly: true,
-    secure: isProduction && isSecureEnv,
-    expires: expires,
-    sameSite: 'lax',
-    path: '/',
-  });
-  return res;
+    const res = NextResponse.next();
+    res.cookies.set({
+      name: 'session',
+      value: await encrypt(parsed),
+      httpOnly: true,
+      secure: isProduction && isSecureEnv,
+      expires: expires,
+      sameSite: 'lax',
+      path: '/',
+    });
+    return res;
+  } catch (e) {
+    // If update fails (expired or bad sig), just let it go - middleware will handle redirect
+    return NextResponse.next();
+  }
 }

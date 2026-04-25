@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { UserPlus, Trash2, Mail, Briefcase, User, Loader2, AlertCircle, Search } from 'lucide-react';
+import { UserPlus, Trash2, Mail, Briefcase, User, Loader2, AlertCircle, Search, ChevronDown } from 'lucide-react';
 
 interface TeamMember {
   id: string;
@@ -156,126 +156,143 @@ export default function TeamMembersTab({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center mb-4">
+    <div className="space-y-10">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
-          <h3 className="text-lg font-bold text-gray-800 uppercase tracking-wide">Audit Team</h3>
-          <p className="text-xs text-gray-500 mt-1">Assign users to give them access to this audit.</p>
+          <h3 className="text-xl font-bold text-gray-900 tracking-tight">Audit Engagement Team</h3>
+          <p className="text-gray-500 text-sm mt-1">Manage personnel access and responsibility levels.</p>
         </div>
         {isBusinessOps && (
           <button
             onClick={handleAddMember}
             disabled={creating}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-sm font-bold"
+            className="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 disabled:opacity-50 transition-all shadow-xl shadow-blue-200 font-bold text-sm active:scale-95 border border-blue-500"
           >
-            {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-            <span>Add Team Member</span>
+            {creating ? <Loader2 className="w-5 h-5 animate-spin" /> : <UserPlus className="w-5 h-5" />}
+            <span>Provision Seat</span>
           </button>
         )}
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-3 text-red-700">
-          <AlertCircle className="w-5 h-5 flex-shrink-0" />
-          <p className="text-sm font-medium">{error}</p>
+        <div className="p-5 bg-red-50 border border-red-200 rounded-[2rem] flex items-center space-x-4 text-red-600 animate-shake">
+          <div className="bg-red-100 p-2 rounded-xl">
+            <AlertCircle className="w-6 h-6 shrink-0" />
+          </div>
+          <p className="text-sm font-semibold">{error}</p>
         </div>
       )}
 
-      <div className="space-y-4">
+      <div className="space-y-6">
         {teamMembers.length === 0 ? (
-          <div className="text-center py-16 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-            <User className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 font-medium text-lg">No team members assigned yet.</p>
-            <p className="text-gray-400 text-sm mt-1">{isBusinessOps ? 'Click the button above to start building your team.' : 'Team members will appear here once assigned.'}</p>
+          <div className="text-center py-24 bg-gray-50 rounded-[3rem] border-2 border-dashed border-gray-200">
+            <div className="bg-gray-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border border-gray-200 shadow-inner">
+              <User className="w-10 h-10 text-gray-300" />
+            </div>
+            <p className="text-gray-900 font-bold text-xl tracking-tight">Team Unassigned</p>
+            <p className="text-gray-500 text-sm mt-2 max-w-xs mx-auto leading-relaxed">
+              {isBusinessOps 
+                ? 'Building a team is the first step toward collaborative execution. Provision a seat to begin.' 
+                : 'Team members will appear here once the engagement manager assigns them.'}
+            </p>
           </div>
         ) : (
           teamMembers.map((member) => (
-            <div key={member.id} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all group animate-in fade-in slide-in-from-top-2">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div key={member.id} className="bg-white border border-gray-100 rounded-[2rem] p-8 shadow-xl hover:shadow-gray-200/50 transition-all group/member animate-in fade-in slide-in-from-top-4 duration-500">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                 <div className="flex flex-col">
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 flex items-center">
-                    <Mail className="w-3 h-3 mr-1" /> {isBusinessOps ? 'Select User' : 'User'}
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-3 flex items-center px-1">
+                    <Mail className="w-3.5 h-3.5 mr-2 text-blue-500" /> {isBusinessOps ? 'Identity Mapping' : 'System ID'}
                   </label>
                   {isBusinessOps ? (
-                    <select
-                      value={member.email || ''}
-                      onChange={(e) => handleUserSelect(member.id, e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-gray-800 appearance-none font-medium"
-                    >
-                      <option value="">Choose a System User...</option>
-                      {systemUsers.map(u => (
-                        <option key={u.id} value={u.username}>
-                          {u.username} ({u.role})
-                        </option>
-                      ))}
-                      <option value="custom">-- Custom / Other --</option>
-                    </select>
+                    <div className="relative group/select">
+                      <select
+                        value={member.email || ''}
+                        onChange={(e) => handleUserSelect(member.id, e.target.value)}
+                        className="w-full pl-5 pr-10 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500/50 focus:bg-white transition-all text-gray-900 appearance-none font-semibold text-sm outline-none shadow-inner"
+                      >
+                        <option value="">Link System User...</option>
+                        {systemUsers.map(u => (
+                          <option key={u.id} value={u.username}>
+                            {u.username} ({u.role})
+                          </option>
+                        ))}
+                        <option value="custom">-- Custom Reference --</option>
+                      </select>
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                        <ChevronDown className="w-4 h-4" />
+                      </div>
+                    </div>
                   ) : (
-                    <div className="px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-gray-700 font-medium">
-                      {member.email || 'No email specified'}
+                    <div className="px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-gray-700 font-semibold text-sm shadow-inner">
+                      {member.email || 'Unlinked'}
                     </div>
                   )}
                 </div>
 
                 <div className="flex flex-col">
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 flex items-center">
-                    <User className="w-3 h-3 mr-1" /> Display Name
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-3 flex items-center px-1">
+                    <User className="w-3.5 h-3.5 mr-2 text-blue-500" /> Engagement Name
                   </label>
                   {isBusinessOps ? (
                     <input
                       value={member.name || ''}
                       onChange={(e) => handleUpdateMember(member.id, { name: e.target.value })}
                       onBlur={() => handleSaveMember(member.id)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-gray-800 font-semibold"
-                      placeholder="Full Name"
+                      className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500/50 focus:bg-white transition-all text-gray-900 font-bold text-sm outline-none shadow-inner"
+                      placeholder="Enter Full Name"
                     />
                   ) : (
-                    <div className="px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-gray-700 font-semibold">
-                      {member.name || 'Anonymous Member'}
+                    <div className="px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-gray-900 font-bold text-sm shadow-inner">
+                      {member.name || 'External Specialist'}
                     </div>
                   )}
                 </div>
                 
                 <div className="flex flex-col">
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 flex items-center">
-                    <Briefcase className="w-3 h-3 mr-1" /> Audit Role
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-3 flex items-center px-1">
+                    <Briefcase className="w-3.5 h-3.5 mr-2 text-blue-500" /> Functional Responsibility
                   </label>
-                  <div className="flex space-x-2">
+                  <div className="flex space-x-3">
                     {isBusinessOps ? (
-                      <select
-                        value={member.role || ''}
-                        onChange={(e) => {
-                          const newRole = e.target.value;
-                          handleUpdateMember(member.id, { role: newRole });
-                          // Trigger save immediately for select
-                          const memberToSave = teamMembers.find(m => m.id === member.id);
-                          if (memberToSave) {
-                            handleSaveMember(member.id, { ...memberToSave, role: newRole });
-                          }
-                        }}
-                        className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-gray-800 appearance-none"
-                      >
-                        <option value="">Select Role</option>
-                        <option value="Audit Director">Audit Director</option>
-                        <option value="Audit Partner">Audit Partner</option>
-                        <option value="Audit Manager">Audit Manager</option>
-                        <option value="Lead Auditor">Lead Auditor</option>
-                        <option value="Senior Auditor">Senior Auditor</option>
-                        <option value="Staff Auditor">Staff Auditor</option>
-                        <option value="Specialist">Specialist</option>
-                        <option value="Quality Reviewer">Quality Reviewer</option>
-                      </select>
+                      <div className="relative flex-1 group/select">
+                        <select
+                          value={member.role || ''}
+                          onChange={(e) => {
+                            const newRole = e.target.value;
+                            handleUpdateMember(member.id, { role: newRole });
+                            const memberToSave = teamMembers.find(m => m.id === member.id);
+                            if (memberToSave) {
+                              handleSaveMember(member.id, { ...memberToSave, role: newRole });
+                            }
+                          }}
+                          className="w-full pl-5 pr-10 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500/50 focus:bg-white transition-all text-gray-900 appearance-none font-semibold text-sm outline-none shadow-inner"
+                        >
+                          <option value="">Select Title</option>
+                          <option value="Audit Director">Audit Director</option>
+                          <option value="Audit Partner">Audit Partner</option>
+                          <option value="Audit Manager">Audit Manager</option>
+                          <option value="Lead Auditor">Lead Auditor</option>
+                          <option value="Senior Auditor">Senior Auditor</option>
+                          <option value="Staff Auditor">Staff Auditor</option>
+                          <option value="Specialist">Specialist</option>
+                          <option value="Quality Reviewer">Quality Reviewer</option>
+                        </select>
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                          <ChevronDown className="w-4 h-4" />
+                        </div>
+                      </div>
                     ) : (
-                      <div className="flex-1 px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-gray-700">
-                        {member.role || 'Not assigned'}
+                      <div className="flex-1 px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-gray-700 font-semibold text-sm shadow-inner">
+                        {member.role || 'General Staff'}
                       </div>
                     )}
                     
                     {isBusinessOps && (
                       <button
                         onClick={() => handleDeleteMember(member.id, member.name)}
-                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Remove Member"
+                        className="p-3.5 text-gray-400 hover:text-red-600 bg-gray-50 hover:bg-red-50 rounded-2xl transition-all active:scale-90 border border-transparent hover:border-red-200 shadow-sm"
+                        title="Revoke Access"
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>

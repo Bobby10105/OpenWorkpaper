@@ -5,6 +5,33 @@ import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
 
+export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  
+  try {
+    const attachment = await prisma.attachment.findUnique({
+      where: { id: params.id }
+    });
+
+    if (!attachment) {
+      return NextResponse.json({ error: 'Attachment not found' }, { status: 404 });
+    }
+
+    const filepath = path.join(process.cwd(), 'public', attachment.filepath);
+    const fileBuffer = await fs.readFile(filepath);
+    
+    return new NextResponse(fileBuffer, {
+      headers: {
+        'Content-Type': attachment.mimetype || 'application/octet-stream',
+        'Content-Disposition': `inline; filename="${attachment.filename}"`,
+      },
+    });
+  } catch (error) {
+    console.error('Fetch attachment error:', error);
+    return NextResponse.json({ error: 'Failed to fetch file' }, { status: 404 });
+  }
+}
+
 export async function PUT(req: Request, props: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   const params = await props.params;

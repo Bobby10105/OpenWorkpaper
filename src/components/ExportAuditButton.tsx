@@ -21,6 +21,70 @@ import type { AuditWithRelations } from '@/lib/types';
 export default function ExportAuditButton({ audit }: { audit: AuditWithRelations }) {
   const [isExporting, setIsExporting] = useState(false);
 
+  const addProcedureDetails = (sections: any[], p: any) => {
+    sections.push(
+      new Paragraph({
+        children: [new TextRun({ text: "Purpose:", bold: true })],
+      }),
+      new Paragraph({ text: p.purpose || 'N/A', spacing: { after: 100 } }),
+      
+      new Paragraph({
+        children: [new TextRun({ text: "Source:", bold: true })],
+      }),
+      new Paragraph({ text: p.source || 'N/A', spacing: { after: 100 } }),
+
+      new Paragraph({
+        children: [new TextRun({ text: "Scope:", bold: true })],
+      }),
+      new Paragraph({ text: p.scope || 'N/A', spacing: { after: 100 } }),
+
+      new Paragraph({
+        children: [new TextRun({ text: "Methodology:", bold: true })],
+      }),
+      new Paragraph({ text: p.methodology || 'N/A', spacing: { after: 100 } }),
+
+      new Paragraph({
+        children: [new TextRun({ text: "Results:", bold: true })],
+      }),
+      new Paragraph({ text: p.results || 'N/A', spacing: { after: 100 } }),
+
+      new Paragraph({
+        children: [new TextRun({ text: "Conclusions:", bold: true })],
+      }),
+      new Paragraph({ text: p.conclusions || 'N/A', spacing: { after: 200 } })
+    );
+
+    // Sign-off Table
+    sections.push(
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: [
+          new TableRow({
+            children: [
+              new TableCell({
+                children: [new Paragraph({ children: [new TextRun({ text: "Prepared By: ", bold: true }), new TextRun(p.preparedBy || 'N/A')] })],
+              }),
+              new TableCell({
+                children: [new Paragraph({ children: [new TextRun({ text: "Reviewed By: ", bold: true }), new TextRun(p.reviewedBy || 'N/A')] })],
+              }),
+            ],
+          }),
+          new TableRow({
+            children: [
+              new TableCell({
+                children: [new Paragraph({ children: [new TextRun({ text: "Date: ", bold: true }), new TextRun(p.preparedDate ? format(new Date(p.preparedDate), 'PP') : 'N/A')] })],
+              }),
+              new TableCell({
+                children: [new Paragraph({ children: [new TextRun({ text: "Date: ", bold: true }), new TextRun(p.reviewedDate ? format(new Date(p.reviewedDate), 'PP') : 'N/A')] })],
+              }),
+            ],
+          }),
+        ],
+      }),
+      new Paragraph({ text: "", spacing: { after: 400 } }) // Spacer
+    );
+  };
+
   const handleExport = async () => {
     setIsExporting(true);
     try {
@@ -158,9 +222,15 @@ export default function ExportAuditButton({ audit }: { audit: AuditWithRelations
 
       // Phases and Procedures
       const phases = ['Planning', 'Fieldwork', 'Reporting'];
+      const phaseMap: Record<string, number> = { 'Planning': 1, 'Fieldwork': 2, 'Reporting': 3 };
+
       for (const phase of phases) {
-        const phaseProcedures = audit.procedures.filter(p => p.phase === phase);
-        if (phaseProcedures.length === 0) continue;
+        const phaseGroups = audit.procedureGroups.filter(g => g.phase === phase);
+        const phaseUngrouped = audit.procedures.filter(p => p.phase === phase && !p.groupId);
+
+        if (phaseGroups.length === 0 && phaseUngrouped.length === 0) continue;
+
+        const phaseNum = phaseMap[phase];
 
         sections.push(
           new Paragraph({
@@ -170,73 +240,58 @@ export default function ExportAuditButton({ audit }: { audit: AuditWithRelations
           })
         );
 
-        for (const [index, p] of phaseProcedures.entries()) {
+        // Render Groups
+        for (const [groupIndex, group] of phaseGroups.entries()) {
+          const groupNomenclature = `${phaseNum}.${groupIndex + 1}`;
+          
           sections.push(
             new Paragraph({
-              text: `Procedure #${index + 1}: ${p.title || 'Untitled'}`,
+              text: `${groupNomenclature} Group: ${group.title}`,
               heading: HeadingLevel.HEADING_3,
-              spacing: { before: 200, after: 100 },
-            }),
-            new Paragraph({
-              children: [new TextRun({ text: "Purpose:", bold: true })],
-            }),
-            new Paragraph({ text: p.purpose || 'N/A', spacing: { after: 100 } }),
-            
-            new Paragraph({
-              children: [new TextRun({ text: "Source:", bold: true })],
-            }),
-            new Paragraph({ text: p.source || 'N/A', spacing: { after: 100 } }),
-
-            new Paragraph({
-              children: [new TextRun({ text: "Scope:", bold: true })],
-            }),
-            new Paragraph({ text: p.scope || 'N/A', spacing: { after: 100 } }),
-
-            new Paragraph({
-              children: [new TextRun({ text: "Methodology:", bold: true })],
-            }),
-            new Paragraph({ text: p.methodology || 'N/A', spacing: { after: 100 } }),
-
-            new Paragraph({
-              children: [new TextRun({ text: "Results:", bold: true })],
-            }),
-            new Paragraph({ text: p.results || 'N/A', spacing: { after: 100 } }),
-
-            new Paragraph({
-              children: [new TextRun({ text: "Conclusions:", bold: true })],
-            }),
-            new Paragraph({ text: p.conclusions || 'N/A', spacing: { after: 200 } })
+              spacing: { before: 300, after: 150 },
+            })
           );
 
-          // Sign-off Table
+          for (const [procIndex, p] of group.procedures.entries()) {
+            const procLetter = String.fromCharCode(97 + procIndex);
+            const procNomenclature = `${groupNomenclature}.${procLetter}`;
+
+            sections.push(
+              new Paragraph({
+                text: `Procedure ${procNomenclature}: ${p.title || 'Untitled'}`,
+                heading: HeadingLevel.HEADING_4,
+                spacing: { before: 200, after: 100 },
+              })
+            );
+
+            // Procedure details
+            addProcedureDetails(sections, p);
+          }
+        }
+
+        // Render Ungrouped Procedures
+        if (phaseUngrouped.length > 0) {
           sections.push(
-            new Table({
-              width: { size: 100, type: WidthType.PERCENTAGE },
-              rows: [
-                new TableRow({
-                  children: [
-                    new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: "Prepared By: ", bold: true }), new TextRun(p.preparedBy || 'N/A')] })],
-                    }),
-                    new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: "Reviewed By: ", bold: true }), new TextRun(p.reviewedBy || 'N/A')] })],
-                    }),
-                  ],
-                }),
-                new TableRow({
-                  children: [
-                    new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: "Date: ", bold: true }), new TextRun(p.preparedDate ? format(new Date(p.preparedDate), 'PP') : 'N/A')] })],
-                    }),
-                    new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: "Date: ", bold: true }), new TextRun(p.reviewedDate ? format(new Date(p.reviewedDate), 'PP') : 'N/A')] })],
-                    }),
-                  ],
-                }),
-              ],
-            }),
-            new Paragraph({ text: "", spacing: { after: 400 } }) // Spacer
+            new Paragraph({
+              text: `${phaseNum}.? Ungrouped Items`,
+              heading: HeadingLevel.HEADING_3,
+              spacing: { before: 300, after: 150 },
+            })
           );
+
+          for (const [index, p] of phaseUngrouped.entries()) {
+            const procNomenclature = `${phaseNum}.?.${index + 1}`;
+            sections.push(
+              new Paragraph({
+                text: `Procedure ${procNomenclature}: ${p.title || 'Untitled'}`,
+                heading: HeadingLevel.HEADING_4,
+                spacing: { before: 200, after: 100 },
+              })
+            );
+
+            // Procedure details
+            addProcedureDetails(sections, p);
+          }
         }
       }
 

@@ -1,7 +1,7 @@
 # AMSOS: Audit Management Software Open Source
 
 ![AMSOS Dashboard](docs/images/dashboard.png)
-*Central Dashboard providing a high-level overview of active audits, project status, and quick access to administrative tools.*
+*Central Dashboard providing a high-level overview of active audits, personalized assignments, and quick access to administrative tools.*
 
 AMSOS is a simple, modern, and open-source web application designed for auditors to document audit programs and procedures. It streamlines the audit lifecycle across Planning, Fieldwork, and Reporting phases with built-in sign-off tracking, reviewer collaboration, and professional document export.
 
@@ -16,12 +16,13 @@ This software was "vibe-coded" by a CPA with 10 years of audit experience who wa
 **Contributions are welcomed!** Whether you are an auditor with feature ideas or a developer looking to help, please feel free to open an issue or submit a pull request.
 
 ![Audit View](docs/images/audit_view.png)
-*Audit Detail View featuring milestone tracking, team member assignments, and phase-based procedure navigation.*
+*Audit Detail View featuring milestone tracking, team member management, and phase-based procedure navigation.*
 
 ## 🚀 Key Features
 
-*   **Project Dashboard**: Overview of all active audits with a dedicated **Completed Archival** section for finished projects.
+*   **Project Dashboard**: Personalized overview of all active audits with high-impact analytics including **"Assigned to You"** metrics and **Next 7 Days** deadline drill-downs.
 *   **Three-Phase Workflow**: Standardized sections for Planning, Fieldwork, and Reporting.
+*   **Procedure Assignments**: Assign individual procedures to specific team members to clarify ownership and streamline the review process.
 *   **Audit Program Templates**: Create and manage a library of standard audit programs. Instantly import sets of procedures and purposes into any phase to standardize documentation and save time.
 *   **Hierarchical Organization**: Organize procedures into **Procedure Groups** (e.g., "Payroll", "Revenue"). 
 *   **Smart Numbering**: Automatic professional nomenclature (Groups: **1.1**, Procedures: **1.1.a**, Attachments: **1.1.a.1**).
@@ -38,7 +39,7 @@ This software was "vibe-coded" by a CPA with 10 years of audit experience who wa
 *Hierarchical Organization using Procedure Groups to categorize complex audit fieldwork into logical folders.*
 
 ![Procedure View](docs/images/procedure_view.png)
-*Detailed Procedure Documentation including standardized fields for audit evidence and integrated sign-off tracking.*
+*Detailed Procedure Documentation including standardized fields, ownership assignments, and integrated sign-off tracking.*
 
 ## 🔐 Roles & Permissions (RBAC)
 
@@ -88,7 +89,30 @@ Key team roles include:
 *   **Export**: docx.js
 
 ![Comments and Attachments](docs/images/review_comments.png)
-*Reviewer Collaboration Tools featuring real-time comments and secure file attachments for comprehensive workpaper support.*
+*Reviewer Collaboration Tools featuring real-time comments, secure file attachments, and ownership transparency.*
+
+## 👔 Business Readiness
+
+AMSOS was built with the specific needs of **CPA Firms** and **Internal Audit Departments** in mind:
+
+*   **Private Cloud Deployment**: Unlike standard SaaS, you can deploy AMSOS within your own Virtual Private Cloud (VPC), ensuring your sensitive client data never leaves your control.
+*   **SQLite Portability**: Your entire database is a single file. This makes off-site backups, disaster recovery, and data archiving as simple as copying a folder.
+*   **Audit Logging**: Every login and major record change is tracked to ensure accountability.
+*   **No Vendor Lock-in**: As an open-source tool, you have full access to your data and the source code, protecting you from future fee increases or platform shutdowns.
+
+## 💾 Backup & Disaster Recovery
+
+AMSOS provides robust data portability and recovery options:
+
+1.  **Word Export**: For professional reporting and off-system review, click the **Export Word** button in any audit. This generates a grouped, professional document of all procedures.
+2.  **Full System Backup**: To save the entire state of an audit (including all metadata and attachment files), use the **Backup Audit** button on the audit detail page. This generates a `.zip` file containing:
+    *   `audit_data.json`: The complete structured data of the audit.
+    *   `attachments/`: A folder containing the actual files (PDFs, Excel, etc.) associated with procedures.
+3.  **Restore**: To restore an audit from a previous backup:
+    *   Go to the **Main Dashboard**.
+    *   Click the **Restore Backup** button (available to Business Operations users).
+    *   Select the backup `.zip` file.
+    *   A new audit will be created with the prefix `RESTORED:`, containing all original data and functional attachments.
 
 ## 💻 Installation & Deployment
 
@@ -111,24 +135,9 @@ This is the professional standard for deploying AMSOS. It ensures a consistent e
     docker compose -f docker-compose.prod.yml up -d --build
     ```
 
-**Why this method?**
-*   **Data Sovereignty**: Your audit data is stored in Docker volumes (`amsos-db` and `amsos-uploads`) on *your* infrastructure.
-*   **Cloud Ready**: Easily deployable to any service that supports Docker (e.g., AWS Fargate, Azure Container Instances).
-*   **Zero-Maintenance**: Automatically restarts if the server reboots (`restart: unless-stopped`).
-
 ---
 
-### 🚀 Method 2: Docker Quickstart (Testing & Evaluation)
-Use this if you just want to see how AMSOS works without long-term setup. This method uses our development configuration to get you up and running in seconds.
-
-```bash
-docker compose up --build
-```
-*Note: This runs in the foreground and is optimized for testing changes. Use Method 1 for actual audit fieldwork.*
-
----
-
-### 🛠 Method 3: Manual Installation (Node.js)
+### 🛠 Method 2: Manual Installation (Node.js)
 If you prefer to run AMSOS directly on your host machine or have a custom Windows Server environment without Docker.
 
 #### 1. Prerequisites
@@ -163,64 +172,6 @@ npm run start
 Once running, sign in with:
 *   **IT Administrator**: `it.admin` / `admin`
 *   **Business Operations**: `biz.ops` / `admin`
-
-**⚠️ Security Note:** Immediately change the passwords for these default accounts to secure your audit environment.
-
-## 👔 Business Readiness
-
-AMSOS was built with the specific needs of **CPA Firms
-** and **Internal Audit Departments** in mind:
-
-*   **Private Cloud Deployment**: Unlike standard SaaS, you can deploy AMSOS within your own Virtual Private Cloud (VPC), ensuring your sensitive client data never leaves your control.
-*   **SQLite Portability**: Your entire database is a single file. This makes off-site backups, disaster recovery, and data archiving as simple as copying a folder.
-*   **Audit Logging**: Every login and major record change is tracked to ensure accountability.
-*   **No Vendor Lock-in**: As an open-source tool, you have full access to your data and the source code, protecting you from future fee increases or platform shutdowns.
-
-
-#### 🔒 Reverse Proxy (Nginx)
-For public access and SSL (HTTPS), use Nginx as a reverse proxy on port 80/443. A sample configuration:
-```nginx
-server {
-    server_name your-app-url.gov;
-
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-    }
-    
-    # Increase client body size for attachment uploads
-    client_max_body_size 50M;
-}
-```
-
-## 💻 Management
-
-*   **Password Management**: Users can securely change their own passwords by clicking their profile icon in the navigation bar. **New users created by an IT Administrator are automatically forced to change their password upon their first login to ensure account security.**
-*   **User Directory**: Accessible to all users to view the team, but only **IT Administrators** can add, delete, or bulk-import users via CSV.
-*   **Audit Logging**: Key actions (Logins, Deletions, User Changes) are tracked in the system Audit Logs.
-*   **Audit Deletion**: Restricted to the **Business Operations** role to prevent accidental data loss of official audit records.
-
-## 📁 Project Structure
-
-*   `/src/app`: Application routes, API endpoints, and SSO handlers.
-*   `/src/components`: Reusable UI components (Procedures, Milestones, User Directory, etc.).
-*   `/prisma`: Database schema and configuration.
-*   `/public/uploads`: Local storage for audit procedure attachments.
-
-## 🛡 Responsibility
-**The user is solely responsible for the security, configuration, and proper deployment of this software.** 
-
-The authors and contributors accept **no responsibility** for security incidents, data breaches, data loss, or system failures. Users must ensure:
-*   **Environment Security**: Always change the `JWT_SECRET` and secure your `.env` file.
-*   **Configuration**: Proper server, network, and database configuration is required for safe operation.
-*   **SSL/TLS**: Production environments must be deployed behind a secure reverse proxy with HTTPS enabled.
-*   **SSO Callback**: Ensure your Identity Provider (IDP) is configured with the correct callback URL: `https://your-domain.com/api/auth/sso/callback`.
-
-Please review the full [Disclaimer](DISCLAIMER.md) before use.
 
 ---
 [License](LICENSE) | [Security Policy](SECURITY.md) | [Disclaimer](DISCLAIMER.md)

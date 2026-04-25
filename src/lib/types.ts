@@ -2,7 +2,8 @@ import type { Audit, Procedure, Attachment, TeamMember, ProcedureMessage, Proced
 
 export type ProcedureWithRelations = Procedure & { 
   attachments: Attachment[],
-  messages: ProcedureMessage[]
+  messages: ProcedureMessage[],
+  assignedTo?: TeamMember | null
 };
 
 export type ProcedureGroupWithRelations = ProcedureGroup & {

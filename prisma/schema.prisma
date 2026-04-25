@@ -51,8 +51,9 @@ model TeamMember {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
-  audit     Audit    @relation(fields: [auditId], references: [id], onDelete: Cascade)
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  audit              Audit       @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  user               User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  assignedProcedures Procedure[] @relation("ProcedureAssignment")
 }
 
 model Procedure {
@@ -71,12 +72,14 @@ model Procedure {
   preparedDate DateTime?
   reviewedBy   String?
   reviewedDate DateTime?
+  assignedToId String?
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   attachments  Attachment[]
   messages     ProcedureMessage[]
   audit        Audit        @relation(fields: [auditId], references: [id], onDelete: Cascade)
   group        ProcedureGroup? @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  assignedTo   TeamMember? @relation("ProcedureAssignment", fields: [assignedToId], references: [id], onDelete: SetNull)
 }
 
 model ProcedureGroup {

@@ -13,31 +13,77 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // 1. Fetch main audit and team members
   const audit = await prisma.audit.findUnique({
     where: { id: params.id },
     include: {
       teamMembers: true,
-      procedureGroups: {
-        orderBy: { displayOrder: 'asc' },
-        include: {
-          procedures: {
-            include: { 
-              attachments: { orderBy: { displayOrder: 'asc' } },
-              messages: { orderBy: { createdAt: 'asc' } }
-            }
-          }
-        }
-      },
-      procedures: {
-        where: { groupId: null }, // Include ungrouped ones too just in case
-        include: { 
-          attachments: { orderBy: { displayOrder: 'asc' } },
-          messages: { orderBy: { createdAt: 'asc' } }
-        }
-      }
     }
   });
-  return NextResponse.json(audit);
+
+  if (!audit) {
+    return NextResponse.json({ error: 'Audit not found' }, { status: 404 });
+  }
+
+  // 2. Fetch Groups and Procedures with RAW logic
+  const rawGroups: any[] = await prisma.$queryRawUnsafe(
+    `SELECT * FROM ProcedureGroup WHERE auditId = ? ORDER BY displayOrder ASC`,
+    audit.id
+  );
+
+  let rawProcedures: any[] = [];
+  try {
+    rawProcedures = await prisma.$queryRawUnsafe(
+      `SELECT p.*, t.name as assignedToName, t.role as assignedToRole, t.email as assignedToEmail
+       FROM Procedure p
+       LEFT JOIN TeamMember t ON p.assignedToId = t.id
+       WHERE p.auditId = ?`,
+      audit.id
+    );
+  } catch (e) {
+    console.warn('API AuditDetail: Full procedure join failed (schema syncing?). Falling back to basic fetch.');
+    rawProcedures = await prisma.$queryRawUnsafe(
+      `SELECT * FROM Procedure WHERE auditId = ?`,
+      audit.id
+    );
+  }
+
+  // 3. For each procedure, fetch attachments and messages
+  const proceduresWithRelations = await Promise.all(rawProcedures.map(async (proc) => {
+    const attachments: any[] = await prisma.$queryRawUnsafe(
+      `SELECT * FROM Attachment WHERE procedureId = ? ORDER BY displayOrder ASC`,
+      proc.id
+    );
+    
+    const messages: any[] = await prisma.$queryRawUnsafe(
+      `SELECT * FROM ProcedureMessage WHERE procedureId = ? ORDER BY createdAt ASC`,
+      proc.id
+    );
+
+    return {
+      ...proc,
+      assignedTo: proc.assignedToId ? {
+        id: proc.assignedToId,
+        name: proc.assignedToName,
+        role: proc.assignedToRole,
+        email: proc.assignedToEmail
+      } : null,
+      attachments,
+      messages
+    };
+  }));
+
+  // 4. Map procedures to groups
+  const groupsWithProcedures = rawGroups.map(group => ({
+    ...group,
+    procedures: proceduresWithRelations.filter(p => p.groupId === group.id)
+  }));
+
+  return NextResponse.json({
+    ...audit,
+    procedureGroups: groupsWithProcedures,
+    procedures: proceduresWithRelations.filter(p => !p.groupId) // ungrouped
+  });
 }
 
 export async function PUT(req: Request, props: { params: Promise<{ id: string }> }) {

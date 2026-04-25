@@ -53,10 +53,23 @@ export default async function AuditDetail(props: { params: Promise<{ id: string 
       audit.id
     );
 
-    const rawProcedures: any[] = await prisma.$queryRawUnsafe(
-      `SELECT * FROM Procedure WHERE auditId = ?`,
-      audit.id
-    );
+    let rawProcedures: any[] = [];
+    try {
+      rawProcedures = await prisma.$queryRawUnsafe(
+        `SELECT p.*, t.name as assignedToName, t.role as assignedToRole, t.email as assignedToEmail
+         FROM Procedure p
+         LEFT JOIN TeamMember t ON p.assignedToId = t.id
+         WHERE p.auditId = ?`,
+        audit.id
+      );
+    } catch (e) {
+      console.warn('AuditDetail: Full procedure join failed (schema syncing?). Falling back to basic fetch.');
+      // Fallback: Fetch procedures without the join to ensure page loads
+      rawProcedures = await prisma.$queryRawUnsafe(
+        `SELECT * FROM Procedure WHERE auditId = ?`,
+        audit.id
+      );
+    }
 
     // 3. For each procedure, fetch attachments and messages
     const proceduresWithRelations = await Promise.all(rawProcedures.map(async (proc) => {
@@ -72,6 +85,12 @@ export default async function AuditDetail(props: { params: Promise<{ id: string 
 
       return {
         ...proc,
+        assignedTo: proc.assignedToId ? {
+          id: proc.assignedToId,
+          name: proc.assignedToName,
+          role: proc.assignedToRole,
+          email: proc.assignedToEmail
+        } : null,
         attachments,
         messages
       };
@@ -91,9 +110,11 @@ export default async function AuditDetail(props: { params: Promise<{ id: string 
 
     return (
       <div className="max-w-6xl mx-auto">
-        <Link href="/" className="inline-flex items-center space-x-2 text-blue-600 hover:text-blue-800 mb-6">
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Dashboard</span>
+        <Link href="/" className="inline-flex items-center space-x-2 text-slate-500 hover:text-slate-900 mb-8 transition-colors group">
+          <div className="bg-slate-100 p-1 rounded-lg group-hover:bg-slate-200 transition-all">
+            <ArrowLeft className="w-4 h-4" />
+          </div>
+          <span className="font-semibold text-sm tracking-tight">Back to Dashboard</span>
         </Link>
 
         <EditableAuditHeader audit={finalAuditData as any} userRole={userRole} />

@@ -144,24 +144,24 @@ export default function ProcedureList({
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       {/* Action Header */}
-      <div className="flex justify-between items-center bg-gray-50/50 p-3 rounded-xl border border-gray-100">
-        <div className="flex items-center space-x-3">
+      <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+        <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={() => setShowTemplateModal(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-50 text-blue-700 text-sm font-bold rounded-lg hover:bg-blue-100 transition-colors border border-blue-100 shadow-sm"
+            className="flex items-center space-x-2 px-5 py-2.5 bg-blue-50 text-blue-700 text-sm font-bold rounded-xl hover:bg-blue-100 transition-all border border-blue-200 active:scale-95 shadow-sm"
           >
             <BookOpen className="w-4 h-4" />
-            <span>Import Template</span>
+            <span>Import Program</span>
           </button>
           <button
             onClick={() => setIsAddingGroup(true)}
             disabled={creating}
-            className="flex items-center space-x-2 px-4 py-2 bg-white text-indigo-700 text-sm font-bold rounded-lg hover:bg-indigo-50 transition-colors border border-indigo-100 shadow-sm"
+            className="flex items-center space-x-2 px-5 py-2.5 bg-gray-50 text-gray-700 text-sm font-bold rounded-xl hover:bg-gray-100 transition-all border border-gray-200 active:scale-95 shadow-sm"
           >
             <FolderPlus className="w-4 h-4" />
-            <span>New Procedure Group</span>
+            <span>Add Procedure Group</span>
           </button>
         </div>
 
@@ -169,7 +169,7 @@ export default function ProcedureList({
           <button
             onClick={handleClearAll}
             disabled={creating}
-            className="flex items-center space-x-2 px-3 py-2 text-red-400 hover:text-red-600 text-xs font-bold uppercase tracking-wider transition-colors"
+            className="flex items-center space-x-2 px-4 py-2 text-red-500 hover:text-red-600 text-xs font-bold uppercase tracking-wider transition-all hover:bg-red-50 rounded-lg"
           >
             <Trash2 className="w-3.5 h-3.5" />
             <span>Clear Phase</span>
@@ -178,83 +178,87 @@ export default function ProcedureList({
       </div>
 
       {isAddingGroup && (
-        <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-xl flex items-center space-x-3 animate-in fade-in slide-in-from-top-2">
-          <FolderPlus className="w-5 h-5 text-indigo-600" />
+        <div className="bg-white border border-blue-100 p-6 rounded-[2rem] flex flex-col md:flex-row items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-300 shadow-xl">
+          <div className="bg-blue-50 p-3 rounded-2xl">
+            <FolderPlus className="w-6 h-6 text-blue-600" />
+          </div>
           <input 
             value={newGroupTitle}
             onChange={(e) => setNewGroupTitle(e.target.value)}
             placeholder="Group Title (e.g. Payroll, Revenue...)"
-            className="flex-1 bg-white border border-indigo-200 rounded-lg px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+            className="flex-1 bg-gray-50 border border-gray-100 rounded-xl px-5 py-3 text-gray-900 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
             autoFocus
             onKeyDown={(e) => e.key === 'Enter' && handleAddGroup()}
           />
-          <button 
-            onClick={handleAddGroup}
-            disabled={creating || !newGroupTitle.trim()}
-            className="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 disabled:opacity-50"
-          >
-            Create Group
-          </button>
-          <button 
-            onClick={() => setIsAddingGroup(false)}
-            className="px-4 py-2 text-gray-500 text-sm font-bold hover:text-gray-700"
-          >
-            Cancel
-          </button>
+          <div className="flex items-center space-x-2 w-full md:w-auto">
+            <button 
+              onClick={handleAddGroup}
+              disabled={creating || !newGroupTitle.trim()}
+              className="flex-1 md:flex-none px-6 py-3 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-all shadow-lg active:scale-95"
+            >
+              Create Group
+            </button>
+            <button 
+              onClick={() => setIsAddingGroup(false)}
+              className="px-6 py-3 text-gray-500 text-sm font-bold hover:text-gray-700 transition-all"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 
       {groups.length === 0 && ungroupedProcedures.length === 0 ? (
-        <div className="text-center py-20 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-          <div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-200">
-            <BookOpen className="w-8 h-8 text-gray-400" />
+        <div className="text-center py-24 bg-white rounded-[3rem] border border-gray-100 shadow-xl">
+          <div className="bg-gray-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border border-gray-100 shadow-inner">
+            <BookOpen className="w-10 h-10 text-gray-300" />
           </div>
-          <h3 className="text-gray-900 font-black uppercase tracking-tight text-lg mb-2">No Procedures Defined</h3>
-          <p className="text-gray-500 text-sm mb-8 max-w-sm mx-auto">Import a standard program or create a new procedure group to begin.</p>
+          <h3 className="text-gray-900 font-bold uppercase tracking-widest text-lg mb-3">Empty Program</h3>
+          <p className="text-gray-500 text-sm mb-10 max-w-sm mx-auto leading-relaxed">Import a standard audit program or build your own by adding groups and procedures.</p>
           
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
             <button
               onClick={() => setShowTemplateModal(true)}
-              className="flex items-center space-x-2 px-8 py-3 bg-blue-600 text-white font-black rounded-xl hover:bg-blue-700 transition-all shadow-lg active:scale-95 uppercase tracking-wider text-sm"
+              className="flex items-center space-x-2 px-10 py-4 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-all shadow-xl active:scale-95 uppercase tracking-wider text-sm border border-blue-500"
             >
               <BookOpen className="w-5 h-5" />
-              <span>Import Template</span>
+              <span>Import Program</span>
             </button>
             <button
               onClick={() => setIsAddingGroup(true)}
-              className="flex items-center space-x-2 px-8 py-3 bg-white text-indigo-700 font-bold rounded-xl hover:bg-indigo-50 transition-all border border-indigo-200 shadow-sm active:scale-95 text-sm"
+              className="flex items-center space-x-2 px-10 py-4 bg-gray-50 text-gray-700 font-bold rounded-2xl hover:bg-gray-100 transition-all border border-gray-200 shadow-lg active:scale-95 text-sm uppercase tracking-wider"
             >
               <FolderPlus className="w-5 h-5" />
-              <span>Create Group</span>
+              <span>Add Group</span>
             </button>
           </div>
         </div>
       ) : (
-        <div className="space-y-10">
+        <div className="space-y-12">
           {groups.map((group, groupIndex) => {
             const groupNomenclature = `${phaseNum}.${groupIndex + 1}`;
             
             return (
-              <div key={group.id} className="space-y-4">
-                <div className="flex items-center justify-between group">
-                  <div className="flex items-center space-x-3">
-                    <div className="bg-indigo-900 text-white text-xs font-black w-10 h-8 flex items-center justify-center rounded-lg shadow-sm">
+              <div key={group.id} className="space-y-6">
+                <div className="flex items-center justify-between group/row px-6 py-4 bg-white rounded-3xl border border-gray-100 shadow-xl">
+                  <div className="flex items-center space-x-4">
+                    <div className="bg-blue-900 text-white text-[11px] font-bold w-12 h-9 flex items-center justify-center rounded-xl shadow-lg border border-blue-800">
                       {groupNomenclature}
                     </div>
-                    <h3 className="text-lg font-black text-gray-800 uppercase tracking-tight flex items-center">
+                    <h3 className="text-xl font-bold text-gray-900 tracking-tight flex items-center">
                       {group.title}
                     </h3>
                   </div>
                   <button 
                     onClick={() => handleDeleteGroup(group.id, group.title)}
-                    className="p-2 text-gray-300 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all"
+                    className="p-2.5 text-gray-300 hover:text-red-500 opacity-0 group-hover/row:opacity-100 transition-all hover:bg-red-50 rounded-xl"
                     title="Delete Group"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-5 h-5" />
                   </button>
                 </div>
 
-                <div className="space-y-4 pl-4 border-l-2 border-indigo-50">
+                <div className="space-y-5 pl-6 border-l border-gray-100">
                   {group.procedures.map((proc, procIndex) => (
                     <ProcedureItem 
                       key={proc.id} 
@@ -262,16 +266,19 @@ export default function ProcedureList({
                       nomenclature={`${groupNomenclature}.${getLetter(procIndex)}`}
                       onDelete={() => handleDeleteProcedure(proc.id)} 
                       user={user}
+                      teamMembers={audit.teamMembers}
                     />
                   ))}
                   
                   <button
                     onClick={() => handleAddProcedure(group.id)}
                     disabled={creating}
-                    className="flex items-center space-x-2 px-4 py-2 text-gray-400 hover:text-indigo-600 transition-colors text-sm font-bold ml-6"
+                    className="flex items-center space-x-3 px-6 py-3 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-2xl transition-all text-sm font-bold ml-6 border border-transparent hover:border-blue-100"
                   >
-                    <Plus className="w-4 h-4" />
-                    <span>Add Procedure to {group.title} ({groupNomenclature}.{getLetter(group.procedures.length)})</span>
+                    <div className="bg-gray-100 p-1 rounded-lg">
+                      <Plus className="w-4 h-4" />
+                    </div>
+                    <span>Add Procedure ({groupNomenclature}.{getLetter(group.procedures.length)})</span>
                   </button>
                 </div>
               </div>
@@ -280,14 +287,14 @@ export default function ProcedureList({
 
           {/* Ungrouped Procedures Section (if any exist) */}
           {ungroupedProcedures.length > 0 && (
-            <div className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <div className="bg-gray-400 text-white text-xs font-black w-10 h-8 flex items-center justify-center rounded-lg shadow-sm">
+            <div className="space-y-6">
+              <div className="flex items-center space-x-4 px-6 py-4 bg-white rounded-3xl border border-gray-100 shadow-xl">
+                <div className="bg-gray-700 text-white text-[11px] font-bold w-12 h-9 flex items-center justify-center rounded-xl shadow-lg border border-gray-600">
                   {phaseNum}.?
                 </div>
-                <h3 className="text-lg font-black text-gray-400 uppercase tracking-tight">Ungrouped Items</h3>
+                <h3 className="text-xl font-bold text-gray-700 tracking-tight">Ungrouped Items</h3>
               </div>
-              <div className="space-y-4 pl-4 border-l-2 border-gray-100">
+              <div className="space-y-5 pl-6 border-l border-gray-100">
                 {ungroupedProcedures.map((proc, index) => (
                   <ProcedureItem 
                     key={proc.id} 
@@ -295,6 +302,7 @@ export default function ProcedureList({
                     nomenclature={`${phaseNum}.?.${index + 1}`}
                     onDelete={() => handleDeleteProcedure(proc.id)} 
                     user={user}
+                    teamMembers={audit.teamMembers}
                   />
                 ))}
               </div>
