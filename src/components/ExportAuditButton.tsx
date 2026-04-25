@@ -23,9 +23,25 @@ export default function ExportAuditButton({ audit }: { audit: AuditWithRelations
 
   const stripHtml = (html: string | null) => {
     if (!html) return '';
-    // Strip HTML tags and decode basic entities if needed, 
-    // but for now simple tag stripping is enough to prevent raw HTML in Word
-    return html.replace(/<[^>]*>?/gm, '');
+    // 1. Remove HTML tags
+    let text = html.replace(/<[^>]*>?/gm, '');
+    
+    // 2. Decode common HTML entities
+    text = text
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&rsquo;/g, "'")
+      .replace(/&lsquo;/g, "'")
+      .replace(/&ldquo;/g, '"')
+      .replace(/&rdquo;/g, '"')
+      .replace(/&ndash;/g, '-')
+      .replace(/&mdash;/g, '--');
+
+    return text.trim();
   };
 
   const addProcedureDetails = (sections: any[], p: any) => {
