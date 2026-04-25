@@ -21,37 +21,44 @@ import type { AuditWithRelations } from '@/lib/types';
 export default function ExportAuditButton({ audit }: { audit: AuditWithRelations }) {
   const [isExporting, setIsExporting] = useState(false);
 
+  const stripHtml = (html: string | null) => {
+    if (!html) return '';
+    // Strip HTML tags and decode basic entities if needed, 
+    // but for now simple tag stripping is enough to prevent raw HTML in Word
+    return html.replace(/<[^>]*>?/gm, '');
+  };
+
   const addProcedureDetails = (sections: any[], p: any) => {
     sections.push(
       new Paragraph({
         children: [new TextRun({ text: "Purpose:", bold: true })],
       }),
-      new Paragraph({ text: p.purpose || 'N/A', spacing: { after: 100 } }),
+      new Paragraph({ text: stripHtml(p.purpose) || 'N/A', spacing: { after: 100 } }),
       
       new Paragraph({
         children: [new TextRun({ text: "Source:", bold: true })],
       }),
-      new Paragraph({ text: p.source || 'N/A', spacing: { after: 100 } }),
+      new Paragraph({ text: stripHtml(p.source) || 'N/A', spacing: { after: 100 } }),
 
       new Paragraph({
         children: [new TextRun({ text: "Scope:", bold: true })],
       }),
-      new Paragraph({ text: p.scope || 'N/A', spacing: { after: 100 } }),
+      new Paragraph({ text: stripHtml(p.scope) || 'N/A', spacing: { after: 100 } }),
 
       new Paragraph({
         children: [new TextRun({ text: "Methodology:", bold: true })],
       }),
-      new Paragraph({ text: p.methodology || 'N/A', spacing: { after: 100 } }),
+      new Paragraph({ text: stripHtml(p.methodology) || 'N/A', spacing: { after: 100 } }),
 
       new Paragraph({
         children: [new TextRun({ text: "Results:", bold: true })],
       }),
-      new Paragraph({ text: p.results || 'N/A', spacing: { after: 100 } }),
+      new Paragraph({ text: stripHtml(p.results) || 'N/A', spacing: { after: 100 } }),
 
       new Paragraph({
         children: [new TextRun({ text: "Conclusions:", bold: true })],
       }),
-      new Paragraph({ text: p.conclusions || 'N/A', spacing: { after: 200 } })
+      new Paragraph({ text: stripHtml(p.conclusions) || 'N/A', spacing: { after: 200 } })
     );
 
     // Sign-off Table

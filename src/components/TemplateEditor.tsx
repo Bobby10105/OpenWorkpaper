@@ -2,6 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { Save, Plus, Trash2, Loader2, AlertCircle, CheckCircle, Info, ArrowUp, ArrowDown, FolderPlus } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import 'react-quill-new/dist/quill.snow.css';
+
+const ReactQuill = dynamic(async () => {
+  const mod = await import('react-quill-new');
+  return mod.default || mod;
+}, { 
+  ssr: false,
+  loading: () => <div className="w-full h-20 bg-gray-50 animate-pulse rounded-lg border border-gray-100" />
+});
 
 interface TemplateProcedure {
   id?: string;
@@ -36,26 +46,31 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
   const [success, setSuccess] = useState('');
   const [activePhase, setActivePhase] = useState(PHASES[0]);
 
+  const quillModules = {
+    toolbar: [
+      ['bold', 'italic', 'underline'],
+      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+      ['clean']
+    ],
+  };
+
   useEffect(() => {
     fetchTemplate();
   }, [templateId]);
 
   const fetchTemplate = async () => {
     try {
-      console.log('[TemplateEditor] Fetching template:', templateId);
       const res = await fetch(`/api/admin/templates/${templateId}`);
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         throw new Error(errData.details || errData.error || `Server error ${res.status}`);
       }
       const data = await res.json();
-      console.log('[TemplateEditor] Data received:', data);
       setTemplate({
         ...data,
         groups: data.groups || []
       });
     } catch (err: any) {
-      console.error('[TemplateEditor] Fetch error:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -273,13 +288,15 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
                           className="w-full font-bold text-gray-900 outline-none border-none p-0 text-sm focus:ring-0"
                           placeholder="Procedure Title..."
                         />
-                        <textarea
-                          value={p.purpose || ''}
-                          onChange={(e) => updateProcedure(originalIndex, pIndex, 'purpose', e.target.value)}
-                          rows={2}
-                          className="w-full text-xs text-gray-500 outline-none border-none p-0 resize-none focus:ring-0 bg-transparent"
-                          placeholder="Purpose / Standard instructions..."
-                        />
+                        <div className="rich-text-template-wrapper">
+                          <ReactQuill
+                            theme="snow"
+                            value={p.purpose || ''}
+                            onChange={(content) => updateProcedure(originalIndex, pIndex, 'purpose', content)}
+                            modules={quillModules}
+                            placeholder="Purpose / Standard instructions..."
+                          />
+                        </div>
                       </div>
                       <button onClick={() => removeProcedure(originalIndex, pIndex)} className="p-1.5 text-gray-300 hover:text-red-600 opacity-0 group-hover/proc:opacity-100"><Trash2 className="w-4 h-4" /></button>
                     </div>
@@ -306,6 +323,30 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
           )}
         </div>
       </div>
+      <style jsx>{`
+        .rich-text-template-wrapper :global(.ql-toolbar.ql-snow) {
+          border: none;
+          border-bottom: 1px solid #f3f4f6;
+          background-color: #f9fafb;
+          padding: 4px;
+        }
+        .rich-text-template-wrapper :global(.ql-container.ql-snow) {
+          border: none;
+          font-family: inherit;
+        }
+        .rich-text-template-wrapper :global(.ql-editor) {
+          min-height: 80px;
+          font-size: 0.75rem;
+          line-height: 1.5;
+          padding: 8px 0;
+          color: #6b7280;
+        }
+        .rich-text-template-wrapper :global(.ql-editor.ql-blank::before) {
+          left: 0;
+          color: #d1d5db;
+          font-style: normal;
+        }
+      `}</style>
     </div>
   );
 }

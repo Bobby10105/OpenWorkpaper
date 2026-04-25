@@ -1,10 +1,20 @@
 'use client';
-
+/** AMSOS ProcedureItem - Rich Text Sync v2 **/
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { Trash2, Save, Paperclip, File as FileIcon, X, ChevronDown, ChevronRight, MessageSquare, RefreshCw, Send, User, CheckCircle, Clock, Link as LinkIcon, Check, AlertCircle } from 'lucide-react';
 import type { Attachment, ProcedureMessage } from '@prisma/client';
 import type { ProcedureWithRelations } from '@/lib/types';
+import 'react-quill-new/dist/quill.snow.css';
+
+const ReactQuill = dynamic(async () => {
+  const mod = await import('react-quill-new');
+  return mod.default || mod;
+}, { 
+  ssr: false,
+  loading: () => <div className="w-full h-[180px] bg-gray-50 animate-pulse rounded-2xl border border-gray-100" />
+});
 
 export default function ProcedureItem({ 
   procedure, 
@@ -304,6 +314,18 @@ export default function ProcedureItem({
     return data[fieldName as keyof ProcedureWithRelations] !== procedure[fieldName as keyof ProcedureWithRelations];
   };
 
+  const handleRichTextChange = (fieldName: string, content: string) => {
+    setData(prev => ({ ...prev, [fieldName]: content }));
+  };
+
+  const modules = {
+    toolbar: [
+      ['bold', 'italic', 'underline'],
+      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+      ['clean']
+    ],
+  };
+
   const assignedMember = teamMembers.find(m => m.id === data.assignedToId) || procedure.assignedTo;
 
   return (
@@ -418,16 +440,17 @@ export default function ProcedureItem({
                       )}
                     </div>
                   </div>
-                  <textarea
-                    ref={adjustTextAreaHeight}
-                    name={field.name}
-                    value={String(data[field.name as keyof ProcedureWithRelations] || '')}
-                    onChange={handleChange}
-                    onFocus={() => setFocusedField(field.name)}
-                    onBlur={() => setFocusedField(null)}
-                    className="w-full bg-white border border-gray-100 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-gray-900 text-base font-normal leading-relaxed rounded-2xl p-8 placeholder:text-gray-300 min-h-[180px] transition-all shadow-inner"
-                    placeholder={`Type ${field.label.toLowerCase()} here...`}
-                  />
+                  <div className="rich-text-wrapper">
+                    <ReactQuill
+                      theme="snow"
+                      value={String(data[field.name as keyof ProcedureWithRelations] || '')}
+                      onChange={(content) => handleRichTextChange(field.name, content)}
+                      modules={modules}
+                      onFocus={() => setFocusedField(field.name)}
+                      onBlur={() => setFocusedField(null)}
+                      placeholder={`Type ${field.label.toLowerCase()} here...`}
+                    />
+                  </div>
                 </div>
               );
             })}
@@ -709,6 +732,51 @@ export default function ProcedureItem({
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background: #d1d5db;
+        }
+        .rich-text-wrapper :global(.ql-toolbar.ql-snow) {
+          border: 1px solid #f3f4f6;
+          border-top-left-radius: 1rem;
+          border-top-right-radius: 1rem;
+          background-color: #f9fafb;
+          padding: 0.75rem;
+          border-bottom: none;
+          position: sticky;
+          top: -2rem; /* Adjusted for parent padding */
+          z-index: 10;
+        }
+        .rich-text-wrapper :global(.ql-container.ql-snow) {
+          border: 1px solid #f3f4f6;
+          border-bottom-left-radius: 1rem;
+          border-bottom-right-radius: 1rem;
+          background-color: white;
+          min-height: 180px;
+          font-family: inherit;
+        }
+        .rich-text-wrapper :global(.ql-editor) {
+          min-height: 180px;
+          font-size: 1rem;
+          line-height: 1.625;
+          padding: 1.5rem 2rem;
+          color: #111827;
+        }
+        .rich-text-wrapper :global(.ql-editor.ql-blank::before) {
+          left: 2rem;
+          color: #d1d5db;
+          font-style: normal;
+        }
+        .rich-text-wrapper :global(.ql-snow .ql-stroke) {
+          stroke: #6b7280;
+        }
+        .rich-text-wrapper :global(.ql-snow .ql-fill) {
+          fill: #6b7280;
+        }
+        .rich-text-wrapper :global(.ql-snow.ql-toolbar button:hover .ql-stroke),
+        .rich-text-wrapper :global(.ql-snow.ql-toolbar button.ql-active .ql-stroke) {
+          stroke: #2563eb;
+        }
+        .rich-text-wrapper :global(.ql-snow.ql-toolbar button:hover .ql-fill),
+        .rich-text-wrapper :global(.ql-snow.ql-toolbar button.ql-active .ql-fill) {
+          fill: #2563eb;
         }
       `}</style>
     </div>
