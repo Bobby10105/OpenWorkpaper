@@ -137,7 +137,17 @@ This is the professional standard for deploying AMSOS. It ensures a consistent e
 
 ---
 
-### 🛠 Method 2: Manual Installation (Node.js)
+### 🚀 Method 2: Docker Quickstart (Development & Evaluation)
+Use this method for local evaluation or if you are a developer looking to contribute. This uses our development configuration with hot-reloading and debug logging enabled.
+
+```bash
+docker compose up --build
+```
+*Note: This command forces a fresh build of the container, synchronizes the database, and seeds initial data. It is optimized for a seamless developer experience.*
+
+---
+
+### 🛠 Method 3: Manual Installation (Node.js)
 If you prefer to run AMSOS directly on your host machine or have a custom Windows Server environment without Docker.
 
 #### 1. Prerequisites
