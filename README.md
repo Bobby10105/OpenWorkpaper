@@ -100,6 +100,48 @@ AMSOS was built with the specific needs of **CPA Firms** and **Internal Audit De
 *   **Audit Logging**: Every login and major record change is tracked to ensure accountability.
 *   **No Vendor Lock-in**: As an open-source tool, you have full access to your data and the source code, protecting you from future fee increases or platform shutdowns.
 
+## 🔒 Production Configuration
+
+For production deployments, it is critical to secure the application with HTTPS and properly configure Single Sign-On (SSO) if required.
+
+### 🌐 HTTPS & Reverse Proxy (Recommended)
+AMSOS provides a streamlined way to deploy with HTTPS using a built-in Nginx reverse proxy configuration. This method handles SSL/TLS termination and automatically redirects insecure HTTP traffic to HTTPS.
+
+#### 1. Prerequisites
+Before deploying with HTTPS, you must:
+*   Have a domain name pointing to your server.
+*   Obtain SSL certificates (e.g., via Let's Encrypt).
+*   Create a `certs/` directory in the project root and place your certificate files there:
+    *   `certs/fullchain.pem`
+    *   `certs/privkey.pem`
+    *   **Note**: Ensure the files are readable by the Docker container (e.g., `chmod 644 certs/*.pem`).
+
+#### 2. Deploy with HTTPS
+Use the secure Docker Compose configuration:
+```bash
+docker compose -f docker-compose.secure.yml up -d --build
+```
+This command starts both the AMSOS application and an Nginx container. The application will be accessible only via HTTPS on port 443.
+
+---
+
+### 🔑 SSO (OIDC) Configuration
+AMSOS supports any OpenID Connect (OIDC) compliant Identity Provider (IDP) such as Microsoft Entra ID (Azure AD), Okta, or Keycloak.
+
+To enable SSO, configure the following environment variables in your `docker-compose.secure.yml` (or `docker-compose.prod.yml`) file:
+
+| Variable | Description | Example |
+| :--- | :--- | :--- |
+| `NEXT_PUBLIC_BASE_URL` | The external URL of your AMSOS instance (used for redirect URIs). | `https://amsos.your-agency.gov` |
+| `SSO_ISSUER_URL` | The base URL of your OIDC Identity Provider. | `https://login.microsoftonline.com/tenant-id/v2.0` |
+| `SSO_CLIENT_ID` | The Client ID assigned to AMSOS by your IDP. | `00000000-0000-0000-0000-000000000000` |
+| `SSO_CLIENT_SECRET` | The Client Secret assigned to AMSOS by your IDP. | `your-secure-client-secret` |
+
+> **Note**: The current implementation assumes standard OIDC paths (`/auth` for authorization and `/token` for token exchange) relative to the `SSO_ISSUER_URL`. If your provider uses different paths (e.g., `/authorize`), you may need to adjust the endpoints in `src/app/api/auth/sso/login/route.ts`.
+
+**Redirect URI**: In your IDP configuration, you must register the following callback URL:
+`https://amsos.your-agency.gov/api/auth/sso/callback`
+
 ## 💾 Backup & Disaster Recovery
 
 AMSOS provides robust data portability and recovery options:
@@ -122,18 +164,27 @@ AMSOS is designed for complete infrastructure-agnostic flexibility. Whether you 
 To use the Docker methods below, you must have [Docker](https://www.docker.com/) installed on your server or local machine.
 
 ### 🐳 Method 1: Docker Compose (Recommended for Business & Cloud)
-This is the professional standard for deploying AMSOS. It ensures a consistent environment, handles data persistence automatically, and is ready for your "Private Cloud" (AWS, Azure, GCP).
+This is the professional standard for deploying AMSOS. Choose between a standard deployment (Port 3000) or a secure deployment (Port 443 with Nginx).
 
 1.  **Clone & Configure**:
     ```bash
     git clone https://github.com/Bobby10105/AMSOS.git
     cd AMSOS
     ```
-2.  **Edit Security**: Open `docker-compose.prod.yml` and replace `change-me-to-a-secure-random-string` with a secure random key for `JWT_SECRET`.
+2.  **Edit Security**: Open your chosen compose file and replace `change-me-to-a-secure-random-string` with a secure random key for `JWT_SECRET`.
 3.  **Launch**:
-    ```bash
-    docker compose -f docker-compose.prod.yml up -d --build
-    ```
+
+    *   **Option A: Standard (HTTP - Port 3000)**
+        *Best for local testing or if you already have an external load balancer.*
+        ```bash
+        docker compose -f docker-compose.prod.yml up -d --build
+        ```
+
+    *   **Option B: Secure (HTTPS - Port 443)**
+        *Best for direct production exposure. Requires SSL certificates in the `certs/` folder (see [Production Configuration](#-production-configuration)).*
+        ```bash
+        docker compose -f docker-compose.secure.yml up -d --build
+        ```
 
 ---
 

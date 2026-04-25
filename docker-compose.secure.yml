@@ -1,0 +1,33 @@
+services:
+  app:
+    build: .
+    # Note: No ports mapping here. App is only accessible via the 'nginx' service.
+    volumes:
+      - amsos-uploads:/app/public/uploads
+      - amsos-db:/app/prisma/data
+    environment:
+      # MANDATORY: Change this to a random secure string for production
+      - JWT_SECRET=change-me-to-a-secure-random-string
+      - DATABASE_URL=file:/app/prisma/data/dev.db
+      - NODE_ENV=production
+      # - SSO_CLIENT_ID=your-client-id
+      # - SSO_CLIENT_SECRET=your-client-secret
+      # - SSO_ISSUER_URL=https://idp.agency.gov
+      # - NEXT_PUBLIC_BASE_URL=https://your-app-url.gov
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      - app
+    restart: unless-stopped
+
+volumes:
+  amsos-uploads:
+  amsos-db:
