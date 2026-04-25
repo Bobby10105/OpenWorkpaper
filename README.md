@@ -108,7 +108,7 @@ For production deployments, it is critical to secure the application with HTTPS 
 ### 🌐 HTTPS & Reverse Proxy (Recommended)
 AMSOS provides a streamlined way to deploy with HTTPS using a built-in Nginx reverse proxy configuration. This method handles SSL/TLS termination and automatically redirects insecure HTTP traffic to HTTPS.
 
-#### 1. Prerequisites
+#### Prerequisites
 Before deploying with HTTPS, you must:
 *   Have a domain name pointing to your server.
 *   Obtain SSL certificates (e.g., via Let's Encrypt).
@@ -117,7 +117,7 @@ Before deploying with HTTPS, you must:
     *   `certs/privkey.pem`
     *   **Note**: Ensure the files are readable by the Docker container (e.g., `chmod 644 certs/*.pem`).
 
-#### 2. Deploy with HTTPS
+#### Deploy with HTTPS
 Use the secure Docker Compose configuration:
 ```bash
 docker compose -f docker-compose.secure.yml up -d --build
