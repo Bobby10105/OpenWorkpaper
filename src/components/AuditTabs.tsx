@@ -4,10 +4,11 @@ import { useState } from 'react';
 import ProcedureList from './ProcedureList';
 import MilestonesTab from './MilestonesTab';
 import TeamMembersTab from './TeamMembersTab';
+import PBCRequestsTab from './PBCRequestsTab';
 import ProcedureMiniMap from './ProcedureMiniMap';
 import type { AuditWithRelations } from '@/lib/types';
 
-const PHASES = ['Planning', 'Fieldwork', 'Reporting', 'Milestones', 'Team Members'];
+const PHASES = ['Planning', 'Fieldwork', 'Reporting', 'PBC Requests', 'Milestones', 'Team Members'];
 const PHASE_NUMBERS: Record<string, string> = {
   'Planning': 'Phase 1',
   'Fieldwork': 'Phase 2',
@@ -71,7 +72,7 @@ export default function AuditTabs({
               <span className="w-1.5 h-7 bg-blue-600 rounded-full mr-4 shadow-sm" />
               {PHASE_NUMBERS[activePhase] ? `${PHASE_NUMBERS[activePhase]}: ` : ''}
               <span className="text-gray-900">{activePhase}</span>
-              <span className="text-gray-400 ml-2 font-medium">{activePhase === 'Milestones' || activePhase === 'Team Members' ? '' : ' Phase'}</span>
+              <span className="text-gray-400 ml-2 font-medium">{activePhase === 'Milestones' || activePhase === 'Team Members' || activePhase === 'PBC Requests' ? '' : ' Phase'}</span>
             </h2>
           </div>
 
@@ -80,6 +81,8 @@ export default function AuditTabs({
               <MilestonesTab audit={audit} />
             ) : activePhase === 'Team Members' ? (
               <TeamMembersTab auditId={audit.id} initialTeamMembers={audit.teamMembers} user={user} />
+            ) : activePhase === 'PBC Requests' ? (
+              <PBCRequestsTab audit={audit} />
             ) : (
               <ProcedureList 
                 key={activePhase}

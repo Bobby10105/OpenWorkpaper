@@ -18,17 +18,27 @@ export default async function AuditDetail(props: { params: Promise<{ id: string 
   const userRole = user.role || 'User';
 
   try {
-    // 1. Fetch Audit via standard Prisma
-    const audit = await prisma.audit.findUnique({
-      where: { id: params.id },
-      include: {
-        teamMembers: true,
-      }
-    });
-
-    if (!audit) {
+    // 1. Fetch Audit via RAW SQL to ensure we get new fields even if client is stale
+    const audits: any[] = await prisma.$queryRawUnsafe(
+      `SELECT * FROM Audit WHERE id = ? LIMIT 1`,
+      params.id
+    );
+    
+    if (!audits || audits.length === 0) {
       notFound();
     }
+    
+    const auditBase = audits[0];
+    
+    // Fetch team members separately since we can't 'include' in raw queries easily
+    const teamMembers = await prisma.teamMember.findMany({
+      where: { auditId: auditBase.id }
+    });
+
+    const audit = {
+      ...auditBase,
+      teamMembers
+    };
 
     // Access Control: Only allow team members or Business Operations
     const isGlobalManager = userRole === 'Business Operations';

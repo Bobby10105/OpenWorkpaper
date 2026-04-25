@@ -41,6 +41,8 @@ export async function POST(req: Request) {
     const cleanAuditId = (auditId === 'null' || auditId === 'undefined' || !auditId) ? undefined : auditId;
     const cleanType = type?.toLowerCase();
 
+    console.log('[API/Upload] Processing with types:', { cleanAuditId, cleanType, cleanProcedureId });
+
     if (!cleanProcedureId && !cleanAuditId) {
       console.error('[API/Upload] Missing IDs');
       return NextResponse.json({ error: 'Either procedureId or auditId is required' }, { status: 400 });
@@ -57,23 +59,24 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Failed to read uploaded file', details: msg }, { status: 500 });
     }
     
-    const uploadDir = path.join(process.cwd(), 'public/uploads');
-    try {
-      await fs.mkdir(uploadDir, { recursive: true });
-    } catch (mkdirErr: unknown) {
-      const msg = mkdirErr instanceof Error ? mkdirErr.message : 'Unknown error';
-      console.error('[API/Upload] Directory creation error:', msg);
-      return NextResponse.json({ error: 'Failed to prepare upload directory', details: msg }, { status: 500 });
-    }
-
     const uniqueSuffix = crypto.randomUUID();
     const safeFilename = filenameAttr.replace(/[^a-zA-Z0-9.-]/g, '_');
     const diskFilename = `${uniqueSuffix}-${safeFilename}`;
+    const uploadDir = path.join(process.cwd(), 'public/uploads');
     const filepath = path.join(uploadDir, diskFilename);
 
+    console.log('[API/Upload] Attempting to save file to:', filepath);
+    console.log('[API/Upload] Current working directory:', process.cwd());
+
     try {
+      await fs.mkdir(uploadDir, { recursive: true });
+      console.log('[API/Upload] Directory ensured:', uploadDir);
+      
       await fs.writeFile(filepath, buffer);
-      console.log('[API/Upload] File saved to:', filepath);
+      
+      // Verify file exists immediately after write
+      const stats = await fs.stat(filepath);
+      console.log('[API/Upload] File write verified. Size:', stats.size, 'bytes');
     } catch (writeErr: unknown) {
       const msg = writeErr instanceof Error ? writeErr.message : 'Unknown error';
       console.error('[API/Upload] File write failure:', msg);
@@ -131,6 +134,76 @@ export async function POST(req: Request) {
         const msg = dbError instanceof Error ? dbError.message : 'Unknown database error';
         console.error('[API/Upload] DB error:', msg);
         return NextResponse.json({ error: 'Database update failed', details: msg }, { status: 500 });
+      }
+    }
+
+    // PBC ATTACHMENT PATH
+    if (cleanAuditId && cleanType === 'pbc') {
+      console.log('[API/Upload] Updating PBC for audit (RAW FALLBACK):', cleanAuditId);
+      try {
+        // 1. Find audit using RAW SQL to bypass Prisma Client validation
+        const audits: any[] = await prisma.$queryRawUnsafe(
+          `SELECT id, pbcAttachmentUrl, title FROM Audit WHERE id = ? LIMIT 1`,
+          cleanAuditId
+        );
+        const audit = audits[0];
+
+        if (!audit) {
+          console.error('[API/Upload] Audit not found:', cleanAuditId);
+          return NextResponse.json({ error: 'Audit not found in database' }, { status: 404 });
+        }
+
+        console.log('[API/Upload] Current audit PBC URL:', audit.pbcAttachmentUrl);
+
+        // Cleanup old file
+        if (audit.pbcAttachmentUrl) {
+          const oldPath = path.join(process.cwd(), 'public', audit.pbcAttachmentUrl);
+          try {
+            await fs.unlink(oldPath);
+            console.log('[API/Upload] Cleaned up old file:', oldPath);
+          } catch (e) {
+            console.warn('[API/Upload] Could not delete old PBC file:', e);
+          }
+        }
+
+        console.log('[API/Upload] Updating database via RAW SQL...');
+        await prisma.$executeRawUnsafe(
+          `UPDATE Audit SET pbcAttachmentUrl = ?, pbcAttachmentName = ? WHERE id = ?`,
+          `/uploads/${diskFilename}`,
+          filenameAttr,
+          cleanAuditId
+        );
+
+        console.log('[API/Upload] Database update successful');
+
+        try {
+          await prisma.auditLog.create({
+            data: {
+              action: 'UPDATE',
+              entityType: 'AUDIT',
+              entityId: cleanAuditId,
+              details: `Uploaded PBC Requests spreadsheet: ${filenameAttr}`,
+              performedBy: session?.user?.username || 'System',
+            }
+          });
+        } catch (logError) {
+          console.error('[API/Upload] Log creation failed:', logError);
+        }
+
+        console.log('[API/Upload] PBC success');
+        return NextResponse.json({
+          ...audit,
+          pbcAttachmentUrl: `/uploads/${diskFilename}`,
+          pbcAttachmentName: filenameAttr
+        });
+      } catch (dbError: unknown) {
+        const msg = dbError instanceof Error ? dbError.message : 'Unknown database error';
+        console.error('[API/Upload] DB raw update error details:', dbError);
+        return NextResponse.json({ 
+          error: 'Database update failed', 
+          message: msg,
+          details: dbError
+        }, { status: 500 });
       }
     }
 
