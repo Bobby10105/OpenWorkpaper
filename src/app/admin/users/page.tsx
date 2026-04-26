@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { UserPlus, Trash2, Shield, Loader2, AlertCircle, Users, FileUp, Download, KeyRound, User as UserIcon, Mail, Briefcase, ChevronDown, X } from 'lucide-react';
+import { UserPlus, Trash2, Shield, Loader2, AlertCircle, Users, FileUp, Download, KeyRound, User as UserIcon, Mail, Briefcase, ChevronDown, X, Edit2, Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Papa from 'papaparse';
 
@@ -22,8 +22,20 @@ export default function UserManagementPage() {
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState({ username: '', password: '', role: 'Auditor' });
   const [submitting, setSubmitting] = useState(false);
+  const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
+  const [updatingRoleId, setUpdatingRoleId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+
+  const ROLES = [
+    'Auditor', 
+    'Specialist', 
+    'Audit Manager', 
+    'Audit Director', 
+    'Audit Partner', 
+    'Business Operations', 
+    'IT Administrator'
+  ];
 
   useEffect(() => {
     fetchSessionAndUsers();
@@ -81,6 +93,34 @@ export default function UserManagementPage() {
       console.error('User creation error:', err);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleUpdateRole = async (userId: string, newRole: string) => {
+    if (!isAdmin) return;
+    setUpdatingRoleId(userId);
+    setError('');
+    setSuccess('');
+    try {
+      const res = await fetch(`/api/users/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: newRole }),
+      });
+      
+      if (res.ok) {
+        const updatedUser = await res.json();
+        setUsers(users.map(u => u.id === userId ? updatedUser : u));
+        setSuccess(`Role updated for ${updatedUser.username}`);
+        setEditingRoleId(null);
+      } else {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to update role');
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setUpdatingRoleId(null);
     }
   };
 
@@ -286,13 +326,42 @@ export default function UserManagementPage() {
                     </div>
                   </td>
                   <td className="px-8 py-6 whitespace-nowrap">
-                    <span className={`inline-flex px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                      user.role === 'IT Administrator' ? 'bg-purple-50 text-purple-600 border-purple-200' : 
-                      user.role === 'Business Operations' ? 'bg-indigo-50 text-indigo-600 border-indigo-200' :
-                      'bg-blue-50 text-blue-600 border-blue-200'
-                    }`}>
-                      {user.role}
-                    </span>
+                    {isAdmin && editingRoleId === user.id ? (
+                      <div className="relative inline-block min-w-[160px]">
+                        <select
+                          autoFocus
+                          value={user.role}
+                          disabled={updatingRoleId === user.id}
+                          onChange={(e) => handleUpdateRole(user.id, e.target.value)}
+                          onBlur={() => !updatingRoleId && setEditingRoleId(null)}
+                          className="w-full pl-3 pr-8 py-1.5 bg-white border border-blue-300 rounded-lg text-[10px] font-bold uppercase tracking-wider text-blue-600 focus:ring-2 focus:ring-blue-500/20 outline-none appearance-none cursor-pointer"
+                        >
+                          {ROLES.map(role => (
+                            <option key={role} value={role}>{role}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-blue-400 pointer-events-none" />
+                        {updatingRoleId === user.id && (
+                          <div className="absolute right-8 top-1/2 -translate-y-1/2">
+                            <Loader2 className="w-3 h-3 animate-spin text-blue-500" />
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => isAdmin && setEditingRoleId(user.id)}
+                        className={`group/role flex items-center space-x-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all ${
+                          user.role === 'IT Administrator' ? 'bg-purple-50 text-purple-600 border-purple-200' : 
+                          user.role === 'Business Operations' ? 'bg-indigo-50 text-indigo-600 border-indigo-200' :
+                          'bg-blue-50 text-blue-600 border-blue-200'
+                        } ${isAdmin ? 'hover:border-blue-400 hover:pr-2' : ''}`}
+                      >
+                        <span>{user.role}</span>
+                        {isAdmin && (
+                          <Edit2 className="w-2.5 h-2.5 opacity-0 group-hover/role:opacity-100 transition-opacity" />
+                        )}
+                      </button>
+                    )}
                   </td>
                   <td className="px-8 py-6 whitespace-nowrap text-center">
                     {user.mustChangePassword ? (
