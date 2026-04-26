@@ -8,6 +8,7 @@ import { format, addDays, formatDistanceToNow } from 'date-fns';
 import { getSession } from '@/lib/auth';
 import RestoreAuditButton from '@/components/RestoreAuditButton';
 import DashboardStats from '@/components/DashboardStats';
+import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
@@ -79,6 +80,11 @@ export default async function DashboardPage() {
   const user = session?.user;
 
   if (!user) return <div className="p-20 text-center font-bold">Session required.</div>;
+
+  // IT Administrators don't use the audit dashboard, they use Logs and User Directory
+  if (user.role === 'IT Administrator') {
+    redirect('/admin/users');
+  }
 
   const isGlobalManager = user.role === 'Business Operations';
   const userMatch = user.username;

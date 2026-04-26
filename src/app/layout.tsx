@@ -42,13 +42,15 @@ export default async function RootLayout({
 
               {user && (
                 <nav className="hidden lg:flex items-center space-x-1">
-                  <Link
-                    href="/"
-                    className="flex items-center space-x-2 text-blue-100 hover:text-white transition-all text-sm font-medium hover:bg-white/10 px-4 py-2 rounded-xl active:scale-95"
-                  >
-                    <Home className="h-4 w-4" />
-                    <span>Dashboard</span>
-                  </Link>
+                  {user.role !== 'IT Administrator' && (
+                    <Link
+                      href="/"
+                      className="flex items-center space-x-2 text-blue-100 hover:text-white transition-all text-sm font-medium hover:bg-white/10 px-4 py-2 rounded-xl active:scale-95"
+                    >
+                      <Home className="h-4 w-4" />
+                      <span>Dashboard</span>
+                    </Link>
+                  )}
                   {(user.role === 'IT Administrator' || user.role === 'Business Operations') && (
                     <Link
                       href="/audit-logs"
