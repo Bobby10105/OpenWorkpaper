@@ -34,7 +34,8 @@ export default function TeamMembersTab({
   const [error, setError] = useState('');
   const router = useRouter();
 
-  const isBusinessOps = user?.role === 'Business Operations';
+  // Relaxed permissions: Any role except Specialist can manage the team
+  const canManageTeam = user && user.role !== 'Specialist';
 
   // Fetch system users on mount
   useEffect(() => {
@@ -60,7 +61,7 @@ export default function TeamMembersTab({
   }, [initialTeamMembers]);
 
   const handleAddMember = async () => {
-    if (!isBusinessOps) return;
+    if (!canManageTeam) return;
     setCreating(true);
     setError('');
     try {
@@ -87,12 +88,12 @@ export default function TeamMembersTab({
   };
 
   const handleUpdateMember = (id: string, updates: Partial<TeamMember>) => {
-    if (!isBusinessOps) return;
+    if (!canManageTeam) return;
     setTeamMembers(prev => prev.map(m => m.id === id ? { ...m, ...updates } : m));
   };
 
   const handleSaveMember = async (memberId: string, manualMember?: TeamMember) => {
-    if (!isBusinessOps) return;
+    if (!canManageTeam) return;
     const member = manualMember || teamMembers.find(m => m.id === memberId);
     if (!member) return;
 
@@ -113,7 +114,7 @@ export default function TeamMembersTab({
   };
 
   const handleDeleteMember = async (id: string, name: string) => {
-    if (!isBusinessOps) return;
+    if (!canManageTeam) return;
     if (!confirm(`Are you sure you want to remove "${name || 'this member'}"?`)) return;
     setError('');
     try {
@@ -133,7 +134,7 @@ export default function TeamMembersTab({
   };
 
   const handleUserSelect = (memberId: string, username: string) => {
-    if (!isBusinessOps) return;
+    if (!canManageTeam) return;
     const selectedUser = systemUsers.find(u => u.username === username);
     if (!selectedUser) {
       handleUpdateMember(memberId, { email: username });
@@ -162,7 +163,7 @@ export default function TeamMembersTab({
           <h3 className="text-xl font-bold text-gray-900 tracking-tight">Audit Engagement Team</h3>
           <p className="text-gray-500 text-sm mt-1">Manage personnel access and responsibility levels.</p>
         </div>
-        {isBusinessOps && (
+        {canManageTeam && (
           <button
             onClick={handleAddMember}
             disabled={creating}
@@ -191,7 +192,7 @@ export default function TeamMembersTab({
             </div>
             <p className="text-gray-900 font-bold text-xl tracking-tight">Team Unassigned</p>
             <p className="text-gray-500 text-sm mt-2 max-w-xs mx-auto leading-relaxed">
-              {isBusinessOps 
+              {canManageTeam 
                 ? 'Building a team is the first step toward collaborative execution. Provision a seat to begin.' 
                 : 'Team members will appear here once the engagement manager assigns them.'}
             </p>
@@ -202,9 +203,9 @@ export default function TeamMembersTab({
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                 <div className="flex flex-col">
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-3 flex items-center px-1">
-                    <Mail className="w-3.5 h-3.5 mr-2 text-blue-500" /> {isBusinessOps ? 'Identity Mapping' : 'System ID'}
+                    <Mail className="w-3.5 h-3.5 mr-2 text-blue-500" /> {canManageTeam ? 'Identity Mapping' : 'System ID'}
                   </label>
-                  {isBusinessOps ? (
+                  {canManageTeam ? (
                     <div className="relative group/select">
                       <select
                         value={member.email || ''}
@@ -234,7 +235,7 @@ export default function TeamMembersTab({
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-3 flex items-center px-1">
                     <User className="w-3.5 h-3.5 mr-2 text-blue-500" /> Engagement Name
                   </label>
-                  {isBusinessOps ? (
+                  {canManageTeam ? (
                     <input
                       value={member.name || ''}
                       onChange={(e) => handleUpdateMember(member.id, { name: e.target.value })}
@@ -254,7 +255,7 @@ export default function TeamMembersTab({
                     <Briefcase className="w-3.5 h-3.5 mr-2 text-blue-500" /> Functional Responsibility
                   </label>
                   <div className="flex space-x-3">
-                    {isBusinessOps ? (
+                    {canManageTeam ? (
                       <div className="relative flex-1 group/select">
                         <select
                           value={member.role || ''}
@@ -288,7 +289,7 @@ export default function TeamMembersTab({
                       </div>
                     )}
                     
-                    {isBusinessOps && (
+                    {canManageTeam && (
                       <button
                         onClick={() => handleDeleteMember(member.id, member.name)}
                         className="p-3.5 text-gray-400 hover:text-red-600 bg-gray-50 hover:bg-red-50 rounded-2xl transition-all active:scale-90 border border-transparent hover:border-red-200 shadow-sm"

@@ -5,20 +5,18 @@ import { getSession } from '@/lib/auth';
 export async function PUT(req: Request, props: { params: Promise<{ id: string }> }) {
   try {
     const session = await getSession();
-    if (!session) {
+    if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Role-based access: Only Business Operations can manage team assignments
-    if (session.user.role !== 'Business Operations') {
-      return NextResponse.json({ error: 'Forbidden: Only Business Operations can manage team members' }, { status: 403 });
+    // Role-based access: Any role except Specialist can manage team assignments
+    if (session.user.role === 'Specialist') {
+      return NextResponse.json({ error: 'Forbidden: Specialists cannot manage team members' }, { status: 403 });
     }
 
     const params = await props.params;
     const data = await req.json();
 
-    // If userId was explicitly provided (from the dropdown), use it.
-    // Otherwise, try to find a user by email/name as a fallback.
     let userId = data.userId;
     
     if (!userId && (data.email || data.name)) {
@@ -52,13 +50,13 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
 export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
   try {
     const session = await getSession();
-    if (!session) {
+    if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Role-based access: Only Business Operations can manage team assignments
-    if (session.user.role !== 'Business Operations') {
-      return NextResponse.json({ error: 'Forbidden: Only Business Operations can manage team members' }, { status: 403 });
+    // Role-based access: Any role except Specialist can manage team assignments
+    if (session.user.role === 'Specialist') {
+      return NextResponse.json({ error: 'Forbidden: Specialists cannot manage team members' }, { status: 403 });
     }
 
     const params = await props.params;
@@ -76,7 +74,7 @@ export async function DELETE(req: Request, props: { params: Promise<{ id: string
             entityType: 'TEAM_MEMBER',
             entityId: params.id,
             details: `Removed team member: ${teamMember.name} from audit: ${teamMember.audit?.title || teamMember.auditId}`,
-            performedBy: session?.user?.username || 'System',
+            performedBy: session.user.username,
           }
         });
       } catch (logErr) {}

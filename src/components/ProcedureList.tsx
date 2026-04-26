@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Plus, BookOpen, Trash2, Loader2, FolderPlus, ChevronRight, ChevronDown, Edit3 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ProcedureItem from './ProcedureItem';
@@ -27,16 +27,15 @@ export default function ProcedureList({
   audit: AuditWithRelations,
   user?: { username: string; role: string; id: string }
 }) {
-  const [groups, setGroups] = useState<ProcedureGroupWithRelations[]>([]);
-  const [ungroupedProcedures, setUngroupedProcedures] = useState<ProcedureWithRelations[]>([]);
+  const router = useRouter();
   const [creating, setCreating] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [isAddingGroup, setIsAddingGroup] = useState(false);
   const [newGroupTitle, setNewGroupTitle] = useState('');
-  const router = useRouter();
 
-  useEffect(() => {
-    // Filter groups and procedures for this specific phase
+  // Use useMemo to calculate groups/procedures immediately during render
+  // instead of waiting for a useEffect. This fixes the 'flicker' glitch.
+  const { groups, ungroupedProcedures } = useMemo(() => {
     const phaseGroups = audit.procedureGroups
       .filter(g => g.phase === phase)
       .map(group => ({
@@ -57,9 +56,8 @@ export default function ProcedureList({
         }
         return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       });
-    
-    setGroups(phaseGroups);
-    setUngroupedProcedures(phaseUngrouped);
+
+    return { groups: phaseGroups, ungroupedProcedures: phaseUngrouped };
   }, [audit, phase]);
 
   const phaseNum = PHASE_MAP[phase] || 0;
@@ -108,22 +106,43 @@ export default function ProcedureList({
   };
 
   const handleAddProcedure = async (groupId?: string) => {
+    console.log('[ProcedureList] handleAddProcedure called. auditId:', auditId, 'phase:', phase);
     setCreating(true);
     try {
+      const payload = {
+        auditId,
+        groupId: groupId || null,
+        phase,
+        title: 'New Procedure',
+        purpose: '',
+      };
+
       const res = await fetch('/api/procedures', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          auditId,
-          groupId,
-          phase,
-          title: 'New Procedure',
-          purpose: '',
-        }),
+        body: JSON.stringify(payload),
       });
+
+      console.log('[ProcedureList] HTTP Status:', res.status, res.statusText);
+      
+      const rawText = await res.text();
+      console.log('[ProcedureList] Server Response Body:', rawText);
+
       if (res.ok) {
-        router.refresh();
+        try {
+          const data = JSON.parse(rawText);
+          console.log('[ProcedureList] SUCCESS:', data);
+          router.refresh();
+        } catch (e) {
+          console.warn('[ProcedureList] SUCCESS but could not parse response JSON');
+          router.refresh();
+        }
+      } else {
+        alert(`Error (Status ${res.status}): ${rawText || res.statusText}`);
       }
+    } catch (e: any) {
+      console.error('[ProcedureList] Critical Fetch Error:', e);
+      alert(`Network error: ${e.message}`);
     } finally {
       setCreating(false);
     }
@@ -162,7 +181,7 @@ export default function ProcedureList({
   };
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-10 animate-fade-in">
       {/* Action Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
         <div className="flex flex-wrap items-center gap-3">

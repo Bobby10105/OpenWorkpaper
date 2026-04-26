@@ -59,8 +59,8 @@ export async function middleware(request: NextRequest) {
 
     // Check if user must change password
     if (user?.mustChangePassword && 
+        !pathname.startsWith('/api/') &&
         pathname !== '/settings/password' && 
-        pathname !== '/api/user/change-password' &&
         pathname !== '/api/logout') {
       const passwordUrl = new URL('/settings/password', request.url);
       const redirectResponse = NextResponse.redirect(passwordUrl);

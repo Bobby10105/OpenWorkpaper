@@ -5,13 +5,13 @@ import { getSession } from '@/lib/auth';
 export async function POST(req: Request) {
   try {
     const session = await getSession();
-    if (!session) {
+    if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Role-based access: Only Business Operations can manage team assignments
-    if (session.user.role !== 'Business Operations') {
-      return NextResponse.json({ error: 'Forbidden: Only Business Operations can manage team members' }, { status: 403 });
+    // Role-based access: Any role except Specialist can manage team assignments
+    if (session.user.role === 'Specialist') {
+      return NextResponse.json({ error: 'Forbidden: Specialists cannot manage team members' }, { status: 403 });
     }
 
     let data;

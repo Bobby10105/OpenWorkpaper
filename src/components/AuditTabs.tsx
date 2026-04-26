@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import { useSearchParams, usePathname } from 'next/navigation';
 import ProcedureList from './ProcedureList';
 import MilestonesTab from './MilestonesTab';
 import TeamMembersTab from './TeamMembersTab';
@@ -30,27 +30,35 @@ export default function AuditTabs({
   user?: { username: string; role: string; id: string } 
 }) {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const pathname = usePathname();
   
   // Initialize state from URL param or default to Planning
   const initialPhase = searchParams.get('phase') || PHASES[0];
   const [activePhase, setActivePhase] = useState(initialPhase);
+  const [navigatorMinimized, setNavigatorMinimized] = useState(true);
 
-  // Sync state if URL changes (e.g., back button)
+  // Handle URL changes (browser back/forward)
   useEffect(() => {
-    const phaseParam = searchParams.get('phase');
-    if (phaseParam && phaseParam !== activePhase && PHASES.includes(phaseParam)) {
-      setActivePhase(phaseParam);
-    }
-  }, [searchParams, activePhase]);
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const phase = params.get('phase');
+      if (phase && PHASES.includes(phase)) {
+        setActivePhase(phase);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   const handlePhaseChange = (phase: string) => {
+    if (phase === activePhase) return;
     setActivePhase(phase);
-    // Update URL without a full page reload
-    const params = new URLSearchParams(searchParams.toString());
+    
+    // Update URL silently without triggering Next.js router re-fetch
+    const params = new URLSearchParams(window.location.search);
     params.set('phase', phase);
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    const newUrl = `${pathname}?${params.toString()}`;
+    window.history.pushState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
   };
 
   const isProcedurePhase = activePhase === 'Planning' || activePhase === 'Fieldwork' || activePhase === 'Reporting';
@@ -66,7 +74,7 @@ export default function AuditTabs({
               key={phase}
               onClick={() => handlePhaseChange(phase)}
               className={`
-                flex-1 whitespace-nowrap py-3 px-6 rounded-xl font-bold text-[11px] uppercase tracking-wider transition-all duration-300 active:scale-[0.98]
+                flex-1 whitespace-nowrap py-3 px-6 rounded-xl font-bold text-[11px] uppercase tracking-wider transition-all duration-200 active:scale-[0.98]
                 ${activePhase === phase
                   ? 'bg-blue-600 text-white shadow-lg shadow-blue-100 border border-blue-500'
                   : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
@@ -80,16 +88,18 @@ export default function AuditTabs({
       </div>
 
       <div className="flex flex-col xl:flex-row gap-8 items-start">
-        {/* Left Side: Mini Map (only for procedure phases) */}
-        {isProcedurePhase && currentPhaseGroups.length > 0 && (
-          <ProcedureMiniMap 
-            procedureGroups={currentPhaseGroups} 
-            phaseNum={phaseNum}
-          />
-        )}
+        {/* Left Side: Mini Map - Constant container to prevent layout shifting */}
+        <div className={`transition-all duration-300 ease-in-out ${isProcedurePhase && currentPhaseGroups.length > 0 ? 'xl:w-auto opacity-100' : 'xl:w-0 opacity-0 pointer-events-none'}`}>
+           <ProcedureMiniMap 
+              procedureGroups={currentPhaseGroups} 
+              phaseNum={phaseNum}
+              isMinimized={navigatorMinimized}
+              setIsMinimized={setNavigatorMinimized}
+            />
+        </div>
 
         {/* Right Side: Main Content */}
-        <div className="flex-1 bg-white rounded-[2.5rem] border border-gray-200 p-10 min-h-[600px] shadow-2xl">
+        <div className="flex-1 bg-white rounded-[2.5rem] border border-gray-200 p-10 min-h-[700px] shadow-2xl overflow-hidden">
           <div className="flex justify-between items-center mb-10 border-b border-gray-100 pb-6">
             <h2 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center">
               <span className="w-1.5 h-7 bg-blue-600 rounded-full mr-4 shadow-sm" />
@@ -99,7 +109,10 @@ export default function AuditTabs({
             </h2>
           </div>
 
-          <div className="relative">
+          <div 
+            key={activePhase}
+            className="relative animate-fade-in will-change-transform"
+          >
             {activePhase === 'Milestones' ? (
               <MilestonesTab audit={audit} />
             ) : activePhase === 'Team Members' ? (
@@ -108,7 +121,6 @@ export default function AuditTabs({
               <PBCRequestsTab audit={audit} />
             ) : (
               <ProcedureList 
-                key={activePhase}
                 auditId={audit.id} 
                 phase={activePhase} 
                 audit={audit}

@@ -23,7 +23,7 @@ export default function ProcedureItem({
   const hasMessages = (procedure.messages?.length || 0) > 0;
 
   return (
-    <div className="flex items-center space-x-4 group/row">
+    <div id={`proc-${nomenclature}`} className="flex items-center space-x-4 group/row">
       <Link 
         href={`/audits/${auditId}/procedures/${procedure.id}?phase=${procedure.phase}`}
         className="flex-1 bg-white border border-slate-200 p-5 rounded-2xl hover:shadow-xl hover:border-blue-500/30 transition-all duration-300 group"

@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { CheckCircle2, Circle, Clock, ChevronLeft, ChevronRight, Map as MapIcon } from 'lucide-react';
 
 interface ProcedureMiniMapProps {
@@ -17,10 +16,16 @@ interface ProcedureMiniMapProps {
     }[];
   }[];
   phaseNum: number;
+  isMinimized: boolean;
+  setIsMinimized: (val: boolean) => void;
 }
 
-export default function ProcedureMiniMap({ procedureGroups, phaseNum }: ProcedureMiniMapProps) {
-  const [isMinimized, setIsMinimized] = useState(true);
+export default function ProcedureMiniMap({ 
+  procedureGroups, 
+  phaseNum, 
+  isMinimized, 
+  setIsMinimized 
+}: ProcedureMiniMapProps) {
   const getLetter = (index: number) => String.fromCharCode(97 + index);
 
   const scrollToProcedure = (nomenclature: string) => {

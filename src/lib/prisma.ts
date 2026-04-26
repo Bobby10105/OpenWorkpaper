@@ -12,9 +12,15 @@ const prismaClientSingleton = () => {
       try {
         // Repair Procedure table
         const procInfo: any[] = await client.$queryRawUnsafe("PRAGMA table_info(Procedure);");
+        
         if (!procInfo.some(c => c.name === 'assignedToId')) {
           console.log('--- DATABASE AUTO-REPAIR: Adding assignedToId to Procedure ---');
           await client.$executeRawUnsafe("ALTER TABLE Procedure ADD COLUMN assignedToId TEXT;");
+        }
+
+        if (!procInfo.some(c => c.name === 'displayOrder')) {
+          console.log('--- DATABASE AUTO-REPAIR: Adding displayOrder to Procedure ---');
+          await client.$executeRawUnsafe("ALTER TABLE Procedure ADD COLUMN displayOrder INTEGER DEFAULT 0 NOT NULL;");
         }
 
         // Repair Audit table for PBC fields

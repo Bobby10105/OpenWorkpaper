@@ -21,8 +21,9 @@ This software was "vibe-coded" by a CPA with 10 years of audit experience who wa
 ## 🚀 Key Features
 
 *   **Unified Task Engine**: Personalized dashboard overview of active audits with high-impact analytics, including direct drill-downs into **"Assigned to You"** and **"Pending Review"** procedures.
-*   **Three-Phase Workflow**: Standardized sections for Planning, Fieldwork, and Reporting with persistent tab navigation.
+*   **Three-Phase Workflow**: Standardized sections for Planning, Fieldwork, and Reporting with **instant, zero-latency tab switching** and cinematic transitions.
 *   **Master-Detail Procedure Workspace**: Dedicated, high-performance workspace for documenting individual procedures, featuring a clean UI, rich text editing, and integrated discussion.
+*   **Data Integrity (Locking)**: Procedures are **automatically locked as Read-Only** once they are reviewed to protect audit integrity. Authorized team members can explicitly "Unlock for Editing," which clears existing sign-offs for re-preparation.
 *   **Procedure Assignments**: Professional ownership management with a "Take Ownership" quick-action and delegated assignment dropdowns.
 *   **PBC Tracking**: Centralize client information requests. **Upload and download a master PBC spreadsheet** to track status and ownership in one place.
 *   **Audit Program Templates**: Create and manage a library of standard audit programs. Instantly import sets of procedures and purposes into any phase to standardize documentation and save time.
@@ -33,8 +34,9 @@ This software was "vibe-coded" by a CPA with 10 years of audit experience who wa
 *   **Attachment Support**: Attach PDF, Word, Excel, and PowerPoint documents directly to specific procedures. 
 *   **Attachment Review**: Each individual attachment now supports its own "Prepared By" and "Reviewed By" sign-offs for granular quality control.
 *   **Milestone Tracking**: Monitor key project dates and **attach a detailed milestones spreadsheet** for granular project management.
-*   **Team Management**: Document audit team members, roles, and contact information.
+*   **Collaborative Team Management**: Authorized team members (Auditors and above) can manage personnel access, link system users to engagements, and assign functional responsibility levels.
 *   **Professional Export**: Generate a complete "Audit Program" in Word (.docx) format with one click, perfectly synchronized with your UI nomenclature.
+*   **Self-Healing API**: Intelligent database repair logic automatically detects and fixes schema mismatches (common in Docker volume migrations) to ensure high availability.
 *   **Secure Access**: Built-in authentication with granular role-based access control and **Federal SSO (OIDC)** support.
 
 ![Procedure View](docs/images/procedure_view.png)
@@ -50,11 +52,11 @@ AMSOS uses a granular **Role-Based Access Control (RBAC)** model to ensure data 
 | :--- | :--- |
 | **IT Administrator** | Identity Management. Can manage the user directory (add/import/delete users). Restricted from managing audit data. |
 | **Business Operations** | Data Management. Can create/delete audits and manage the Audit Program Template Library. |
-| **Audit Partner** | Senior management role. Can create, edit, and sign off on any audit they are assigned to. |
-| **Audit Director** | Senior management role. Can create, edit, and sign off on any audit they are assigned to. |
-| **Audit Manager** | Management role. Can create, edit, and sign off on any audit they are assigned to. |
-| **Auditor** | Standard role. Can document procedures, upload attachments, and sign off as a preparer. |
-| **Specialist** | Contributor role. Can document procedures but is **restricted from deleting procedures** to protect data integrity. |
+| **Audit Partner** | Senior management role. Can manage teams, sign off on procedures, and unlock reviewed workpapers. |
+| **Audit Director** | Senior management role. Can manage teams, sign off on procedures, and unlock reviewed workpapers. |
+| **Audit Manager** | Management role. Can manage teams, sign off on procedures, and unlock reviewed workpapers. |
+| **Auditor** | Standard role. Can document procedures, **manage engagement teams**, sign off as a preparer, and unlock workpapers for editing. |
+| **Specialist** | Contributor role. Can document procedures but is **restricted from deleting procedures or managing teams** to protect engagement integrity. |
 
 ### Audit Team Roles
 
@@ -69,8 +71,8 @@ Key team roles include:
 ### Access Control Rules
 *   **Audit Visibility**: Users (except Business Operations) can **only** see and access audits to which they have been explicitly added as a **Team Member**.
 *   **Audit Deletion**: A safety-first approach restricts audit deletion strictly to the **Business Operations** role.
-*   **Review Workflow**: While any role can be assigned to an audit, typically senior roles (Partner, Director, Manager) perform the final "Reviewed By" sign-off.
-*   **Audit Logs**: All sensitive actions (logins, deletions, user changes) are tracked in the system-wide Audit Logs for compliance.
+*   **Locking Protocol**: Once a procedure is signed off as "Reviewed," it is frozen. Only authorized staff (Auditor and above) can unlock it, which automatically clears sign-offs to ensure a full re-review.
+*   **Audit Logs**: All sensitive actions (logins, deletions, procedure unlocking, user changes) are tracked in the system-wide Audit Logs for compliance.
 
 ## 🛠 Tech Stack
 
@@ -87,6 +89,7 @@ AMSOS was built with the specific needs of **CPA Firms** and **Internal Audit De
 
 *   **Private Cloud Deployment**: Unlike standard SaaS, you can deploy AMSOS within your own Virtual Private Cloud (VPC), ensuring your sensitive client data never leaves your control.
 *   **SQLite Portability**: Your entire database is a single file. This makes off-site backups, disaster recovery, and data archiving as simple as copying a folder.
+*   **Self-Healing Reliability**: Built-in logic repairs database schema drifts automatically, ensuring the system stays online during infrastructure updates.
 *   **Audit Logging**: Every login and major record change is tracked to ensure accountability.
 *   **No Vendor Lock-in**: As an open-source tool, you have full access to your data and the source code, protecting you from future fee increases or platform shutdowns.
 
@@ -153,8 +156,8 @@ AMSOS is designed for complete infrastructure-agnostic flexibility. Whether you 
 ### ✅ Prerequisites (Docker Methods)
 To use the Docker methods below, you must have [Docker](https://www.docker.com/) installed on your server or local machine.
 
-### 🐳 Method 1: Docker Compose (Recommended for Business & Cloud)
-This is the professional standard for deploying AMSOS. Choose between a standard deployment (Port 3000) or a secure deployment (Port 443 with Nginx).
+### 🐳 Method 1: Docker Deployment (Recommended)
+This is the professional standard for deploying AMSOS. We recommend Option A for all production environments.
 
 1.  **Clone & Configure**:
     ```bash
@@ -164,31 +167,27 @@ This is the professional standard for deploying AMSOS. Choose between a standard
 2.  **Edit Security**: Open your chosen compose file and replace `change-me-to-a-secure-random-string` with a secure random key for `JWT_SECRET`.
 3.  **Launch**:
 
-    *   **Option A: Standard (HTTP - Port 3000)**
-        *Best for local testing or if you already have an external load balancer.*
-        ```bash
-        docker compose -f docker-compose.prod.yml up -d --build
-        ```
-
-    *   **Option B: Secure (HTTPS - Port 443)**
-        *Best for direct production exposure. Requires SSL certificates in the `certs/` folder (see [Production Configuration](#-production-configuration)).*
+    *   **Option A: Secure Production (HTTPS - Port 443)**
+        *Best for direct production exposure. Handles SSL/TLS termination automatically. Requires SSL certificates in the `certs/` folder (see [Production Configuration](#-production-configuration)).*
         ```bash
         docker compose -f docker-compose.secure.yml up -d --build
         ```
 
+    *   **Option B: Standard Production (HTTP - Port 3000)**
+        *Best for local testing or if you already have an external load balancer/reverse proxy.*
+        ```bash
+        docker compose -f docker-compose.prod.yml up -d --build
+        ```
+
+    *   **Option C: Quickstart (Development & Evaluation)**
+        *Best for rapid evaluation or developers. Includes hot-reloading and debug logging.*
+        ```bash
+        docker compose up --build
+        ```
+
 ---
 
-### 🚀 Method 2: Docker Quickstart (Development & Evaluation)
-Use this method for local evaluation or if you are a developer looking to contribute. This uses our development configuration with hot-reloading and debug logging enabled.
-
-```bash
-docker compose up --build
-```
-*Note: This command forces a fresh build of the container, synchronizes the database, and seeds initial data. It is optimized for a seamless developer experience.*
-
----
-
-### 🛠 Method 3: Manual Installation (Node.js)
+### 🛠 Method 2: Manual Installation (Node.js)
 If you prefer to run AMSOS directly on your host machine or have a custom Windows Server environment without Docker.
 
 #### 1. Prerequisites
@@ -221,8 +220,37 @@ npm run start
 
 ### 🔑 Initial Login
 Once running, sign in with:
-*   **IT Administrator**: `it.admin` / `admin`
-*   **Business Operations**: `biz.ops` / `admin`
+*   **IT Administrator**: `it.admin` / `admin` (Password change required)
+*   **Business Operations**: `biz.ops` / `admin` (Password change required)
+
+## 🛠 Maintenance & Updates
+
+### Data Persistence
+AMSOS is designed to be updated without data loss. All sensitive engagement data is stored in **Named Docker Volumes** that reside on the host machine's permanent storage:
+*   `amsos-db`: Contains the SQLite database file (audits, users, settings, and logs).
+*   `amsos-uploads`: Contains all documents (PDF, Excel, Word) attached to procedures.
+
+When the application is updated, the temporary containers are replaced, but these volumes remain untouched and are automatically re-attached to the new version.
+
+### Applying Updates
+To apply a new version or your own custom code tweaks:
+
+1.  **Pull the latest changes**:
+    ```bash
+    git pull
+    ```
+2.  **Rebuild and restart**:
+    ```bash
+    # For standard deployment:
+    docker compose -f docker-compose.prod.yml up -d --build
+
+    # For secure HTTPS deployment:
+    docker compose -f docker-compose.secure.yml up -d --build
+    ```
+    *This command rebuilds the application image with your new code, synchronizes any database schema changes, and restarts the service. Your audits and files will remain exactly as they were.*
+
+### Database Schema Changes
+If an update introduces new features that require database changes (like a new column), the system handles this automatically. The startup script runs a synchronization task that aligns your existing data file with the new code structure without requiring manual SQL commands.
 
 ---
 [License](LICENSE) | [Security Policy](SECURITY.md) | [Disclaimer](DISCLAIMER.md)

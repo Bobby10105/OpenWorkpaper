@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { Trash2, Save, Paperclip, File as FileIcon, X, MessageSquare, RefreshCw, Send, User, CheckCircle, Clock, Link as LinkIcon, Check, AlertCircle, ArrowLeft, Plus, ChevronDown } from 'lucide-react';
+import { Trash2, Save, Paperclip, File as FileIcon, X, MessageSquare, RefreshCw, Send, User, CheckCircle, Clock, Link as LinkIcon, Check, AlertCircle, ArrowLeft, Plus, ChevronDown, Lock, Unlock } from 'lucide-react';
 import type { Attachment, ProcedureMessage } from '@prisma/client';
 import type { ProcedureWithRelations } from '@/lib/types';
 import 'react-quill-new/dist/quill.snow.css';
@@ -74,10 +74,19 @@ export default function ProcedureDetail({
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isUnlocking, setIsUnlocking] = useState(false);
   
   const replaceInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // CRITICAL FIX: Lock state must be based on the SERVER data (props), 
+  // not the local transient state (data), otherwise filling the review fields 
+  // blocks the request that actually saves the review.
+  const isLocked = !!(procedure.reviewedBy && procedure.reviewedDate);
+
+  const isReviewed = data.reviewedBy && data.reviewedDate;
+  const isPrepared = data.preparedBy && data.preparedDate;
 
   // Load draft message from localStorage
   useEffect(() => {
@@ -103,6 +112,8 @@ export default function ProcedureDetail({
   }, [procedure, normalizeData]);
 
   const handleSave = useCallback(async (updatedData?: any) => {
+    if (isLocked) return; // Prevent saving if locked
+
     const dataToSave = updatedData || data;
     const currentDataStr = normalizeData(dataToSave);
 
@@ -119,16 +130,20 @@ export default function ProcedureDetail({
         setLastSavedData(currentDataStr);
         setHasUnsavedChanges(false);
         router.refresh();
+      } else if (res.status === 423) {
+        alert("This procedure is locked for review and cannot be saved.");
       }
     } catch (err) {
       console.error('Auto-save failed:', err);
     } finally {
       setSaving(false);
     }
-  }, [data, procedure.id, lastSavedData, router, normalizeData]);
+  }, [data, procedure.id, lastSavedData, router, normalizeData, isLocked]);
 
   // Debounced Auto-Save Logic
   useEffect(() => {
+    if (isLocked) return;
+
     const currentDataStr = normalizeData(data);
 
     if (currentDataStr !== lastSavedData) {
@@ -144,7 +159,32 @@ export default function ProcedureDetail({
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
-  }, [data, lastSavedData, handleSave, normalizeData]);
+  }, [data, lastSavedData, handleSave, normalizeData, isLocked]);
+
+  const handleUnlock = async () => {
+    if (!confirm("Unlocking this procedure will clear the existing sign-offs and require re-preparation and re-review. Continue?")) return;
+    
+    setIsUnlocking(true);
+    try {
+      const res = await fetch(`/api/procedures/${procedure.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'unlock' }),
+      });
+      
+      if (res.ok) {
+        router.refresh();
+      } else {
+        const err = await res.json();
+        alert(err.error || "Failed to unlock procedure");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Network error unlocking procedure");
+    } finally {
+      setIsUnlocking(false);
+    }
+  };
 
   const scrollToBottom = () => {
     if (chatEndRef.current) {
@@ -166,6 +206,7 @@ export default function ProcedureDetail({
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+    if (isLocked) return;
     setData({ ...data, [e.target.name]: e.target.value });
     
     if (e.target instanceof HTMLTextAreaElement) {
@@ -174,6 +215,7 @@ export default function ProcedureDetail({
   };
 
   const handleAttachmentChange = (id: string, name: string, value: string) => {
+    if (isLocked) return;
     setAttachments(attachments.map(att => {
       if (att.id === id) {
         return { ...att, [name]: value };
@@ -183,6 +225,7 @@ export default function ProcedureDetail({
   };
 
   const handleSaveAttachmentMetadata = async (att: Attachment) => {
+    if (isLocked) return;
     setSavingAttachmentId(att.id);
     try {
       const res = await fetch(`/api/attachments/${att.id}`, {
@@ -237,6 +280,7 @@ export default function ProcedureDetail({
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isLocked) return;
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
     
@@ -268,12 +312,13 @@ export default function ProcedureDetail({
   };
 
   const handleReplaceClick = (id: string) => {
+    if (isLocked) return;
     setReplacingId(id);
     replaceInputRef.current?.click();
   };
 
   const handleReplaceFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0 || !replacingId) return;
+    if (isLocked || !e.target.files || e.target.files.length === 0 || !replacingId) return;
     const file = e.target.files[0];
     
     const formData = new FormData();
@@ -300,6 +345,7 @@ export default function ProcedureDetail({
   };
 
   const handleDeleteAttachment = async (id: string) => {
+    if (isLocked) return;
     if (!confirm('Delete this attachment?')) return;
     try {
       const res = await fetch(`/api/attachments/${id}`, {
@@ -314,6 +360,7 @@ export default function ProcedureDetail({
   };
 
   const handleDelete = async (e: React.MouseEvent) => {
+    if (isLocked) return;
     e.stopPropagation();
     if (!confirm('Are you sure you want to delete this procedure?')) return;
     
@@ -348,38 +395,38 @@ export default function ProcedureDetail({
     { name: 'conclusions', label: 'Conclusions' },
   ];
 
-  const isReviewed = data.reviewedBy && data.reviewedDate;
-  const isPrepared = data.preparedBy && data.preparedDate;
-
   let statusBadge = null;
   if (isReviewed) {
     statusBadge = (
-      <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-blue-600 text-white uppercase tracking-wider flex items-center shadow-lg shadow-blue-100 border border-blue-400">
+      <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-blue-600 text-white uppercase tracking-wider flex items-center shadow-lg shadow-blue-100 border border-blue-400 animate-fade-in">
         <CheckCircle className="w-3 h-3 mr-1.5" />
         Reviewed
       </span>
     );
   } else if (isPrepared) {
     statusBadge = (
-      <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-600 text-white uppercase tracking-wider flex items-center shadow-lg shadow-emerald-100 border border-emerald-400">
+      <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-600 text-white uppercase tracking-wider flex items-center shadow-lg shadow-emerald-100 border border-emerald-400 animate-fade-in">
         <Clock className="w-3 h-3 mr-1.5" />
         Prepared
       </span>
     );
   }
 
-  const canDelete = user?.role !== 'Specialist';
+  const canDelete = user?.role !== 'Specialist' && !isLocked;
+  const allowedUnlockRoles = ['Auditor', 'Audit Manager', 'Audit Director', 'Audit Partner', 'Business Operations', 'Engagement Manager'];
+  const canUnlock = user && allowedUnlockRoles.includes(user.role);
 
   const isFieldDirty = (fieldName: string) => {
     return data[fieldName as keyof ProcedureWithRelations] !== procedure[fieldName as keyof ProcedureWithRelations];
   };
 
   const handleRichTextChange = (fieldName: string, content: string) => {
+    if (isLocked) return;
     setData(prev => ({ ...prev, [fieldName]: content }));
   };
 
   const modules = {
-    toolbar: [
+    toolbar: isLocked ? false : [
       ['bold', 'italic', 'underline'],
       [{ 'list': 'ordered'}, { 'list': 'bullet' }],
       ['clean']
@@ -388,8 +435,32 @@ export default function ProcedureDetail({
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      {isLocked && (
+        <div className="bg-amber-50 border border-amber-200 p-4 rounded-3xl flex items-center justify-between shadow-sm animate-slide-up">
+           <div className="flex items-center space-x-4">
+             <div className="bg-amber-100 p-2 rounded-xl">
+               <Lock className="w-5 h-5 text-amber-600" />
+             </div>
+             <div>
+               <p className="text-sm font-bold text-amber-900 tracking-tight">Procedure is Locked</p>
+               <p className="text-[11px] text-amber-700 font-medium uppercase tracking-widest opacity-80">This workpaper has been reviewed and is now read-only.</p>
+             </div>
+           </div>
+           {canUnlock && (
+             <button
+               onClick={handleUnlock}
+               disabled={isUnlocking}
+               className="flex items-center space-x-2 px-5 py-2.5 bg-white border border-amber-200 text-amber-700 text-[10px] font-black rounded-xl hover:bg-amber-100 transition-all active:scale-95 shadow-sm uppercase tracking-widest"
+             >
+               {isUnlocking ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Unlock className="w-3.5 h-3.5" />}
+               <span>Unlock for Editing</span>
+             </button>
+           )}
+        </div>
+      )}
+
       {/* Header / Navigation */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-white p-8 rounded-[2.5rem] border border-gray-200 shadow-2xl">
+      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-white p-8 rounded-[2.5rem] border border-gray-200 shadow-2xl transition-all duration-500 ${isLocked ? 'opacity-80 grayscale-[0.3]' : ''}`}>
         <div className="flex items-center space-x-6">
           <Link 
             href={`/audits/${auditId}?phase=${procedure.phase}`}
@@ -406,42 +477,54 @@ export default function ProcedureDetail({
               name="title"
               value={data.title || ''}
               onChange={handleChange}
-              className="bg-transparent border-none focus:ring-0 text-3xl font-black text-gray-900 placeholder:text-gray-200 p-0 w-full"
+              disabled={isLocked}
+              className="bg-transparent border-none focus:ring-0 text-3xl font-black text-gray-900 placeholder:text-gray-200 p-0 w-full disabled:cursor-not-allowed"
               placeholder="Untitled Procedure"
             />
           </div>
         </div>
         
         <div className="flex items-center space-x-4">
-          {saving ? (
-            <div className="flex items-center space-x-2 mr-4">
-              <RefreshCw className="w-4 h-4 text-blue-600 animate-spin" />
-              <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Auto-Saving...</span>
-            </div>
-          ) : hasUnsavedChanges ? (
-            <div className="flex items-center space-x-2 mr-4">
-              <Clock className="w-4 h-4 text-orange-400 animate-pulse" />
-              <span className="text-[10px] font-black text-orange-400 uppercase tracking-widest">Unsaved Changes</span>
-            </div>
-          ) : (
-            <div className="flex items-center space-x-2 mr-4 opacity-50">
-              <CheckCircle className="w-4 h-4 text-emerald-600" />
-              <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Saved</span>
-            </div>
+          {!isLocked && (
+            <>
+              {saving ? (
+                <div className="flex items-center space-x-2 mr-4">
+                  <RefreshCw className="w-4 h-4 text-blue-600 animate-spin" />
+                  <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Auto-Saving...</span>
+                </div>
+              ) : hasUnsavedChanges ? (
+                <div className="flex items-center space-x-2 mr-4">
+                  <Clock className="w-4 h-4 text-orange-400 animate-pulse" />
+                  <span className="text-[10px] font-black text-orange-400 uppercase tracking-widest">Unsaved Changes</span>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-2 mr-4 opacity-50">
+                  <CheckCircle className="w-4 h-4 text-emerald-600" />
+                  <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Saved</span>
+                </div>
+              )}
+              
+              <button 
+                onClick={() => handleSave()} 
+                disabled={saving || !hasUnsavedChanges}
+                className={`flex items-center space-x-3 px-8 py-4 text-sm font-black rounded-2xl transition-all active:scale-95 border uppercase tracking-widest ${
+                  hasUnsavedChanges 
+                    ? 'bg-blue-600 text-white border-blue-500 shadow-xl shadow-blue-200 hover:bg-blue-700' 
+                    : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-50'
+                }`}
+              >
+                <Save className="w-5 h-5" />
+                <span>{saving ? 'Saving...' : 'Save Manual'}</span>
+              </button>
+            </>
           )}
           
-          <button 
-            onClick={() => handleSave()} 
-            disabled={saving || !hasUnsavedChanges}
-            className={`flex items-center space-x-3 px-8 py-4 text-sm font-black rounded-2xl transition-all active:scale-95 border uppercase tracking-widest ${
-              hasUnsavedChanges 
-                ? 'bg-blue-600 text-white border-blue-500 shadow-xl shadow-blue-200 hover:bg-blue-700' 
-                : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-50'
-            }`}
-          >
-            <Save className="w-5 h-5" />
-            <span>{saving ? 'Saving...' : 'Save Manual'}</span>
-          </button>
+          {isLocked && (
+             <div className="flex items-center space-x-3 px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-gray-400">
+               <Lock className="w-5 h-5" />
+               <span className="text-xs font-black uppercase tracking-widest">Locked</span>
+             </div>
+          )}
           
           {canDelete && (
             <button 
@@ -457,7 +540,7 @@ export default function ProcedureDetail({
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         {/* Main Content Area */}
-        <div className="xl:col-span-2 space-y-8">
+        <div className={`xl:col-span-2 space-y-8 ${isLocked ? 'pointer-events-none select-none' : ''}`}>
           {/* Assignment & Metadata */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white p-6 rounded-[2rem] border border-gray-200 shadow-xl flex items-center space-x-5">
@@ -476,7 +559,8 @@ export default function ProcedureDetail({
                         setData(newData);
                         handleSave(newData);
                       }}
-                      className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-4 pr-10 py-2.5 text-sm font-bold text-gray-900 outline-none focus:ring-2 focus:ring-blue-500/50 focus:bg-white transition-all appearance-none cursor-pointer shadow-inner"
+                      disabled={isLocked}
+                      className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-4 pr-10 py-2.5 text-sm font-bold text-gray-900 outline-none focus:ring-2 focus:ring-blue-500/50 focus:bg-white transition-all appearance-none cursor-pointer shadow-inner disabled:cursor-not-allowed"
                     >
                       <option value="">Unassigned</option>
                       {teamMembers.map(m => (
@@ -487,7 +571,7 @@ export default function ProcedureDetail({
                   </div>
                   
                   {/* Quick Assign to Me shortcut */}
-                  {user && !teamMembers.find(m => m.id === data.assignedToId && m.userId === user.id) && (
+                  {user && !isLocked && !teamMembers.find(m => m.id === data.assignedToId && m.userId === user.id) && (
                     <button
                       onClick={() => {
                         const myMember = teamMembers.find(m => m.userId === user.id || m.email === user.username);
@@ -534,7 +618,7 @@ export default function ProcedureDetail({
                     isFocused 
                       ? 'border-blue-500 bg-white shadow-[0_20px_80px_rgba(59,130,246,0.12)] scale-[1.02]' 
                       : 'border-gray-100 bg-white shadow-[0_10px_40px_rgba(0,0,0,0.04)]'
-                  }`}
+                  } ${isLocked ? 'bg-gray-50/50' : ''}`}
                 >
                   {/* Left Accent Bar */}
                   <div className={`absolute left-0 top-0 bottom-0 w-1.5 transition-colors duration-500 ${
@@ -550,16 +634,20 @@ export default function ProcedureDetail({
                         {field.label}
                       </label>
                     </div>
-                    {isDirty && (
+                    {isDirty && !isLocked && (
                       <span className="flex items-center text-[10px] font-black text-blue-700 uppercase tracking-widest bg-blue-50 px-4 py-2 rounded-full border border-blue-100 animate-pulse shadow-sm">
                         <Save className="w-3.5 h-3.5 mr-2" /> Syncing...
                       </span>
+                    )}
+                    {isLocked && (
+                      <Lock className="w-3.5 h-3.5 text-gray-300" />
                     )}
                   </div>
 
                   <div className="rich-text-wrapper px-4 pb-4">
                     <ReactQuill
                       theme="snow"
+                      readOnly={isLocked}
                       value={String(data[field.name as keyof ProcedureWithRelations] || '')}
                       onChange={(content) => handleRichTextChange(field.name, content)}
                       modules={modules}
@@ -568,7 +656,7 @@ export default function ProcedureDetail({
                         setFocusedField(null);
                         handleSave(); // Immediate save on blur for better feel
                       }}
-                      placeholder={`Provide comprehensive details for ${field.label.toLowerCase()}...`}
+                      placeholder={isLocked ? "No content provided." : `Provide comprehensive details for ${field.label.toLowerCase()}...`}
                     />
                   </div>
                 </div>
@@ -577,7 +665,7 @@ export default function ProcedureDetail({
           </div>
 
           {/* Attachments Section */}
-          <div className="bg-white p-10 rounded-[2.5rem] border border-gray-200 shadow-2xl space-y-10">
+          <div className={`bg-white p-10 rounded-[2.5rem] border border-gray-200 shadow-2xl space-y-10 transition-all ${isLocked ? 'opacity-70 grayscale-[0.5] pointer-events-none select-none' : ''}`}>
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-black text-gray-400 flex items-center tracking-[0.2em] uppercase">
                 <div className="bg-blue-50 p-2 rounded-xl mr-4 shadow-sm">
@@ -585,11 +673,13 @@ export default function ProcedureDetail({
                 </div>
                 Evidence & Attached Workpapers
               </h4>
-              <label className="group/btn relative inline-flex items-center px-6 py-3 bg-blue-600 text-[10px] font-black rounded-xl text-white hover:bg-blue-700 transition-all cursor-pointer active:scale-95 shadow-xl shadow-blue-100 uppercase tracking-widest border border-blue-500">
-                <Plus className="w-4 h-4 mr-2" />
-                <span>{uploading ? 'Uploading...' : 'Add Evidence'}</span>
-                <input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading} accept=".pdf,.doc,.docx,.xlsx,.xls,.pptx,.ppt" />
-              </label>
+              {!isLocked && (
+                <label className="group/btn relative inline-flex items-center px-6 py-3 bg-blue-600 text-[10px] font-black rounded-xl text-white hover:bg-blue-700 transition-all cursor-pointer active:scale-95 shadow-xl shadow-blue-100 uppercase tracking-widest border border-blue-500">
+                  <Plus className="w-4 h-4 mr-2" />
+                  <span>{uploading ? 'Uploading...' : 'Add Evidence'}</span>
+                  <input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading} accept=".pdf,.doc,.docx,.xlsx,.xls,.pptx,.ppt" />
+                </label>
+              )}
             </div>
             
             <div className="grid grid-cols-1 gap-6">
@@ -633,20 +723,24 @@ export default function ProcedureDetail({
                         >
                           {copiedId === att.id ? <Check className="w-5 h-5 text-emerald-600" /> : <LinkIcon className="w-5 h-5" />}
                         </button>
-                        <button 
-                          onClick={() => handleReplaceClick(att.id)}
-                          className="p-3 text-gray-400 hover:text-blue-600 hover:bg-white rounded-xl transition-all shadow-sm active:scale-90"
-                          title="Upload New Version"
-                        >
-                          <RefreshCw className="w-5 h-5" />
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteAttachment(att.id)} 
-                          className="p-3 text-gray-400 hover:text-red-600 hover:bg-white rounded-xl transition-all shadow-sm active:scale-90"
-                          title="Remove Attachment"
-                        >
-                          <X className="w-5 h-5" />
-                        </button>
+                        {!isLocked && (
+                          <>
+                            <button 
+                              onClick={() => handleReplaceClick(att.id)}
+                              className="p-3 text-gray-400 hover:text-blue-600 hover:bg-white rounded-xl transition-all shadow-sm active:scale-90"
+                              title="Upload New Version"
+                            >
+                              <RefreshCw className="w-5 h-5" />
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteAttachment(att.id)} 
+                              className="p-3 text-gray-400 hover:text-red-600 hover:bg-white rounded-xl transition-all shadow-sm active:scale-90"
+                              title="Remove Attachment"
+                            >
+                              <X className="w-5 h-5" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
 
@@ -657,7 +751,8 @@ export default function ProcedureDetail({
                         <input
                           value={att.preparedBy || ''}
                           onChange={(e) => handleAttachmentChange(att.id, 'preparedBy', e.target.value)}
-                          className="text-xs font-bold px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/50 outline-none transition-all shadow-inner"
+                          disabled={isLocked}
+                          className="text-xs font-bold px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/50 outline-none transition-all shadow-inner disabled:cursor-not-allowed"
                           placeholder="Initials"
                         />
                       </div>
@@ -667,7 +762,8 @@ export default function ProcedureDetail({
                           type="date"
                           value={formatDateForInput(att.preparedDate)}
                           onChange={(e) => handleAttachmentChange(att.id, 'preparedDate', e.target.value)}
-                          className="text-xs font-bold px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/50 outline-none transition-all shadow-inner"
+                          disabled={isLocked}
+                          className="text-xs font-bold px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/50 outline-none transition-all shadow-inner disabled:cursor-not-allowed"
                         />
                       </div>
                       <div className="flex flex-col">
@@ -675,7 +771,8 @@ export default function ProcedureDetail({
                         <input
                           value={att.reviewedBy || ''}
                           onChange={(e) => handleAttachmentChange(att.id, 'reviewedBy', e.target.value)}
-                          className="text-xs font-bold px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/50 outline-none transition-all shadow-inner"
+                          disabled={isLocked}
+                          className="text-xs font-bold px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/50 outline-none transition-all shadow-inner disabled:cursor-not-allowed"
                           placeholder="Initials"
                         />
                       </div>
@@ -686,16 +783,19 @@ export default function ProcedureDetail({
                             type="date"
                             value={formatDateForInput(att.reviewedDate)}
                             onChange={(e) => handleAttachmentChange(att.id, 'reviewedDate', e.target.value)}
-                            className="flex-1 text-xs font-bold px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/50 outline-none transition-all shadow-inner"
+                            disabled={isLocked}
+                            className="flex-1 text-xs font-bold px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/50 outline-none transition-all shadow-inner disabled:cursor-not-allowed"
                           />
-                          <button
-                            onClick={() => handleSaveAttachmentMetadata(att)}
-                            disabled={savingAttachmentId === att.id}
-                            className="p-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-all shadow-lg active:scale-95 border border-blue-500 flex-shrink-0"
-                            title="Save Metadata"
-                          >
-                            {savingAttachmentId === att.id ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                          </button>
+                          {!isLocked && (
+                            <button
+                              onClick={() => handleSaveAttachmentMetadata(att)}
+                              disabled={savingAttachmentId === att.id}
+                              className="p-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-all shadow-lg active:scale-95 border border-blue-500 flex-shrink-0"
+                              title="Save Metadata"
+                            >
+                              {savingAttachmentId === att.id ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -763,7 +863,7 @@ export default function ProcedureDetail({
           </div>
 
           {/* Sign-offs Card */}
-          <div className="bg-white p-10 rounded-[2.5rem] border border-gray-200 shadow-2xl space-y-10">
+          <div className={`bg-white p-10 rounded-[2.5rem] border border-gray-200 shadow-2xl space-y-10 transition-all ${isLocked ? 'opacity-80' : ''}`}>
             <h4 className="text-xs font-black text-gray-400 tracking-[0.2em] uppercase">Sign-offs & Dates</h4>
             
             <div className="space-y-10">
@@ -778,7 +878,8 @@ export default function ProcedureDetail({
                       name="preparedBy"
                       value={String(data.preparedBy || '')}
                       onChange={handleChange}
-                      className="w-full pl-16 pr-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-blue-500/50 focus:bg-white transition-all text-sm font-bold text-gray-900 outline-none shadow-inner"
+                      disabled={isLocked}
+                      className="w-full pl-16 pr-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-blue-500/50 focus:bg-white transition-all text-sm font-bold text-gray-900 outline-none shadow-inner disabled:cursor-not-allowed"
                       placeholder="Auditor Name"
                     />
                   </div>
@@ -790,7 +891,8 @@ export default function ProcedureDetail({
                     type="date"
                     value={formatDateForInput(data.preparedDate)}
                     onChange={handleChange}
-                    className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-blue-500/50 focus:bg-white transition-all text-sm font-bold text-gray-900 outline-none shadow-inner"
+                    disabled={isLocked}
+                    className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-blue-500/50 focus:bg-white transition-all text-sm font-bold text-gray-900 outline-none shadow-inner disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -808,7 +910,8 @@ export default function ProcedureDetail({
                       name="reviewedBy"
                       value={String(data.reviewedBy || '')}
                       onChange={handleChange}
-                      className="w-full pl-16 pr-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-blue-500/50 focus:bg-white transition-all text-sm font-bold text-gray-900 outline-none shadow-inner"
+                      disabled={isLocked}
+                      className="w-full pl-16 pr-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-blue-500/50 focus:bg-white transition-all text-sm font-bold text-gray-900 outline-none shadow-inner disabled:cursor-not-allowed"
                       placeholder="Reviewer Name"
                     />
                   </div>
@@ -820,7 +923,8 @@ export default function ProcedureDetail({
                     type="date"
                     value={formatDateForInput(data.reviewedDate)}
                     onChange={handleChange}
-                    className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-blue-500/50 focus:bg-white transition-all text-sm font-bold text-gray-900 outline-none shadow-inner"
+                    disabled={isLocked}
+                    className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-blue-500/50 focus:bg-white transition-all text-sm font-bold text-gray-900 outline-none shadow-inner disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
