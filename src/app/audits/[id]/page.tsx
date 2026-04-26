@@ -58,10 +58,19 @@ export default async function AuditDetail(props: { params: Promise<{ id: string 
     }
 
     // 2. Fetch Groups and Procedures with RAW logic to avoid schema mismatch errors
-    const rawGroups: any[] = await prisma.$queryRawUnsafe(
-      `SELECT * FROM ProcedureGroup WHERE auditId = ? ORDER BY displayOrder ASC`,
-      audit.id
-    );
+    let rawGroups: any[] = [];
+    try {
+      rawGroups = await prisma.$queryRawUnsafe(
+        `SELECT * FROM ProcedureGroup WHERE auditId = ? ORDER BY displayOrder ASC, createdAt ASC`,
+        audit.id
+      );
+    } catch (e) {
+      console.warn('AuditDetail: ProcedureGroup displayOrder fallback triggered.');
+      rawGroups = await prisma.$queryRawUnsafe(
+        `SELECT * FROM ProcedureGroup WHERE auditId = ? ORDER BY createdAt ASC`,
+        audit.id
+      );
+    }
 
     let rawProcedures: any[] = [];
     try {
@@ -69,14 +78,18 @@ export default async function AuditDetail(props: { params: Promise<{ id: string 
         `SELECT p.*, t.name as assignedToName, t.role as assignedToRole, t.email as assignedToEmail
          FROM Procedure p
          LEFT JOIN TeamMember t ON p.assignedToId = t.id
-         WHERE p.auditId = ?`,
+         WHERE p.auditId = ?
+         ORDER BY p.displayOrder ASC, p.createdAt ASC`,
         audit.id
       );
     } catch (e) {
-      console.warn('AuditDetail: Full procedure join failed (schema syncing?). Falling back to basic fetch.');
-      // Fallback: Fetch procedures without the join to ensure page loads
+      console.warn('AuditDetail: Procedure displayOrder fallback triggered.');
       rawProcedures = await prisma.$queryRawUnsafe(
-        `SELECT * FROM Procedure WHERE auditId = ?`,
+        `SELECT p.*, t.name as assignedToName, t.role as assignedToRole, t.email as assignedToEmail
+         FROM Procedure p
+         LEFT JOIN TeamMember t ON p.assignedToId = t.id
+         WHERE p.auditId = ?
+         ORDER BY p.createdAt ASC`,
         audit.id
       );
     }

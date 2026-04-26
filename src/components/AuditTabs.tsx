@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import ProcedureList from './ProcedureList';
 import MilestonesTab from './MilestonesTab';
 import TeamMembersTab from './TeamMembersTab';
@@ -28,7 +29,29 @@ export default function AuditTabs({
   audit: AuditWithRelations, 
   user?: { username: string; role: string; id: string } 
 }) {
-  const [activePhase, setActivePhase] = useState(PHASES[0]);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  
+  // Initialize state from URL param or default to Planning
+  const initialPhase = searchParams.get('phase') || PHASES[0];
+  const [activePhase, setActivePhase] = useState(initialPhase);
+
+  // Sync state if URL changes (e.g., back button)
+  useEffect(() => {
+    const phaseParam = searchParams.get('phase');
+    if (phaseParam && phaseParam !== activePhase && PHASES.includes(phaseParam)) {
+      setActivePhase(phaseParam);
+    }
+  }, [searchParams, activePhase]);
+
+  const handlePhaseChange = (phase: string) => {
+    setActivePhase(phase);
+    // Update URL without a full page reload
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('phase', phase);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
 
   const isProcedurePhase = activePhase === 'Planning' || activePhase === 'Fieldwork' || activePhase === 'Reporting';
   const phaseNum = PHASE_MAP[activePhase] || 0;
@@ -41,7 +64,7 @@ export default function AuditTabs({
           {PHASES.map((phase) => (
             <button
               key={phase}
-              onClick={() => setActivePhase(phase)}
+              onClick={() => handlePhaseChange(phase)}
               className={`
                 flex-1 whitespace-nowrap py-3 px-6 rounded-xl font-bold text-[11px] uppercase tracking-wider transition-all duration-300 active:scale-[0.98]
                 ${activePhase === phase

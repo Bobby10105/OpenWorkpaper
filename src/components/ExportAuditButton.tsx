@@ -248,8 +248,20 @@ export default function ExportAuditButton({ audit }: { audit: AuditWithRelations
       const phaseMap: Record<string, number> = { 'Planning': 1, 'Fieldwork': 2, 'Reporting': 3 };
 
       for (const phase of phases) {
-        const phaseGroups = audit.procedureGroups.filter(g => g.phase === phase);
-        const phaseUngrouped = audit.procedures.filter(p => p.phase === phase && !p.groupId);
+        // Sort groups by displayOrder
+        const phaseGroups = audit.procedureGroups
+          .filter(g => g.phase === phase)
+          .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+
+        // Sort ungrouped procedures
+        const phaseUngrouped = audit.procedures
+          .filter(p => p.phase === phase && !p.groupId)
+          .sort((a, b) => {
+            if ((a.displayOrder || 0) !== (b.displayOrder || 0)) {
+              return (a.displayOrder || 0) - (b.displayOrder || 0);
+            }
+            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          });
 
         if (phaseGroups.length === 0 && phaseUngrouped.length === 0) continue;
 
@@ -275,7 +287,15 @@ export default function ExportAuditButton({ audit }: { audit: AuditWithRelations
             })
           );
 
-          for (const [procIndex, p] of group.procedures.entries()) {
+          // Sort procedures within group
+          const sortedProcedures = [...group.procedures].sort((a, b) => {
+            if ((a.displayOrder || 0) !== (b.displayOrder || 0)) {
+              return (a.displayOrder || 0) - (b.displayOrder || 0);
+            }
+            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          });
+
+          for (const [procIndex, p] of sortedProcedures.entries()) {
             const procLetter = String.fromCharCode(97 + procIndex);
             const procNomenclature = `${groupNomenclature}.${procLetter}`;
 

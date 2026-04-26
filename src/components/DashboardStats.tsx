@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { LayoutDashboard, Target, AlertTriangle, Timer, ChevronRight, ArrowRight, ExternalLink, X, ClipboardList, User, Calendar } from 'lucide-react';
+import { LayoutDashboard, AlertTriangle, ChevronRight, ArrowRight, ExternalLink, X, ClipboardList, User } from 'lucide-react';
 import Link from 'next/link';
 
 interface PendingProcedure {
@@ -14,18 +14,14 @@ interface PendingAudit {
   id: string;
   title: string;
   pendingProcedures?: PendingProcedure[];
-  fieldworkEndDate?: Date | string | null;
 }
 
 interface DashboardStatsProps {
   activeCount: number;
-  portfolioProgress: number;
   totalPendingReview: number;
-  upcomingDeadlines: number;
   totalToComplete: number;
   pendingAudits: PendingAudit[];
   toCompleteAudits: PendingAudit[];
-  upcomingAudits: PendingAudit[];
 }
 
 function StatCard({ 
@@ -69,21 +65,17 @@ function StatCard({
 
 export default function DashboardStats({ 
   activeCount, 
-  portfolioProgress, 
   totalPendingReview, 
-  upcomingDeadlines, 
   totalToComplete,
   pendingAudits,
   toCompleteAudits,
-  upcomingAudits
 }: DashboardStatsProps) {
   const [showPendingPanel, setShowPendingPanel] = useState(false);
   const [showToCompletePanel, setShowToCompletePanel] = useState(false);
-  const [showUpcomingPanel, setShowUpcomingPanel] = useState(false);
 
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <StatCard 
           label="Active Audits" 
           value={activeCount} 
@@ -95,7 +87,7 @@ export default function DashboardStats({
           value={totalToComplete} 
           icon={ClipboardList} 
           color="bg-gradient-to-br from-blue-400 to-indigo-500 shadow-blue-400/10"
-          onClick={() => { setShowToCompletePanel(!showToCompletePanel); setShowPendingPanel(false); setShowUpcomingPanel(false); }}
+          onClick={() => { setShowToCompletePanel(!showToCompletePanel); setShowPendingPanel(false); }}
           isActive={showToCompletePanel}
         />
         <StatCard 
@@ -103,64 +95,10 @@ export default function DashboardStats({
           value={totalPendingReview} 
           icon={AlertTriangle} 
           color="bg-gradient-to-br from-orange-500 to-amber-600 shadow-orange-500/10"
-          onClick={() => { setShowPendingPanel(!showPendingPanel); setShowToCompletePanel(false); setShowUpcomingPanel(false); }}
+          onClick={() => { setShowPendingPanel(!showPendingPanel); setShowToCompletePanel(false); }}
           isActive={showPendingPanel}
         />
-        <StatCard 
-          label="Next 7 Days" 
-          value={upcomingDeadlines} 
-          icon={Timer} 
-          color="bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-500/10"
-          onClick={() => { setShowUpcomingPanel(!showUpcomingPanel); setShowPendingPanel(false); setShowToCompletePanel(false); }}
-          isActive={showUpcomingPanel}
-        />
-        <StatCard 
-          label="Completion" 
-          value={`${portfolioProgress}%`} 
-          icon={Target} 
-          color="bg-gradient-to-br from-indigo-600 to-violet-700 shadow-indigo-500/10"
-        />
       </div>
-
-      {showUpcomingPanel && upcomingDeadlines > 0 && (
-        <div className="bg-white/95 backdrop-blur-3xl rounded-[2.5rem] border border-emerald-200 shadow-xl overflow-hidden animate-in slide-in-from-top-6 fade-in duration-500 ease-out">
-          <div className="bg-emerald-50/50 px-8 py-5 border-b border-emerald-100 flex justify-between items-center">
-            <h3 className="font-bold text-emerald-700 tracking-tight text-sm flex items-center">
-              <div className="bg-emerald-500/10 p-1.5 rounded-lg mr-3 border border-emerald-500/20">
-                <Timer className="w-4 h-4 text-emerald-600" />
-              </div>
-              Deadlines Approaching (Next 7 Days)
-            </h3>
-            <button onClick={() => setShowUpcomingPanel(false)} className="p-2 bg-white hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-900 transition-all shadow-sm border border-slate-200">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="p-8">
-            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-              {upcomingAudits.map(audit => (
-                <Link 
-                  key={audit.id} 
-                  href={`/audits/${audit.id}`}
-                  className="p-6 rounded-[2rem] border border-slate-200 bg-white shadow-sm hover:shadow-emerald-500/5 hover:border-emerald-200 transition-all duration-300 group/card block"
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <h4 className="font-bold text-slate-800 text-sm line-clamp-1 flex-1 pr-3 tracking-tight group-hover/card:text-emerald-600 transition-colors">{audit.title}</h4>
-                    <div className="text-emerald-600 p-2 bg-emerald-50 rounded-xl group-hover/card:bg-emerald-600 group-hover/card:text-white transition-all">
-                      <ArrowRight className="w-4 h-4" />
-                    </div>
-                  </div>
-                  <div className="flex items-center text-slate-500">
-                    <Calendar className="w-4 h-4 mr-2 text-emerald-500" />
-                    <span className="text-xs font-bold uppercase tracking-wider">
-                      Ends: {audit.fieldworkEndDate ? new Date(audit.fieldworkEndDate).toLocaleDateString() : 'N/A'}
-                    </span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {showToCompletePanel && totalToComplete > 0 && (
         <div className="bg-white/95 backdrop-blur-3xl rounded-[2.5rem] border border-blue-200 shadow-xl overflow-hidden animate-in slide-in-from-top-6 fade-in duration-500 ease-out">
@@ -192,7 +130,7 @@ export default function DashboardStats({
                     {audit.pendingProcedures?.map(proc => (
                       <Link 
                         key={proc.id} 
-                        href={`/audits/${audit.id}`}
+                        href={`/audits/${audit.id}/procedures/${proc.id}`}
                         className="flex items-center group/item p-2 rounded-lg hover:bg-slate-50 transition-colors"
                       >
                         <div className="w-2 h-2 rounded-full bg-blue-500 mr-3 group-hover/item:scale-125 transition-transform shadow-[0_0_12px_rgba(59,130,246,0.2)]" />
@@ -248,7 +186,7 @@ export default function DashboardStats({
                     {audit.pendingProcedures?.map(proc => (
                       <Link 
                         key={proc.id} 
-                        href={`/audits/${audit.id}`}
+                        href={`/audits/${audit.id}/procedures/${proc.id}`}
                         className="flex items-center group/item p-2 rounded-lg hover:bg-slate-50 transition-colors"
                       >
                         <div className="w-2 h-2 rounded-full bg-orange-500 mr-3 group-hover/item:scale-125 transition-transform shadow-[0_0_12px_rgba(249,115,22,0.2)]" />

@@ -1,7 +1,7 @@
 # AMSOS: Audit Management Software Open Source
 
 ![AMSOS Dashboard](docs/images/dashboard.png)
-*Central Dashboard providing a high-level overview of active audits, personalized assignments, and quick access to administrative tools.*
+*Central Dashboard providing a high-level overview of active audits, personalized assignments, and a Unified Task Engine.*
 
 AMSOS is a simple, modern, and open-source web application designed for auditors to document audit programs and procedures. It streamlines the audit lifecycle across Planning, Fieldwork, and Reporting phases with built-in sign-off tracking, reviewer collaboration, and professional document export.
 
@@ -20,12 +20,13 @@ This software was "vibe-coded" by a CPA with 10 years of audit experience who wa
 
 ## 🚀 Key Features
 
-*   **Project Dashboard**: Personalized overview of all active audits with high-impact analytics including **"Assigned to You"** metrics and **Next 7 Days** deadline drill-downs.
-*   **Three-Phase Workflow**: Standardized sections for Planning, Fieldwork, and Reporting.
-*   **Procedure Assignments**: Assign individual procedures to specific team members to clarify ownership and streamline the review process.
+*   **Unified Task Engine**: Personalized dashboard overview of active audits with high-impact analytics, including direct drill-downs into **"Assigned to You"** and **"Pending Review"** procedures.
+*   **Three-Phase Workflow**: Standardized sections for Planning, Fieldwork, and Reporting with persistent tab navigation.
+*   **Master-Detail Procedure Workspace**: Dedicated, high-performance workspace for documenting individual procedures, featuring a clean UI, rich text editing, and integrated discussion.
+*   **Procedure Assignments**: Professional ownership management with a "Take Ownership" quick-action and delegated assignment dropdowns.
 *   **PBC Tracking**: Centralize client information requests. **Upload and download a master PBC spreadsheet** to track status and ownership in one place.
 *   **Audit Program Templates**: Create and manage a library of standard audit programs. Instantly import sets of procedures and purposes into any phase to standardize documentation and save time.
-*   **Hierarchical Organization**: Organize procedures into **Procedure Groups** (e.g., "Payroll", "Revenue"). 
+*   **Hierarchical Organization**: Organize procedures into **Procedure Groups** (e.g., "Payroll", "Revenue") with stable, automatic nomenclature.
 *   **Smart Numbering**: Automatic professional nomenclature (Groups: **1.1**, Procedures: **1.1.a**, Attachments: **1.1.a.1**).
 *   **Comprehensive Documentation**: Each procedure tracks Purpose, Source, Scope, Methodology, Results, Conclusions, and **Reviewer Comments**.
 *   **Audit Sign-offs**: "Prepared By" and "Reviewed By" tracking with dates and visual status badges.
@@ -33,14 +34,11 @@ This software was "vibe-coded" by a CPA with 10 years of audit experience who wa
 *   **Attachment Review**: Each individual attachment now supports its own "Prepared By" and "Reviewed By" sign-offs for granular quality control.
 *   **Milestone Tracking**: Monitor key project dates and **attach a detailed milestones spreadsheet** for granular project management.
 *   **Team Management**: Document audit team members, roles, and contact information.
-*   **Professional Export**: Generate a complete "Audit Program" in Word (.docx) format with one click.
+*   **Professional Export**: Generate a complete "Audit Program" in Word (.docx) format with one click, perfectly synchronized with your UI nomenclature.
 *   **Secure Access**: Built-in authentication with granular role-based access control and **Federal SSO (OIDC)** support.
 
-![Procedure Grouping](docs/images/procedure_group.png)
-*Hierarchical Organization using Procedure Groups to categorize complex audit fieldwork into logical folders.*
-
 ![Procedure View](docs/images/procedure_view.png)
-*Detailed Procedure Documentation including standardized fields, ownership assignments, and integrated sign-off tracking.*
+*Dedicated Procedure Workspace including standardized rich-text fields, ownership assignments, and integrated sign-off tracking.*
 
 ## 🔐 Roles & Permissions (RBAC)
 
@@ -74,12 +72,6 @@ Key team roles include:
 *   **Review Workflow**: While any role can be assigned to an audit, typically senior roles (Partner, Director, Manager) perform the final "Reviewed By" sign-off.
 *   **Audit Logs**: All sensitive actions (logins, deletions, user changes) are tracked in the system-wide Audit Logs for compliance.
 
-![Detailed Sign-offs](docs/images/prepare_review_view.png)
-*Granular Control with individual "Prepared" and "Reviewed" sign-offs for every procedure and supporting attachment.*
-
-![Audit Status](docs/images/status.png)
-*Visual Status Tracking providing immediate insight into preparation and review progress across all procedures.*
-
 ## 🛠 Tech Stack
 
 *   **Framework**: [Next.js](https://nextjs.org/) (React)
@@ -88,9 +80,6 @@ Key team roles include:
 *   **Auth**: JWT-based session management + OpenID Connect (OIDC)
 *   **Password Hashing**: [bcryptjs](https://www.npmjs.com/package/bcryptjs) (Cost Factor: 10)
 *   **Export**: docx.js
-
-![Comments and Attachments](docs/images/review_comments.png)
-*Reviewer Collaboration Tools featuring real-time comments, secure file attachments, and ownership transparency.*
 
 ## 👔 Business Readiness
 

@@ -17,22 +17,34 @@ export async function POST(req: Request) {
       }
     };
 
-    // Use RAW SQL to create to bypass any Prisma Client validation issues
     const title = data.title || 'New Procedure';
     const auditId = data.auditId;
     const groupId = data.groupId || null;
     const phase = data.phase;
     
-    // Create random ID for SQLite (Prisma usually does this via UUID)
-    // Using a simpler approach for the raw insert
+    // Calculate next displayOrder
+    let nextOrder = 0;
+    try {
+      const maxResults: any[] = await prisma.$queryRawUnsafe(
+        groupId 
+          ? `SELECT MAX(displayOrder) as maxOrder FROM Procedure WHERE groupId = ?`
+          : `SELECT MAX(displayOrder) as maxOrder FROM Procedure WHERE auditId = ? AND phase = ? AND groupId IS NULL`,
+        groupId ? groupId : auditId,
+        groupId ? undefined : phase
+      );
+      nextOrder = (Number(maxResults[0]?.maxOrder || 0)) + 10;
+    } catch (e) {
+      console.warn("Failed to calculate max displayOrder, defaulting to 0");
+    }
+
     const id = crypto.randomUUID();
 
     await prisma.$executeRawUnsafe(
       `INSERT INTO Procedure (
         id, auditId, groupId, phase, title, purpose, source, scope, 
         methodology, results, conclusions, preparedBy, preparedDate, 
-        reviewedBy, reviewedDate, assignedToId, updatedAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        reviewedBy, reviewedDate, assignedToId, displayOrder, updatedAt
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
       id,
       auditId,
       groupId,
@@ -48,7 +60,8 @@ export async function POST(req: Request) {
       parseDate(data.preparedDate),
       data.reviewedBy ?? null,
       parseDate(data.reviewedDate),
-      (data.assignedToId === '' || data.assignedToId === undefined) ? null : data.assignedToId
+      (data.assignedToId === '' || data.assignedToId === undefined) ? null : data.assignedToId,
+      nextOrder
     );
 
     const procedureResults: any[] = await prisma.$queryRawUnsafe(

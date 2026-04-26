@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
+import { revalidatePath } from 'next/cache';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -38,6 +39,7 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
              reviewedBy = ?, 
              reviewedDate = ?, 
              assignedToId = ?,
+             displayOrder = ?,
              updatedAt = CURRENT_TIMESTAMP
          WHERE id = ?`,
         data.title ?? null,
@@ -52,6 +54,7 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
         data.reviewedBy ?? null,
         parseDate(data.reviewedDate),
         assignedToId,
+        data.displayOrder ?? 0,
         params.id
       );
     } catch (sqlError: any) {
@@ -59,8 +62,7 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
       throw new Error(`Database update failed: ${sqlError.message}`);
     }
 
-    // Fetch the updated procedure using standard Prisma (it should work now if instance is fresh)
-    // or use RAW if still paranoid. Let's use RAW to be safe.
+    // Fetch the updated procedure to get the auditId for revalidation
     const updated: any[] = await prisma.$queryRawUnsafe(
       `SELECT * FROM Procedure WHERE id = ? LIMIT 1`,
       params.id
@@ -70,7 +72,15 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
       throw new Error("Procedure not found after update");
     }
 
-    return NextResponse.json(updated[0]);
+    const procedure = updated[0];
+
+    // Revalidate paths to ensure dashboard and audit page show fresh data
+    revalidatePath('/');
+    if (procedure.auditId) {
+      revalidatePath(`/audits/${procedure.auditId}`);
+    }
+
+    return NextResponse.json(procedure);
   } catch (error: any) {
     console.error('Update procedure error:', error);
     return NextResponse.json({ 

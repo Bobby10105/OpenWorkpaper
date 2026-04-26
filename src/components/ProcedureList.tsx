@@ -37,8 +37,26 @@ export default function ProcedureList({
 
   useEffect(() => {
     // Filter groups and procedures for this specific phase
-    const phaseGroups = audit.procedureGroups.filter(g => g.phase === phase);
-    const phaseUngrouped = audit.procedures.filter(p => p.phase === phase && !p.groupId);
+    const phaseGroups = audit.procedureGroups
+      .filter(g => g.phase === phase)
+      .map(group => ({
+        ...group,
+        procedures: [...group.procedures].sort((a, b) => {
+          if ((a.displayOrder || 0) !== (b.displayOrder || 0)) {
+            return (a.displayOrder || 0) - (b.displayOrder || 0);
+          }
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        })
+      }));
+
+    const phaseUngrouped = audit.procedures
+      .filter(p => p.phase === phase && !p.groupId)
+      .sort((a, b) => {
+        if ((a.displayOrder || 0) !== (b.displayOrder || 0)) {
+          return (a.displayOrder || 0) - (b.displayOrder || 0);
+        }
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      });
     
     setGroups(phaseGroups);
     setUngroupedProcedures(phaseUngrouped);
@@ -260,14 +278,16 @@ export default function ProcedureList({
 
                 <div className="space-y-5 pl-6 border-l border-gray-100">
                   {group.procedures.map((proc, procIndex) => (
-                    <ProcedureItem 
-                      key={proc.id} 
-                      procedure={proc} 
+                    <ProcedureItem
+                      key={proc.id}
+                      procedure={proc}
                       nomenclature={`${groupNomenclature}.${getLetter(procIndex)}`}
-                      onDelete={() => handleDeleteProcedure(proc.id)} 
+                      onDelete={() => handleDeleteProcedure(proc.id)}
                       user={user}
                       teamMembers={audit.teamMembers}
+                      auditId={auditId}
                     />
+
                   ))}
                   
                   <button
@@ -303,6 +323,7 @@ export default function ProcedureList({
                     onDelete={() => handleDeleteProcedure(proc.id)} 
                     user={user}
                     teamMembers={audit.teamMembers}
+                    auditId={auditId}
                   />
                 ))}
               </div>
