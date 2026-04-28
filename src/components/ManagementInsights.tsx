@@ -151,12 +151,12 @@ export default function ManagementInsights({
                   </div>
                   <div className="h-8 w-px bg-slate-100" />
                   <div className="space-y-1">
-                    <p className="text-[10px] font-bold text-blue-600 uppercase tracking-tighter">In-Op</p>
+                    <p suppressHydrationWarning className="text-[10px] font-bold text-blue-600 uppercase tracking-tighter">In-Op</p>
                     <p className="text-xl font-black text-slate-900 leading-none">{workload.pending}</p>
                   </div>
                   <div className="h-8 w-px bg-slate-100" />
                   <div className="space-y-1">
-                    <p className="text-[10px] font-bold text-orange-600 uppercase tracking-tighter">Review</p>
+                    <p suppressHydrationWarning className="text-[10px] font-bold text-orange-600 uppercase tracking-tighter">Review</p>
                     <p className="text-xl font-black text-slate-900 leading-none">{workload.awaitingReview}</p>
                   </div>
                 </div>
