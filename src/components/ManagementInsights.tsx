@@ -105,7 +105,7 @@ export default function ManagementInsights({
         <InsightCard 
           label="Aging Procedures" 
           value={agingCount} 
-          subValue="Pending Review > 5 Days"
+          subValue="Pending Review > 30 Days"
           icon={AlertCircle} 
           color="bg-orange-500" 
         />

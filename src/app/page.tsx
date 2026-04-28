@@ -153,7 +153,7 @@ export default async function DashboardPage() {
       `);
       managementData.avgReviewLag = Number(lagResults[0]?.avgLag || 0);
 
-      // B. Aging Count (> 5 days)
+      // B. Aging Count (> 30 days)
       const agingResults: any[] = await prisma.$queryRawUnsafe(`
         SELECT COUNT(*) as count 
         FROM Procedure 
@@ -162,7 +162,7 @@ export default async function DashboardPage() {
           AND (
             julianday('now') - 
             (CASE WHEN preparedDate GLOB '*T*' THEN julianday(preparedDate) ELSE julianday(preparedDate / 1000, 'unixepoch') END)
-          ) > 5
+          ) > 30
       `);
       managementData.agingCount = Number(agingResults[0]?.count || 0);
 
