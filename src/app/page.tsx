@@ -9,6 +9,7 @@ import { getSession } from '@/lib/auth';
 import RestoreAuditButton from '@/components/RestoreAuditButton';
 import DashboardStats from '@/components/DashboardStats';
 import { redirect } from 'next/navigation';
+import ManagementInsights from '@/components/ManagementInsights';
 
 export const dynamic = 'force-dynamic';
 
@@ -123,6 +124,55 @@ export default async function DashboardPage() {
   const pendingAuditsData: any[] = [];
   const toCompleteAuditsData: any[] = [];
 
+  // Management Insights Data (BizOps only)
+  let managementData = {
+    avgReviewLag: 0,
+    agingCount: 0,
+    auditorWorkloads: [] as any[]
+  };
+
+  if (isGlobalManager) {
+    try {
+      // A. Avg Review Lag
+      const lagResults: any[] = await prisma.$queryRawUnsafe(`
+        SELECT AVG(julianday(reviewedDate) - julianday(preparedDate)) as avgLag 
+        FROM Procedure 
+        WHERE preparedDate IS NOT NULL AND reviewedDate IS NOT NULL
+      `);
+      managementData.avgReviewLag = Number(lagResults[0]?.avgLag || 0);
+
+      // B. Aging Count (> 5 days)
+      const agingResults: any[] = await prisma.$queryRawUnsafe(`
+        SELECT COUNT(*) as count 
+        FROM Procedure 
+        WHERE preparedDate IS NOT NULL 
+          AND reviewedDate IS NULL 
+          AND (julianday('now') - julianday(preparedDate)) > 5
+      `);
+      managementData.agingCount = Number(agingResults[0]?.count || 0);
+
+      // C. Auditor Workloads
+      const workloadResults: any[] = await prisma.$queryRawUnsafe(`
+        SELECT 
+          t.name,
+          COUNT(CASE WHEN p.reviewedDate IS NOT NULL THEN 1 END) as completed,
+          COUNT(CASE WHEN p.reviewedDate IS NULL AND (p.preparedDate IS NOT NULL OR p.assignedToId IS NOT NULL) THEN 1 END) as pending
+        FROM TeamMember t
+        JOIN Procedure p ON t.id = p.assignedToId
+        GROUP BY t.name
+        HAVING completed > 0 OR pending > 0
+        ORDER BY pending DESC, completed DESC
+      `);
+      managementData.auditorWorkloads = workloadResults.map(r => ({
+        name: r.name,
+        completed: Number(r.completed),
+        pending: Number(r.pending)
+      }));
+    } catch (e) {
+      console.warn('Dashboard: Failed to calculate management insights:', e);
+    }
+  }
+
   // 2. Process each audit for deep metrics
   const processedAudits = await Promise.all(audits.map(async (audit) => {
     // A. Count Reviewed (Sign-off complete)
@@ -220,8 +270,17 @@ export default async function DashboardPage() {
         totalToComplete={globalTotalToComplete}
         pendingAudits={pendingAuditsData}
         toCompleteAudits={toCompleteAuditsData}
-        upcomingAudits={[]}
       />
+
+      {/* Management Insights Panel (BizOps Only) */}
+      {isGlobalManager && (
+        <ManagementInsights 
+          avgReviewLag={managementData.avgReviewLag}
+          agingCount={managementData.agingCount}
+          auditorWorkloads={managementData.auditorWorkloads}
+          portfolioVelocity={portfolioProgress}
+        />
+      )}
 
       {/* Portfolio List */}
       <section className="space-y-8">

@@ -43,7 +43,7 @@ export default async function AuditDetail(props: { params: Promise<{ id: string 
     // Access Control: Only allow team members or Business Operations
     const isGlobalManager = userRole === 'Business Operations';
     if (!isGlobalManager) {
-      const isMember = audit.teamMembers.some(m => m.userId === user.id);
+      const isMember = audit.teamMembers.some((m: any) => m.userId === user.id);
       if (!isMember) {
         return (
           <div className="p-8 text-center bg-yellow-50 rounded-xl border border-yellow-200 text-yellow-800">

@@ -36,18 +36,18 @@ export async function POST(req: NextRequest) {
     // 1. Calculate next displayOrder
     let nextOrder = 0;
     try {
-      const maxOrderRes = await prisma.procedure.aggregate({
+      const maxOrderRes: any = await prisma.procedure.aggregate({
         where: groupId ? { groupId } : { auditId, phase, groupId: null },
-        _max: { displayOrder: true }
+        _max: { displayOrder: true } as any
       });
-      nextOrder = Number(maxOrderRes._max.displayOrder || 0) + 10;
+      nextOrder = Number(maxOrderRes?._max?.displayOrder || 0) + 10;
     } catch (e) {
       // Non-fatal if order calculation fails
     }
 
     // 2. Create the procedure with self-healing fallback
     const createProcedure = async () => {
-      return await prisma.procedure.create({
+      return await (prisma.procedure as any).create({
         data: {
           auditId,
           phase,

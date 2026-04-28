@@ -18,7 +18,9 @@ interface PendingAudit {
 
 interface DashboardStatsProps {
   activeCount: number;
+  portfolioProgress: number;
   totalPendingReview: number;
+  upcomingDeadlines: number;
   totalToComplete: number;
   pendingAudits: PendingAudit[];
   toCompleteAudits: PendingAudit[];
@@ -65,6 +67,7 @@ function StatCard({
 
 export default function DashboardStats({ 
   activeCount, 
+  portfolioProgress,
   totalPendingReview, 
   totalToComplete,
   pendingAudits,
@@ -75,12 +78,18 @@ export default function DashboardStats({
 
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard 
           label="Active Audits" 
           value={activeCount} 
           icon={LayoutDashboard} 
           color="bg-gradient-to-br from-blue-600 to-blue-700 shadow-blue-500/10"
+        />
+        <StatCard 
+          label="Portfolio Progress" 
+          value={`${portfolioProgress}%`} 
+          icon={ExternalLink} 
+          color="bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-500/10"
         />
         <StatCard 
           label="Assigned to You" 
