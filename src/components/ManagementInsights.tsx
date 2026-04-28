@@ -146,7 +146,7 @@ export default function ManagementInsights({
                 </div>
                 <div className="flex items-center space-x-6">
                   <div className="space-y-1">
-                    <p suppressHydrationWarning className="text-[10px] font-bold text-blue-600 uppercase tracking-tighter">Procedures Assigned</p>
+                    <p suppressHydrationWarning className="text-[10px] font-bold text-blue-600 uppercase tracking-tighter">Assigned</p>
                     <p className="text-xl font-black text-slate-900 leading-none">{workload.pending}</p>
                   </div>
                   <div className="h-8 w-px bg-slate-100" />
