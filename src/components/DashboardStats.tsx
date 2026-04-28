@@ -6,6 +6,7 @@ import Link from 'next/link';
 
 interface PendingProcedure {
   id: string;
+  auditId?: string;
   title: string | null;
   assignedTo?: { name: string } | null;
 }
@@ -41,14 +42,8 @@ function StatCard({
   onClick?: () => void,
   isActive?: boolean
 }) {
-  return (
-    <button 
-      onClick={onClick}
-      disabled={!onClick}
-      className={`w-full text-left bg-white backdrop-blur-2xl p-6 rounded-[2rem] border transition-all duration-500 flex items-center space-x-5 shadow-xl group ${
-        onClick ? 'cursor-pointer hover:shadow-blue-500/10 hover:border-slate-300 active:scale-[0.98]' : 'cursor-default'
-      } ${isActive ? 'ring-2 ring-blue-500/50 border-transparent bg-slate-50' : 'border-slate-200'}`}
-    >
+  const content = (
+    <div className="flex items-center space-x-5">
       <div className={`p-3.5 rounded-2xl transition-all duration-500 group-hover:scale-110 shadow-lg ${color}`}>
         <Icon className="w-6 h-6 text-white" />
       </div>
@@ -61,7 +56,30 @@ function StatCard({
           <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-blue-500" />
         </div>
       )}
-    </button>
+    </div>
+  );
+
+  if (onClick) {
+    return (
+      <button 
+        onClick={onClick}
+        className={`w-full text-left bg-white backdrop-blur-2xl p-6 rounded-[2rem] border transition-all duration-500 shadow-xl group cursor-pointer hover:shadow-blue-500/10 hover:border-slate-300 active:scale-[0.98] ${isActive ? 'ring-2 ring-blue-500/50 border-transparent bg-slate-50' : 'border-slate-200'}`}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <div className="w-full text-left bg-white backdrop-blur-2xl p-6 rounded-[2rem] border border-slate-200 transition-all duration-500 shadow-xl flex items-center space-x-5">
+      <div className={`p-3.5 rounded-2xl shadow-lg ${color}`}>
+        <Icon className="w-6 h-6 text-white" />
+      </div>
+      <div>
+        <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider leading-none mb-2">{label}</p>
+        <p className="text-3xl font-bold text-slate-900 leading-none tracking-tight">{value}</p>
+      </div>
+    </div>
   );
 }
 
@@ -139,7 +157,7 @@ export default function DashboardStats({
                     {audit.pendingProcedures?.map(proc => (
                       <Link 
                         key={proc.id} 
-                        href={`/audits/${audit.id}/procedures/${proc.id}`}
+                        href={`/audits/${proc.auditId || audit.id}/procedures/${proc.id}`}
                         className="flex items-center group/item p-2 rounded-lg hover:bg-slate-50 transition-colors"
                       >
                         <div className="w-2 h-2 rounded-full bg-blue-500 mr-3 group-hover/item:scale-125 transition-transform shadow-[0_0_12px_rgba(59,130,246,0.2)]" />
@@ -195,7 +213,7 @@ export default function DashboardStats({
                     {audit.pendingProcedures?.map(proc => (
                       <Link 
                         key={proc.id} 
-                        href={`/audits/${audit.id}/procedures/${proc.id}`}
+                        href={`/audits/${proc.auditId || audit.id}/procedures/${proc.id}`}
                         className="flex items-center group/item p-2 rounded-lg hover:bg-slate-50 transition-colors"
                       >
                         <div className="w-2 h-2 rounded-full bg-orange-500 mr-3 group-hover/item:scale-125 transition-transform shadow-[0_0_12px_rgba(249,115,22,0.2)]" />

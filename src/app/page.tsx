@@ -184,7 +184,7 @@ export default async function DashboardPage() {
 
     // B. Find Pending Review (Prepared by someone, but no reviewer sign-off yet)
     const pendingResults: any[] = await prisma.$queryRawUnsafe(
-      `SELECT id, title FROM Procedure WHERE auditId = ? AND preparedBy IS NOT NULL AND preparedDate IS NOT NULL AND (reviewedBy IS NULL OR reviewedDate IS NULL)`,
+      `SELECT id, auditId, title FROM Procedure WHERE auditId = ? AND preparedBy IS NOT NULL AND preparedDate IS NOT NULL AND (reviewedBy IS NULL OR reviewedDate IS NULL)`,
       audit.id
     );
     
@@ -192,14 +192,14 @@ export default async function DashboardPage() {
       pendingAuditsData.push({
         id: audit.id,
         title: audit.title,
-        pendingProcedures: pendingResults.map(p => ({ id: p.id, title: p.title }))
+        pendingProcedures: pendingResults.map(p => ({ id: p.id, auditId: p.auditId, title: p.title }))
       });
       globalTotalPendingReview += pendingResults.length;
     }
 
     // C. Find "My Tasks" (Assigned to you, but no preparer sign-off yet)
     const myTaskResults: any[] = await prisma.$queryRawUnsafe(
-      `SELECT p.id, p.title, t.name as assignedToName
+      `SELECT p.id, p.auditId, p.title, t.name as assignedToName
        FROM Procedure p 
        LEFT JOIN TeamMember t ON p.assignedToId = t.id
        WHERE p.auditId = ? 
@@ -221,6 +221,7 @@ export default async function DashboardPage() {
         title: audit.title,
         pendingProcedures: myTaskResults.map(p => ({ 
           id: p.id, 
+          auditId: p.auditId,
           title: p.title,
           assignedTo: { name: p.assignedToName || 'You' }
         }))
