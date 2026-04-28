@@ -8,6 +8,7 @@ interface AuditorWorkload {
   name: string;
   completed: number;
   pending: number;
+  awaitingReview: number;
 }
 
 interface ManagementInsightsProps {
@@ -145,19 +146,24 @@ export default function ManagementInsights({
                 </div>
                 <div className="flex items-center space-x-6">
                   <div className="space-y-1">
-                    <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-tighter">Completed</p>
+                    <p suppressHydrationWarning className="text-[10px] font-bold text-emerald-600 uppercase tracking-tighter">Done</p>
                     <p className="text-xl font-black text-slate-900 leading-none">{workload.completed}</p>
                   </div>
                   <div className="h-8 w-px bg-slate-100" />
                   <div className="space-y-1">
-                    <p className="text-[10px] font-bold text-orange-600 uppercase tracking-tighter">Pending</p>
+                    <p className="text-[10px] font-bold text-blue-600 uppercase tracking-tighter">In-Op</p>
                     <p className="text-xl font-black text-slate-900 leading-none">{workload.pending}</p>
+                  </div>
+                  <div className="h-8 w-px bg-slate-100" />
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold text-orange-600 uppercase tracking-tighter">Review</p>
+                    <p className="text-xl font-black text-slate-900 leading-none">{workload.awaitingReview}</p>
                   </div>
                 </div>
                 <div className="mt-4 h-1 w-full bg-slate-50 rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-indigo-500 transition-all duration-1000" 
-                    style={{ width: `${(workload.completed / (workload.completed + workload.pending || 1)) * 100}%` }} 
+                    style={{ width: `${(workload.completed / (workload.completed + workload.pending + workload.awaitingReview || 1)) * 100}%` }} 
                   />
                 </div>
               </div>
