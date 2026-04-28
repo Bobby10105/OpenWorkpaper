@@ -21,6 +21,7 @@ This software was "vibe-coded" by a CPA with 10 years of audit experience who wa
 ## 🚀 Key Features
 
 *   **Unified Task Engine**: Personalized dashboard overview of active audits with high-impact analytics, including direct drill-downs into **"Assigned to You"** and **"Pending Review"** procedures.
+*   **Management Insights**: Dedicated oversight suite for Business Operations, featuring real-time tracking of **Review Timeliness (Lag)**, **Aging Procedures (>30 days)**, and **Global Auditor Workload Analysis**.
 *   **Three-Phase Workflow**: Standardized sections for Planning, Fieldwork, and Reporting with **instant, zero-latency tab switching** and cinematic transitions.
 *   **Master-Detail Procedure Workspace**: Dedicated, high-performance workspace for documenting individual procedures, featuring a clean UI, rich text editing, and integrated discussion.
 *   **Data Integrity (Locking)**: Procedures are **automatically locked as Read-Only** once they are reviewed to protect audit integrity. Authorized team members can explicitly "Unlock for Editing," which clears existing sign-offs for re-preparation.
@@ -38,6 +39,9 @@ This software was "vibe-coded" by a CPA with 10 years of audit experience who wa
 *   **Professional Export**: Generate a complete "Audit Program" in Word (.docx) format with one click, perfectly synchronized with your UI nomenclature.
 *   **Self-Healing API**: Intelligent database repair logic automatically detects and fixes schema mismatches (common in Docker volume migrations) to ensure high availability.
 *   **Secure Access**: Built-in authentication with granular role-based access control and **Federal SSO (OIDC)** support.
+
+![Management Insights](docs/images/management_insights.png)
+*Management Insights Panel for Business Operations, featuring review timeliness tracking, aging analysis, and granular auditor workload metrics.*
 
 ![Procedure View](docs/images/procedure_view.png)
 *Dedicated Procedure Workspace including standardized rich-text fields, ownership assignments, and integrated sign-off tracking.*
