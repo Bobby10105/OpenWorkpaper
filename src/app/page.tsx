@@ -133,11 +133,16 @@ export default async function DashboardPage() {
 
   if (isGlobalManager) {
     try {
-      // A. Avg Review Lag
+      // A. Avg Review Lag (Historical + Current Awaiting Review)
       const lagResults: any[] = await prisma.$queryRawUnsafe(`
-        SELECT AVG(julianday(reviewedDate) - julianday(preparedDate)) as avgLag 
+        SELECT AVG(
+          CASE 
+            WHEN reviewedDate IS NOT NULL THEN (julianday(reviewedDate) - julianday(preparedDate))
+            ELSE (julianday('now') - julianday(preparedDate))
+          END
+        ) as avgLag 
         FROM Procedure 
-        WHERE preparedDate IS NOT NULL AND reviewedDate IS NOT NULL
+        WHERE preparedDate IS NOT NULL
       `);
       managementData.avgReviewLag = Number(lagResults[0]?.avgLag || 0);
 
@@ -156,17 +161,19 @@ export default async function DashboardPage() {
         SELECT 
           t.name,
           COUNT(CASE WHEN p.reviewedDate IS NOT NULL THEN 1 END) as completed,
-          COUNT(CASE WHEN p.reviewedDate IS NULL AND (p.preparedDate IS NOT NULL OR p.assignedToId IS NOT NULL) THEN 1 END) as pending
+          COUNT(CASE WHEN p.reviewedDate IS NULL AND p.preparedDate IS NULL AND p.assignedToId IS NOT NULL THEN 1 END) as inProgress,
+          COUNT(CASE WHEN p.reviewedDate IS NULL AND p.preparedDate IS NOT NULL THEN 1 END) as awaitingReview
         FROM TeamMember t
         JOIN Procedure p ON t.id = p.assignedToId
         GROUP BY t.name
-        HAVING completed > 0 OR pending > 0
-        ORDER BY pending DESC, completed DESC
+        HAVING completed > 0 OR inProgress > 0 OR awaitingReview > 0
+        ORDER BY awaitingReview DESC, inProgress DESC
       `);
       managementData.auditorWorkloads = workloadResults.map(r => ({
         name: r.name,
         completed: Number(r.completed),
-        pending: Number(r.pending)
+        pending: Number(r.inProgress),
+        awaitingReview: Number(r.awaitingReview)
       }));
     } catch (e) {
       console.warn('Dashboard: Failed to calculate management insights:', e);
