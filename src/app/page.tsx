@@ -134,11 +134,18 @@ export default async function DashboardPage() {
   if (isGlobalManager) {
     try {
       // A. Avg Review Lag (Historical + Current Awaiting Review)
+      // Handles both ISO strings and BigInt timestamps stored in SQLite
       const lagResults: any[] = await prisma.$queryRawUnsafe(`
         SELECT AVG(
           CASE 
-            WHEN reviewedDate IS NOT NULL THEN (julianday(reviewedDate) - julianday(preparedDate))
-            ELSE (julianday('now') - julianday(preparedDate))
+            WHEN reviewedDate IS NOT NULL THEN (
+              (CASE WHEN reviewedDate GLOB '*T*' THEN julianday(reviewedDate) ELSE julianday(reviewedDate / 1000, 'unixepoch') END) - 
+              (CASE WHEN preparedDate GLOB '*T*' THEN julianday(preparedDate) ELSE julianday(preparedDate / 1000, 'unixepoch') END)
+            )
+            ELSE (
+              julianday('now') - 
+              (CASE WHEN preparedDate GLOB '*T*' THEN julianday(preparedDate) ELSE julianday(preparedDate / 1000, 'unixepoch') END)
+            )
           END
         ) as avgLag 
         FROM Procedure 
