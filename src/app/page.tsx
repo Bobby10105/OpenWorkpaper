@@ -159,7 +159,10 @@ export default async function DashboardPage() {
         FROM Procedure 
         WHERE preparedDate IS NOT NULL 
           AND reviewedDate IS NULL 
-          AND (julianday('now') - julianday(preparedDate)) > 5
+          AND (
+            julianday('now') - 
+            (CASE WHEN preparedDate GLOB '*T*' THEN julianday(preparedDate) ELSE julianday(preparedDate / 1000, 'unixepoch') END)
+          ) > 5
       `);
       managementData.agingCount = Number(agingResults[0]?.count || 0);
 
