@@ -262,14 +262,19 @@ To apply a new version or your own custom code tweaks:
     git pull
     ```
 2.  **Rebuild and restart**:
+
+    **Standard Deployment**:
     ```bash
-    # For standard deployment:
     docker compose -f docker-compose.prod.yml up -d --build
+    ```
 
-    # For secure HTTPS deployment:
+    **Secure HTTPS Deployment**:
+    ```bash
     docker compose -f docker-compose.secure.yml up -d --build
+    ```
 
-    # For development/quickstart:
+    **Development/Quickstart**:
+    ```bash
     docker compose up -d --build
     ```
     *This command rebuilds the application image with your new code, synchronizes any database schema changes, and restarts the service. Your audits and files will remain exactly as they were.*
