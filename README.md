@@ -268,6 +268,9 @@ To apply a new version or your own custom code tweaks:
 
     # For secure HTTPS deployment:
     docker compose -f docker-compose.secure.yml up -d --build
+
+    # For development/quickstart:
+    docker compose up -d --build
     ```
     *This command rebuilds the application image with your new code, synchronizes any database schema changes, and restarts the service. Your audits and files will remain exactly as they were.*
 
