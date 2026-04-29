@@ -9,7 +9,7 @@ async function main() {
   // mustChangePassword is now set to true for improved security
   const itAdmin = await prisma.user.upsert({
     where: { username: 'it.admin' },
-    update: { role: 'IT Administrator', mustChangePassword: true },
+    update: { role: 'IT Administrator' },
     create: {
       username: 'it.admin',
       password: hashedPassword,
@@ -22,7 +22,7 @@ async function main() {
   // mustChangePassword is now set to true for improved security
   const bizOps = await prisma.user.upsert({
     where: { username: 'biz.ops' },
-    update: { role: 'Business Operations', mustChangePassword: true },
+    update: { role: 'Business Operations' },
     create: {
       username: 'biz.ops',
       password: hashedPassword,

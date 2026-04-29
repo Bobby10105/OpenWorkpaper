@@ -7,14 +7,13 @@ services:
       - amsos-uploads:/app/public/uploads
       - amsos-db:/app/prisma/data
     environment:
-      # MANDATORY: Change this to a random secure string for production
-      - JWT_SECRET=change-me-to-a-secure-random-string
-      - DATABASE_URL=file:/app/prisma/data/dev.db
-      - NODE_ENV=production
-      # - SSO_CLIENT_ID=your-client-id
-      # - SSO_CLIENT_SECRET=your-client-secret
-      # - SSO_ISSUER_URL=https://idp.agency.gov
-      # - NEXT_PUBLIC_BASE_URL=https://your-app-url.gov
+      - JWT_SECRET=${JWT_SECRET}
+      - DATABASE_URL=${DATABASE_URL:-file:/app/prisma/data/dev.db}
+      - NODE_ENV=${NODE_ENV:-production}
+      - SSO_CLIENT_ID=${SSO_CLIENT_ID}
+      - SSO_CLIENT_SECRET=${SSO_CLIENT_SECRET}
+      - SSO_ISSUER_URL=${SSO_ISSUER_URL}
+      - NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL}
     restart: unless-stopped
 
 volumes:

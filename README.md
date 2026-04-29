@@ -122,10 +122,22 @@ This command starts both the AMSOS application and an Nginx container. The appli
 
 ---
 
+### 📝 Environment Variables Reference
+
+| Variable | Requirement | Description |
+| :--- | :--- | :--- |
+| **`DATABASE_URL`** | **Required** | Path to the SQLite database. <br>• **Docker Dev**: `file:/app/prisma/dev.db`<br>• **Docker Prod or Secure**: `file:/app/prisma/data/dev.db`<br>• **Manual/Host**: `file:./dev.db` |
+| **`JWT_SECRET`** | **Required** | A secure random string used to sign session tokens. **Must be changed for production** to prevent session hijacking. |
+| **`SESSION_DURATION_SECONDS`** | Optional | How long a user remains logged in (default `3600` or 1 hour). |
+| **`NODE_ENV`** | **Required** | Set to `production` for live deployments to enable optimizations and strict security checks. Use `development` for local coding. |
+| **`PORT`** | Optional | The internal port the app listens on (default `3000`). Even with HTTPS, this internal port usually stays as `3000`. |
+
+---
+
 ### 🔑 SSO (OIDC) Configuration
 AMSOS supports any OpenID Connect (OIDC) compliant Identity Provider (IDP) such as Microsoft Entra ID (Azure AD), Okta, or Keycloak.
 
-To enable SSO, configure the following environment variables in your `docker-compose.secure.yml` (or `docker-compose.prod.yml`) file:
+To enable SSO, configure the following environment variables in your `.env` file:
 
 | Variable | Description | Example |
 | :--- | :--- | :--- |
@@ -138,6 +150,8 @@ To enable SSO, configure the following environment variables in your `docker-com
 
 **Redirect URI**: In your IDP configuration, you must register the following callback URL:
 `https://amsos.your-agency.gov/api/auth/sso/callback`
+
+---
 
 ## 💾 Backup & Disaster Recovery
 
@@ -163,12 +177,16 @@ To use the Docker methods below, you must have [Docker](https://www.docker.com/)
 ### 🐳 Method 1: Docker Deployment (Recommended)
 This is the professional standard for deploying AMSOS. We recommend Option A for all production environments.
 
-1.  **Clone & Configure**:
+1.  **Clone & Prepare**:
     ```bash
     git clone https://github.com/Bobby10105/AMSOS.git
     cd AMSOS
     ```
-2.  **Edit Security**: Open your chosen compose file and replace `change-me-to-a-secure-random-string` with a secure random key for `JWT_SECRET`.
+2.  **Configure Environment**: Set up your local `.env` file by copying the template:
+    ```bash
+    cp .env.example .env
+    ```
+    Edit the `.env` file and configure your settings. At a minimum, you **must** update **`JWT_SECRET`**. The other defaults are already pre-configured for a standard production Docker deployment. If you are using SSO, configure those variables as described in the [Environment Variables Reference](#-environment-variables-reference) above.
 3.  **Launch**:
 
     *   **Option A: Secure Production (HTTPS - Port 443)**
@@ -184,7 +202,7 @@ This is the professional standard for deploying AMSOS. We recommend Option A for
         ```
 
     *   **Option C: Quickstart (Development & Evaluation)**
-        *Best for rapid evaluation or developers. Includes hot-reloading and debug logging.*
+        *Best for rapid evaluation or developers. Includes debug logging. **Note**: If you want hot-reloading for code changes, edit your `.env` and set `NODE_ENV=development` and `DATABASE_URL="file:/app/prisma/dev.db"`.*
         ```bash
         docker compose up --build
         ```
@@ -206,11 +224,11 @@ npm install
 ```
 
 #### 3. Environment Configuration
-Create a `.env` file in the root directory:
+Set up your local `.env` file by copying the template:
 ```bash
-DATABASE_URL="file:./dev.db"
-JWT_SECRET="your-secure-secret-key" # CHANGE THIS FOR PRODUCTION
+cp .env.example .env
 ```
+Open the `.env` file and **update** the **`DATABASE_URL`** to `file:./dev.db` and set a secure **`JWT_SECRET`**.
 
 #### 4. Database & Launch
 ```bash

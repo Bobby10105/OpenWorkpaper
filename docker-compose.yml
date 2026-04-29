@@ -12,10 +12,10 @@ services:
       - uploads-data:/app/public/uploads
       - db-data:/app/prisma
     environment:
-      - DATABASE_URL=file:/app/prisma/dev.db
-      - JWT_SECRET=local-development-secret-key-123
-      - SESSION_DURATION_SECONDS=3600
-      - NODE_ENV=development
+      - DATABASE_URL=${DATABASE_URL:-file:/app/prisma/dev.db}
+      - JWT_SECRET=${JWT_SECRET}
+      - SESSION_DURATION_SECONDS=${SESSION_DURATION_SECONDS:-3600}
+      - NODE_ENV=${NODE_ENV:-development}
     restart: always
 
 volumes:
