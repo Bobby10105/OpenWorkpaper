@@ -1,6 +1,6 @@
 # OpenWorkpaper: Open Source Audit Management System
 
-![OpenWorkpaper Dashboard](docs/images/dashboard.png)
+![OpenWorkpaper Dashboard](docs/images/dashboard.png?v=1)
 *Central Dashboard providing a high-level overview of active audits, personalized assignments, and a Unified Task Engine.*
 
 OpenWorkpaper is a simple, modern, and open-source web application designed for auditors to document audit programs and procedures. It streamlines the audit lifecycle across Planning, Fieldwork, and Reporting phases with built-in sign-off tracking, reviewer collaboration, and professional document export.
@@ -15,7 +15,7 @@ This software was "vibe-coded" by a CPA with 10 years of audit experience who wa
 
 **Contributions are welcomed!** Whether you are an auditor with feature ideas or a developer looking to help, please feel free to open an issue or submit a pull request.
 
-![Audit View](docs/images/audit_view.png)
+![Audit View](docs/images/audit_view.png?v=1)
 *Audit Detail View featuring PBC tracking, milestone management, and phase-based procedure navigation.*
 
 ## 🚀 Key Features
@@ -40,10 +40,10 @@ This software was "vibe-coded" by a CPA with 10 years of audit experience who wa
 *   **Self-Healing API**: Intelligent database repair logic automatically detects and fixes schema mismatches (common in Docker volume migrations) to ensure high availability.
 *   **Secure Access**: Built-in authentication with granular role-based access control and **Federal SSO (OIDC)** support.
 
-![Management Insights](docs/images/management_insights.png)
+![Management Insights](docs/images/management_insights.png?v=1)
 *Management Insights Panel for Business Operations, featuring review timeliness tracking, aging analysis, and granular auditor workload metrics.*
 
-![Procedure View](docs/images/procedure_view.png)
+![Procedure View](docs/images/procedure_view.png?v=1)
 *Dedicated Procedure Workspace including standardized rich-text fields, ownership assignments, and integrated sign-off tracking.*
 
 ## 🔐 Roles & Permissions (RBAC)
