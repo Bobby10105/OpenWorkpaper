@@ -249,11 +249,19 @@ Once running, sign in with:
 ## 🛠 Maintenance & Updates
 
 ### Data Persistence
-AMSOS is designed to be updated without data loss. All sensitive engagement data is stored in **Named Docker Volumes** that reside on the host machine's permanent storage:
-*   `amsos-db`: Contains the SQLite database file (audits, users, settings, and logs).
-*   `amsos-uploads`: Contains all documents (PDF, Excel, Word) attached to procedures.
+AMSOS is designed to be updated without data loss. Permanent data is stored using two methods:
 
-When the application is updated, the temporary containers are replaced, but these volumes remain untouched and are automatically re-attached to the new version.
+#### 1. Named Docker Volumes (Application Data)
+These volumes are managed by Docker and persist across container restarts and updates.
+*   **`amsos-db`**: Contains the SQLite database file (audits, users, settings, and logs).
+*   **`amsos-uploads`**: Contains all documents (PDF, Excel, Word) attached to procedures.
+
+#### 2. Host Bind-Mounts (Infrastructure & Security)
+These directories are located in the project folder on your host machine.
+*   **`./certs`**: (Required for HTTPS) Stores your SSL `fullchain.pem` and `privkey.pem`.
+*   **`nginx.conf`**: Your web server configuration.
+
+When the application is updated, the temporary containers are replaced, but these volumes and files remain untouched and are automatically re-attached to the new version.
 
 ### Applying Updates
 To apply a new version or your own custom code tweaks:
