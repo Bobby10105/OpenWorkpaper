@@ -173,6 +173,7 @@ AMSOS is designed for complete infrastructure-agnostic flexibility. Whether you 
 
 ### ✅ Prerequisites (Docker Methods)
 To use the Docker methods below, you must have [Docker](https://www.docker.com/) installed on your server or local machine.
+> **Note**: For a complete list of all internal libraries, security dependencies, and infrastructure requirements for IT approval, please see **[DEPENDENCIES.md](DEPENDENCIES.md)**.
 
 ### 🐳 Method 1: Docker Deployment (Recommended)
 This is the professional standard for deploying AMSOS. We recommend Option A for all production environments.
