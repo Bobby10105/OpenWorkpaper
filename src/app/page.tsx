@@ -1,5 +1,5 @@
 /** 
- * AMSOS Dashboard - Unified Task Engine
+ * OpenWorkpaper Dashboard - Unified Task Engine
  */
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';

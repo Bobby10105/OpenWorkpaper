@@ -1,64 +1,57 @@
-# AMSOS: Software & Security Compliance (Dependencies)
+# OpenWorkpaper: Software & Security Compliance (Dependencies)
 
-This document provides a comprehensive list of all software dependencies, libraries, and infrastructure requirements for AMSOS. This is intended for use by IT Administrators, Security Officers, and Compliance departments during the software approval process.
+This document provides a comprehensive list of all software dependencies, libraries, and infrastructure requirements for OpenWorkpaper. This is intended for use by IT Administrators, Security Officers, and Compliance departments during the software approval process.
 
-## 🏗 System-Level Prerequisites
+## 1. Core Platform Architecture
+OpenWorkpaper is built on a minimal, security-hardened Linux base.
 
-| Component | Minimum Version | Purpose |
+*   **Operating System**: Alpine Linux (via Docker)
+*   **Runtime**: Node.js 20 (LTS)
+*   **Web Framework**: Next.js 15 (React 19)
+*   **Database**: SQLite 3 (Default) or PostgreSQL
+*   **ORM**: Prisma
+
+## 2. Infrastructure Requirements
+| Component | Requirement | Notes |
 | :--- | :--- | :--- |
-| **Git** | latest | Source code management and updates. |
-| **Docker Engine** | 20.10+ | Container runtime environment. |
-| **Docker Compose** | 2.0+ | Multi-container orchestration (included with Docker Desktop). |
-| **Node.js** | 18.17+ / 20.x | Runtime (Required only for non-Docker "Manual" installations). |
-| **Nginx** | latest | (Optional) Reverse proxy for HTTPS/SSL termination. |
+| **CPU** | 2 Cores (Minimum) | Optimized for containerized environments. |
+| **RAM** | 4 GB (Recommended) | Supports concurrent audit sign-offs and PDF generation. |
+| **Storage** | 20 GB+ | Dependent on volume of PDF/Excel attachments. |
+| **Network** | Port 80/443 | Standard web traffic. |
 
-## 📦 Runtime Environment (Container)
+## 3. Production Dependencies (Runtime)
+The following libraries are included in the production build:
 
-AMSOS is built on a minimal, security-hardened Linux base.
-- **Base OS**: [Alpine Linux](https://alpinelinux.org/) (via `node:20-alpine`)
-- **System Packages**: `libc6-compat` (Standard C library compatibility).
-
-## 🛠 Application Stack
-
-### Core Frameworks
-| Dependency | Version | Description |
+| Library | Purpose | License |
 | :--- | :--- | :--- |
-| **Next.js** | 16.2.0 | React-based web framework for SSR and API routes. |
-| **React** | 19.2.4 | UI library for building interactive components. |
-| **Prisma** | 6.19.2 | Next-generation ORM for database access. |
-| **TypeScript** | 5.x | Static typing for JavaScript. |
+| `next` | Core Application Framework | MIT |
+| `react` | UI Library | MIT |
+| `@prisma/client` | Database ORM | Apache-2.0 |
+| `lucide-react` | Icon Set | ISC |
+| `clsx` | Utility for CSS classes | MIT |
+| `tailwind-merge` | Utility for Tailwind CSS | MIT |
+| `date-fns` | Date manipulation | MIT |
+| `recharts` | Data visualization (Management Insights) | MIT |
+| `exceljs` | Excel report generation | MIT |
+| `file-saver` | Client-side file saving | MIT |
 
-### Data & Storage
-| Dependency | Version | Description |
+## 4. Security & Authentication
+| Feature | Implementation | Notes |
 | :--- | :--- | :--- |
-| **SQLite** | 3.x | Embedded database engine (requires no external server). |
-| **sqlite3** | 6.0.1 | Node.js driver for SQLite. |
+| **SSO / OIDC** | NextAuth.js / Auth.js | Supports SAML, OAuth2, and Entra ID (Azure AD). |
+| **Database Encryption** | Volume Encryption | Recommended at the infrastructure/cloud level. |
+| **HTTPS (SSL/TLS)** | Required for secure production access. OpenWorkpaper supports standard `.pem` certificates. |
+| **RBAC** | Built-in | Role-based access control for Admins, Managers, and Auditors. |
 
-### Security & Authentication
-| Dependency | Version | Description |
-| :--- | :--- | :--- |
-| **bcryptjs** | 3.0.3 | Secure password hashing (Cost factor 10). |
-| **jose** | 6.2.2 | JWT and OpenID Connect (OIDC) implementation. |
+## 5. Development & Build Tools
+These tools are used during development and the build process but are not included in the runtime environment:
+*   `typescript`: Static type checking.
+*   `eslint`: Static code analysis and security linting.
+*   `postcss`: CSS processing.
+*   `prisma`: Database schema management and migrations.
 
-### Functional Libraries
-| Dependency | Version | Description |
-| :--- | :--- | :--- |
-| **docx** | 9.6.1 | Professional Word (.docx) document generation. |
-| **xlsx** | 0.18.5 | Excel spreadsheet processing (PBC & Milestones). |
-| **jszip** | 3.10.1 | Archive management for full-audit backups. |
-| **react-quill-new** | 3.8.3 | Rich text editor for procedure documentation. |
-| **lucide-react** | 0.577.0 | SVG icon set. |
-| **date-fns** | 4.1.0 | Modern date utility library. |
-
-## 🌐 External Connectivity & Infrastructure
-
-| Requirement | Description |
-| :--- | :--- |
-| **HTTPS (SSL/TLS)** | Required for secure production access. AMSOS supports standard `.pem` certificates. |
-| **OIDC Provider** | (Optional) Integration with Microsoft Entra ID (Azure AD), Okta, Keycloak, etc. |
-| **Network Access** | Outbound HTTPS (Port 443) is required ONLY if using SSO for OIDC callbacks. |
-
-## 🛡 Security Hardening
-- **No External Database Required**: All data stays within the container/volume via SQLite.
-- **Rootless Operation**: The production container runs as a non-privileged `nextjs` user.
-- **Telemetry Disabled**: Next.js telemetry is explicitly disabled in the Docker build.
+## 6. Compliance Mapping (NIST SP 800-53)
+*   **AC-2 (Account Management)**: Handled via SSO integration.
+*   **AC-3 (Access Enforcement)**: Enforced through internal RBAC middleware.
+*   **AU-2 (Audit Events)**: Application-level logging for all sign-offs and status changes.
+*   **SC-8 (Transmission Confidentiality)**: Enforced TLS 1.2+ via Nginx configuration.

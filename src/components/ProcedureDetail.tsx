@@ -1,5 +1,5 @@
 'use client';
-/** AMSOS ProcedureDetail - Full Page Editor with Auto-Save **/
+/** OpenWorkpaper ProcedureDetail - Full Page Editor with Auto-Save **/
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';

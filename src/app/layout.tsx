@@ -9,8 +9,8 @@ import UserMenu from '@/components/UserMenu';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'AMSOS - Audit Management',
-  description: 'Audit Management Software Open Source',
+  title: 'OpenWorkpaper - Audit Management',
+  description: 'Open Source Audit Management System',
 };
 
 export default async function RootLayout({
@@ -37,7 +37,7 @@ export default async function RootLayout({
                 <div className="bg-white p-1.5 rounded-lg group-hover:bg-blue-50 transition-all duration-300 shadow-md group-active:scale-95">
                   <Component className="h-6 w-6 text-blue-600" />
                 </div>
-                <span className="text-xl font-bold tracking-tight text-white group-hover:text-blue-100 transition-colors">AMSOS</span>
+                <span className="text-xl font-bold tracking-tight text-white group-hover:text-blue-100 transition-colors">OpenWorkpaper</span>
               </Link>
 
               {user && (

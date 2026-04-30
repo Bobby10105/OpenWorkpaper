@@ -4,8 +4,8 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - amsos-uploads:/app/public/uploads
-      - amsos-db:/app/prisma/data
+      - openworkpaper-uploads:/app/public/uploads
+      - openworkpaper-db:/app/prisma/data
     environment:
       - JWT_SECRET=${JWT_SECRET}
       - DATABASE_URL=${DATABASE_URL:-file:/app/prisma/data/dev.db}
@@ -17,5 +17,5 @@ services:
     restart: unless-stopped
 
 volumes:
-  amsos-uploads:
-  amsos-db:
+  openworkpaper-uploads:
+  openworkpaper-db:

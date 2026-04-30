@@ -91,7 +91,7 @@ export async function GET() {
     return new Response(buffer, {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': 'attachment; filename="AMSOS_Global_Report.xlsx"'
+        'Content-Disposition': 'attachment; filename="OpenWorkpaper_Global_Report.xlsx"'
       }
     });
 

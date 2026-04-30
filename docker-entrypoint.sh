@@ -18,5 +18,5 @@ echo "Seeding database..."
 npx prisma db seed
 
 # Start the application
-echo "Starting AMSOS..."
+echo "Starting OpenWorkpaper..."
 exec node server.js

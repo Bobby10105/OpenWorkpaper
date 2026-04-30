@@ -1,11 +1,11 @@
 # Security & Compliance Policy
 
-AMSOS is designed with federal security standards in mind, specifically targeting compliance with **NIST SP 800-53** and **FISMA** requirements.
+OpenWorkpaper is designed with federal security standards in mind, specifically targeting compliance with **NIST SP 800-53** and **FISMA** requirements.
 
 ## Security Controls
 
 ### Transport Layer Security (TLS)
-In accordance with **OMB M-15-13**, AMSOS is configured to be HTTPS-only. 
+In accordance with **OMB M-15-13**, OpenWorkpaper is configured to be HTTPS-only. 
 - **HSTS:** Enabled with a 2-year `max-age`.
 - **Encryption:** All data in transit must be encrypted using FIPS-validated cryptographic modules (e.g., TLS 1.2+).
 
@@ -21,7 +21,7 @@ In accordance with **OMB M-15-13**, AMSOS is configured to be HTTPS-only.
 
 ## Reporting a Vulnerability
 
-We take the security of AMSOS seriously. If you discover a security vulnerability, please **do not open a public issue**. Instead, follow the process below to report it privately.
+We take the security of OpenWorkpaper seriously. If you discover a security vulnerability, please **do not open a public issue**. Instead, follow the process below to report it privately.
 
 ### Private Reporting Process
 
@@ -32,7 +32,7 @@ When reporting a vulnerability, please include:
 1.  **A descriptive title** of the vulnerability.
 2.  **Steps to reproduce** the issue (including proof-of-concept code, if possible).
 3.  **The potential impact** of the vulnerability.
-4.  **The version** of AMSOS you are using.
+4.  **The version** of OpenWorkpaper you are using.
 
 ### Our Commitment
 

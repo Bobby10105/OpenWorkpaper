@@ -54,7 +54,7 @@ export default function LoginPage() {
               Welcome Back
             </h2>
             <p className="text-slate-500 text-sm font-medium">
-              Audit Management Software Open Source
+              Open Source Audit Management System
             </p>
           </div>
         </div>

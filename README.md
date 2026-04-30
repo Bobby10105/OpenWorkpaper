@@ -1,15 +1,15 @@
-# AMSOS: Audit Management Software Open Source
+# OpenWorkpaper: Open Source Audit Management System
 
-![AMSOS Dashboard](docs/images/dashboard.png)
+![OpenWorkpaper Dashboard](docs/images/dashboard.png)
 *Central Dashboard providing a high-level overview of active audits, personalized assignments, and a Unified Task Engine.*
 
-AMSOS is a simple, modern, and open-source web application designed for auditors to document audit programs and procedures. It streamlines the audit lifecycle across Planning, Fieldwork, and Reporting phases with built-in sign-off tracking, reviewer collaboration, and professional document export.
+OpenWorkpaper is a simple, modern, and open-source web application designed for auditors to document audit programs and procedures. It streamlines the audit lifecycle across Planning, Fieldwork, and Reporting phases with built-in sign-off tracking, reviewer collaboration, and professional document export.
 
-Deploy AMSOS on your terms with complete infrastructure-agnostic flexibility. Our open-source architecture gives you the freedom to run the platform locally for private testing, self-host it within your own secure network for maximum data sovereignty, or scale easily in the cloud. By leveraging a fully containerized design, AMSOS ensures that you always retain full ownership of your sensitive audit data, regardless of where you choose to host it.
+Deploy OpenWorkpaper on your terms with complete infrastructure-agnostic flexibility. Our open-source architecture gives you the freedom to run the platform locally for private testing, self-host it within your own secure network for maximum data sovereignty, or scale easily in the cloud. By leveraging a fully containerized design, OpenWorkpaper ensures that you always retain full ownership of your sensitive audit data, regardless of where you choose to host it.
 
 ## 🌟 Background & Mission
 
-The purpose of this project is to provide free, open-source audit management software to audit offices. 
+The purpose of this project is to provide free, open-source audit software to audit offices. 
 
 This software was "vibe-coded" by a CPA with 10 years of audit experience who was looking for a free, open-source alternative to expensive proprietary solutions. We believe that high-quality audit tools should be accessible to every auditor, regardless of budget.
 
@@ -48,7 +48,7 @@ This software was "vibe-coded" by a CPA with 10 years of audit experience who wa
 
 ## 🔐 Roles & Permissions (RBAC)
 
-AMSOS uses a granular **Role-Based Access Control (RBAC)** model to ensure data integrity and proper audit oversight. Access is controlled at two levels: system-wide roles and audit-specific team assignments.
+OpenWorkpaper uses a granular **Role-Based Access Control (RBAC)** model to ensure data integrity and proper audit oversight. Access is controlled at two levels: system-wide roles and audit-specific team assignments.
 
 ### System Roles
 
@@ -89,9 +89,9 @@ Key team roles include:
 
 ## 👔 Business Readiness
 
-AMSOS was built with the specific needs of **CPA Firms** and **Internal Audit Departments** in mind:
+OpenWorkpaper was built with the specific needs of **CPA Firms** and **Internal Audit Departments** in mind:
 
-*   **Private Cloud Deployment**: Unlike standard SaaS, you can deploy AMSOS within your own Virtual Private Cloud (VPC), ensuring your sensitive client data never leaves your control.
+*   **Private Cloud Deployment**: Unlike standard SaaS, you can deploy OpenWorkpaper within your own Virtual Private Cloud (VPC), ensuring your sensitive client data never leaves your control.
 *   **SQLite Portability**: Your entire database is a single file. This makes off-site backups, disaster recovery, and data archiving as simple as copying a folder.
 *   **Self-Healing Reliability**: Built-in logic repairs database schema drifts automatically, ensuring the system stays online during infrastructure updates.
 *   **Audit Logging**: Every login and major record change is tracked to ensure accountability.
@@ -102,7 +102,7 @@ AMSOS was built with the specific needs of **CPA Firms** and **Internal Audit De
 For production deployments, it is critical to secure the application with HTTPS and properly configure Single Sign-On (SSO) if required.
 
 ### 🌐 HTTPS & Reverse Proxy (Recommended)
-AMSOS provides a streamlined way to deploy with HTTPS using a built-in Nginx reverse proxy configuration. This method handles SSL/TLS termination and automatically redirects insecure HTTP traffic to HTTPS.
+OpenWorkpaper provides a streamlined way to deploy with HTTPS using a built-in Nginx reverse proxy configuration. This method handles SSL/TLS termination and automatically redirects insecure HTTP traffic to HTTPS.
 
 #### Prerequisites
 Before deploying with HTTPS, you must:
@@ -118,7 +118,7 @@ Use the secure Docker Compose configuration:
 ```bash
 docker compose -f docker-compose.secure.yml up -d --build
 ```
-This command starts both the AMSOS application and an Nginx container. The application will be accessible only via HTTPS on port 443.
+This command starts both the OpenWorkpaper application and an Nginx container. The application will be accessible only via HTTPS on port 443.
 
 ---
 
@@ -135,27 +135,27 @@ This command starts both the AMSOS application and an Nginx container. The appli
 ---
 
 ### 🔑 SSO (OIDC) Configuration
-AMSOS supports any OpenID Connect (OIDC) compliant Identity Provider (IDP) such as Microsoft Entra ID (Azure AD), Okta, or Keycloak.
+OpenWorkpaper supports any OpenID Connect (OIDC) compliant Identity Provider (IDP) such as Microsoft Entra ID (Azure AD), Okta, or Keycloak.
 
 To enable SSO, configure the following environment variables in your `.env` file:
 
 | Variable | Description | Example |
 | :--- | :--- | :--- |
-| `NEXT_PUBLIC_BASE_URL` | The external URL of your AMSOS instance (used for redirect URIs). | `https://amsos.your-agency.gov` |
+| `NEXT_PUBLIC_BASE_URL` | The external URL of your OpenWorkpaper instance (used for redirect URIs). | `https://openworkpaper.your-agency.gov` |
 | `SSO_ISSUER_URL` | The base URL of your OIDC Identity Provider. | `https://login.microsoftonline.com/tenant-id/v2.0` |
-| `SSO_CLIENT_ID` | The Client ID assigned to AMSOS by your IDP. | `00000000-0000-0000-0000-000000000000` |
-| `SSO_CLIENT_SECRET` | The Client Secret assigned to AMSOS by your IDP. | `your-secure-client-secret` |
+| `SSO_CLIENT_ID` | The Client ID assigned to OpenWorkpaper by your IDP. | `00000000-0000-0000-0000-000000000000` |
+| `SSO_CLIENT_SECRET` | The Client Secret assigned to OpenWorkpaper by your IDP. | `your-secure-client-secret` |
 
 > **Note**: The current implementation assumes standard OIDC paths (`/auth` for authorization and `/token` for token exchange) relative to the `SSO_ISSUER_URL`. If your provider uses different paths (e.g., `/authorize`), you may need to adjust the endpoints in `src/app/api/auth/sso/login/route.ts`.
 
 **Redirect URI**: In your IDP configuration, you must register the following callback URL:
-`https://amsos.your-agency.gov/api/auth/sso/callback`
+`https://openworkpaper.your-agency.gov/api/auth/sso/callback`
 
 ---
 
 ## 💾 Backup & Disaster Recovery
 
-AMSOS provides robust data portability and recovery options:
+OpenWorkpaper provides robust data portability and recovery options:
 
 1.  **Word Export**: For professional reporting and off-system review, click the **Export Word** button in any audit. This generates a grouped, professional document of all procedures.
 2.  **Full System Backup**: To save the entire state of an audit (including all metadata and attachment files), use the **Backup Audit** button on the audit detail page. This generates a `.zip` file containing:
@@ -169,19 +169,19 @@ AMSOS provides robust data portability and recovery options:
 
 ## 💻 Installation & Deployment
 
-AMSOS is designed for complete infrastructure-agnostic flexibility. Whether you are a solo practitioner or a large firm, choose the method that fits your IT environment.
+OpenWorkpaper is designed for complete infrastructure-agnostic flexibility. Whether you are a solo practitioner or a large firm, choose the method that fits your IT environment.
 
 ### ✅ Prerequisites (Docker Methods)
 To use the Docker methods below, you must have [Docker](https://www.docker.com/) installed on your server or local machine.
 > **Note**: For a complete list of all internal libraries, security dependencies, and infrastructure requirements for IT approval, please see **[DEPENDENCIES.md](DEPENDENCIES.md)**.
 
 ### 🐳 Method 1: Docker Deployment (Recommended)
-This is the professional standard for deploying AMSOS. We recommend Option A for all production environments.
+This is the professional standard for deploying OpenWorkpaper. We recommend Option A for all production environments.
 
 1.  **Clone & Prepare**:
     ```bash
-    git clone https://github.com/Bobby10105/AMSOS.git
-    cd AMSOS
+    git clone https://github.com/Bobby10105/OpenWorkpaper.git
+    cd OpenWorkpaper
     ```
 2.  **Configure Environment**: Set up your local `.env` file by copying the template:
     ```bash
@@ -211,7 +211,7 @@ This is the professional standard for deploying AMSOS. We recommend Option A for
 ---
 
 ### 🛠 Method 2: Manual Installation (Node.js)
-If you prefer to run AMSOS directly on your host machine or have a custom Windows Server environment without Docker.
+If you prefer to run OpenWorkpaper directly on your host machine or have a custom Windows Server environment without Docker.
 
 #### 1. Prerequisites
 *   [Node.js](https://nodejs.org/) (v18 or later)
@@ -219,8 +219,8 @@ If you prefer to run AMSOS directly on your host machine or have a custom Window
 
 #### 2. Setup
 ```bash
-git clone https://github.com/Bobby10105/AMSOS.git
-cd AMSOS
+git clone https://github.com/Bobby10105/OpenWorkpaper.git
+cd OpenWorkpaper
 npm install
 ```
 
@@ -249,12 +249,12 @@ Once running, sign in with:
 ## 🛠 Maintenance & Updates
 
 ### Data Persistence
-AMSOS is designed to be updated without data loss. Permanent data is stored using two methods:
+OpenWorkpaper is designed to be updated without data loss. Permanent data is stored using two methods:
 
 #### Named Docker Volumes (Application Data)
 These volumes are managed by Docker and persist across container restarts and updates.
-*   **`amsos-db`**: Contains the SQLite database file (audits, users, settings, and logs).
-*   **`amsos-uploads`**: Contains all documents (PDF, Excel, Word) attached to procedures.
+*   **`openworkpaper-db`**: Contains the SQLite database file (audits, users, settings, and logs).
+*   **`openworkpaper-uploads`**: Contains all documents (PDF, Excel, Word) attached to procedures.
 
 #### Host Bind-Mounts (Infrastructure & Security)
 These directories are located in the project folder on your host machine.
