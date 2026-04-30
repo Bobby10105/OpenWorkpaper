@@ -40,11 +40,13 @@ This software was "vibe-coded" by a CPA with 10 years of audit experience who wa
 *   **Self-Healing API**: Intelligent database repair logic automatically detects and fixes schema mismatches (common in Docker volume migrations) to ensure high availability.
 *   **Secure Access**: Built-in authentication with granular role-based access control and **Federal SSO (OIDC)** support.
 
+![Procedure View](docs/images/procedure_view.png?v=1)
+*Dedicated Procedure Workspace including standardized rich-text fields, ownership assignments, and integrated sign-off tracking.*
+
 ![Management Insights](docs/images/management_insights.png?v=1)
 *Management Insights Panel for Business Operations, featuring review timeliness tracking, aging analysis, and granular auditor workload metrics.*
 
-![Procedure View](docs/images/procedure_view.png?v=1)
-*Dedicated Procedure Workspace including standardized rich-text fields, ownership assignments, and integrated sign-off tracking.*
+
 
 ## 🔐 Roles & Permissions (RBAC)
 
