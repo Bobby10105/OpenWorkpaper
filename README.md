@@ -1,8 +1,5 @@
 # OpenWorkpaper: Open Source Audit Management System
 
-![OpenWorkpaper Dashboard](docs/images/dashboard.png?v=1)
-*Central Dashboard providing a high-level overview of active audits, personalized assignments, and a Unified Task Engine.*
-
 OpenWorkpaper is a simple, modern, and open-source web application designed for auditors to document audit programs and procedures. It streamlines the audit lifecycle across Planning, Fieldwork, and Reporting phases with built-in sign-off tracking, reviewer collaboration, and professional document export.
 
 Deploy OpenWorkpaper on your terms with complete infrastructure-agnostic flexibility. Our open-source architecture gives you the freedom to run the platform locally for private testing, self-host it within your own secure network for maximum data sovereignty, or scale easily in the cloud. By leveraging a fully containerized design, OpenWorkpaper ensures that you always retain full ownership of your sensitive audit data, regardless of where you choose to host it.
@@ -14,9 +11,6 @@ The purpose of this project is to provide free, open-source audit software to au
 This software was "vibe-coded" by a CPA with 10 years of audit experience who was looking for a free, open-source alternative to expensive proprietary solutions. We believe that high-quality audit tools should be accessible to every auditor, regardless of budget.
 
 **Contributions are welcomed!** Whether you are an auditor with feature ideas or a developer looking to help, please feel free to open an issue or submit a pull request.
-
-![Audit View](docs/images/audit_view.png?v=1)
-*Audit Detail View featuring PBC tracking, milestone management, and phase-based procedure navigation.*
 
 ## 🚀 Key Features
 
@@ -39,14 +33,6 @@ This software was "vibe-coded" by a CPA with 10 years of audit experience who wa
 *   **Professional Export**: Generate a complete "Audit Program" in Word (.docx) format with one click, perfectly synchronized with your UI nomenclature.
 *   **Self-Healing API**: Intelligent database repair logic automatically detects and fixes schema mismatches (common in Docker volume migrations) to ensure high availability.
 *   **Secure Access**: Built-in authentication with granular role-based access control and **Federal SSO (OIDC)** support.
-
-![Procedure View](docs/images/procedure_view.png?v=1)
-*Dedicated Procedure Workspace including standardized rich-text fields, ownership assignments, and integrated sign-off tracking.*
-
-![Management Insights](docs/images/management_insights.png?v=1)
-*Management Insights Panel for Business Operations, featuring review timeliness tracking, aging analysis, and granular auditor workload metrics.*
-
-
 
 ## 🔐 Roles & Permissions (RBAC)
 
