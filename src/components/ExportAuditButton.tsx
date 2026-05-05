@@ -23,25 +23,18 @@ export default function ExportAuditButton({ audit }: { audit: AuditWithRelations
 
   const stripHtml = (html: string | null) => {
     if (!html) return '';
-    // 1. Remove HTML tags
-    let text = html.replace(/<[^>]*>?/gm, '');
-    
-    // 2. Decode common HTML entities
-    text = text
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
-      .replace(/&rsquo;/g, "'")
-      .replace(/&lsquo;/g, "'")
-      .replace(/&ldquo;/g, '"')
-      .replace(/&rdquo;/g, '"')
-      .replace(/&ndash;/g, '-')
-      .replace(/&mdash;/g, '--')
-      .replace(/&amp;/g, '&');
 
-    return text.trim();
+    // Parse as HTML and extract text content to avoid incomplete regex-based sanitization.
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const extractedText = doc.body.textContent || '';
+
+    // Decode any remaining HTML entities safely via the browser parser.
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = extractedText;
+    const decodedText = textarea.value;
+
+    return decodedText.replace(/\s+/g, ' ').trim();
   };
 
   const addProcedureDetails = (sections: any[], p: any) => {
