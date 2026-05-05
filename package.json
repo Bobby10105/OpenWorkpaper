@@ -11,21 +11,25 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@prisma/client": "^6.19.2",
+    "@prisma/client": "7.8.0",
     "bcryptjs": "^3.0.3",
+    "brace-expansion": "5.0.5",
     "date-fns": "^4.1.0",
+    "defu": "6.1.7",
     "docx": "^9.6.1",
+    "effect": "3.21.2",
     "file-saver": "^2.0.5",
     "jose": "^6.2.2",
     "jszip": "^3.10.1",
     "lucide-react": "^0.577.0",
-    "next": "16.2.0",
+    "next": "16.2.4",
     "papaparse": "^5.5.3",
+    "picomatch": "4.0.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-quill-new": "^3.8.3",
     "sqlite3": "^6.0.1",
-    "xlsx": "^0.18.5"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -38,10 +42,15 @@
     "@types/react-dom": "^19",
     "dotenv": "^17.3.1",
     "eslint": "^9",
-    "eslint-config-next": "16.2.0",
-    "prisma": "^6.19.2",
+    "eslint-config-next": "16.2.4",
+    "postcss": "8.5.14",
+    "prisma": "7.8.0",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "postcss": "8.5.14",
+    "@hono/node-server": "1.19.13"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
