@@ -72,7 +72,7 @@ export async function POST(req: Request) {
 
         results.created++;
       } catch (err: any) {
-        console.error(`Bulk import error for ${userData.username}:`, err);
+        console.error('Bulk import error for %s:', userData.username || 'unknown', err);
         results.errors.push(`Failed to create ${userData.username || 'unknown'}: ${err.message}`);
       }
     }
