@@ -29,7 +29,6 @@ export default function ExportAuditButton({ audit }: { audit: AuditWithRelations
     // 2. Decode common HTML entities
     text = text
       .replace(/&nbsp;/g, ' ')
-      .replace(/&amp;/g, '&')
       .replace(/&lt;/g, '<')
       .replace(/&gt;/g, '>')
       .replace(/&quot;/g, '"')
@@ -39,7 +38,8 @@ export default function ExportAuditButton({ audit }: { audit: AuditWithRelations
       .replace(/&ldquo;/g, '"')
       .replace(/&rdquo;/g, '"')
       .replace(/&ndash;/g, '-')
-      .replace(/&mdash;/g, '--');
+      .replace(/&mdash;/g, '--')
+      .replace(/&amp;/g, '&');
 
     return text.trim();
   };
