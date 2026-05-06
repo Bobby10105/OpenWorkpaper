@@ -10,9 +10,9 @@ services:
       - /app/node_modules
       - /app/.next
       - uploads-data:/app/public/uploads
-      - db-data:/app/prisma
+      - db-data:/app/prisma/data
     environment:
-      - DATABASE_URL=${DATABASE_URL:-file:/app/prisma/dev.db}
+      - DATABASE_URL=${DATABASE_URL:-file:/app/prisma/data/dev.db}
       - JWT_SECRET=${JWT_SECRET}
       - SESSION_DURATION_SECONDS=${SESSION_DURATION_SECONDS:-3600}
       - NODE_ENV=${NODE_ENV:-development}

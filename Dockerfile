@@ -1,7 +1,6 @@
 # Stage 1: Install dependencies
-FROM node:22-alpine AS deps
-# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
-RUN apk add --no-cache libc6-compat python3 make g++
+FROM node:22-bookworm-slim AS deps
+RUN apt-get update && apt-get install -y python3 make g++ openssl libsqlite3-dev
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
@@ -9,8 +8,8 @@ COPY package.json package-lock.json* ./
 RUN npm ci
 
 # Stage 2: Rebuild the source code only when needed
-FROM node:22-alpine AS builder
-RUN apk add --no-cache libc6-compat openssl
+FROM node:22-bookworm-slim AS builder
+RUN apt-get update && apt-get install -y openssl
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -26,16 +25,16 @@ ENV NEXT_TELEMETRY_DISABLED 1
 RUN npm run build
 
 # Stage 3: Production image, copy all the files and run next
-FROM node:22-alpine AS runner
-RUN apk add --no-cache libc6-compat openssl
+FROM node:22-bookworm-slim AS runner
+RUN apt-get update && apt-get install -y openssl libsqlite3-0
 WORKDIR /app
 
 ENV NODE_ENV production
 # Uncomment the following line in case you want to disable telemetry during runtime.
 ENV NEXT_TELEMETRY_DISABLED 1
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+RUN groupadd --system --gid 1001 nodejs
+RUN useradd --system --uid 1001 nextjs
 
 # Copy all the necessary files for the application
 # We copy the entire standalone output and node_modules to ensure all deps are present
@@ -48,7 +47,6 @@ COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./prisma.config.
 COPY --from=builder --chown=nextjs:nodejs /app/docker-entrypoint.sh ./docker-entrypoint.sh
 
 # Set the correct permission for prerender cache and uploads
-# We must be root to create directories and change ownership
 USER root
 RUN mkdir -p .next && chown nextjs:nodejs .next
 RUN mkdir -p public/uploads && chown nextjs:nodejs public/uploads

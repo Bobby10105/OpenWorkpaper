@@ -5,8 +5,8 @@ This document provides a comprehensive list of all software dependencies, librar
 ## 1. Core Platform Architecture
 OpenWorkpaper is built on a minimal, security-hardened Linux base.
 
-*   **Operating System**: Alpine Linux (via Docker)
-*   **Runtime**: Node.js 20 (LTS)
+*   **Operating System**: Debian (via Docker `bookworm-slim`)
+*   **Runtime**: Node.js 22 (LTS)
 *   **Web Framework**: Next.js 15 (React 19)
 *   **Database**: SQLite 3 (Default) or PostgreSQL
 *   **ORM**: Prisma

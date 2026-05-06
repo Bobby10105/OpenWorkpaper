@@ -2,8 +2,13 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 
 const prismaClientSingleton = () => {
-  const dbUrl = process.env.DATABASE_URL || 'file:dev.db';
-  const adapter = new PrismaBetterSqlite3({ url: dbUrl });
+  let dbUrl = process.env.DATABASE_URL || 'file:dev.db';
+  
+  // The PrismaBetterSqlite3 adapter expects a raw file path, but DATABASE_URL 
+  // often starts with 'file:'. We need to strip it to avoid issues.
+  const pathOnly = dbUrl.replace(/^file:/, '');
+  
+  const adapter = new PrismaBetterSqlite3({ url: pathOnly });
   const client = new PrismaClient({
     adapter,
     log: ['error', 'warn'],

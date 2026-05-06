@@ -114,7 +114,7 @@ This command starts both the OpenWorkpaper application and an Nginx container. T
 
 | Variable | Requirement | Description |
 | :--- | :--- | :--- |
-| **`DATABASE_URL`** | **Required** | Path to the SQLite database. <br>• **Docker Dev**: `file:/app/prisma/dev.db`<br>• **Docker Prod or Secure**: `file:/app/prisma/data/dev.db`<br>• **Manual/Host**: `file:./dev.db` |
+| **`DATABASE_URL`** | **Required** | Path to the SQLite database. <br>• **Docker (All Modes)**: `file:/app/prisma/data/dev.db`<br>• **Manual/Host**: `file:./prisma/data/dev.db` |
 | **`JWT_SECRET`** | **Required** | A secure random string used to sign session tokens. **Must be changed for production** to prevent session hijacking. |
 | **`SESSION_DURATION_SECONDS`** | Optional | How long a user remains logged in (default `3600` or 1 hour). |
 | **`NODE_ENV`** | **Required** | Set to `production` for live deployments to enable optimizations and strict security checks. Use `development` for local coding. |

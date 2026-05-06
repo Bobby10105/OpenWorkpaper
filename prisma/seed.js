@@ -1,15 +1,24 @@
 const { PrismaClient } = require('@prisma/client');
+const { PrismaBetterSqlite3 } = require('@prisma/adapter-better-sqlite3');
 const bcrypt = require('bcryptjs');
-const prisma = new PrismaClient();
+
+const dbUrl = process.env.DATABASE_URL || 'file:./prisma/data/dev.db';
+const pathOnly = dbUrl.replace(/^file:/, '');
+const adapter = new PrismaBetterSqlite3({ url: pathOnly });
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
   const hashedPassword = await bcrypt.hash('admin', 10);
   
   // Create IT Administrator (Identity Management)
-  // mustChangePassword is now set to true for improved security
+  // We now update the password on upsert to ensure default credentials work
   const itAdmin = await prisma.user.upsert({
     where: { username: 'it.admin' },
-    update: { role: 'IT Administrator' },
+    update: { 
+      role: 'IT Administrator',
+      password: hashedPassword,
+      mustChangePassword: true
+    },
     create: {
       username: 'it.admin',
       password: hashedPassword,
@@ -19,10 +28,13 @@ async function main() {
   });
 
   // Create Business Operations (Data Management)
-  // mustChangePassword is now set to true for improved security
   const bizOps = await prisma.user.upsert({
     where: { username: 'biz.ops' },
-    update: { role: 'Business Operations' },
+    update: { 
+      role: 'Business Operations',
+      password: hashedPassword,
+      mustChangePassword: true
+    },
     create: {
       username: 'biz.ops',
       password: hashedPassword,
@@ -32,8 +44,8 @@ async function main() {
   });
 
   console.log('Seed successful: Roles separated and security hardened.');
-  console.log('IT Administrator: it.admin / admin (Password change required)');
-  console.log('Business Operations: biz.ops / admin (Password change required)');
+  console.log('IT Administrator: it.admin / admin (Password reset)');
+  console.log('Business Operations: biz.ops / admin (Password reset)');
 }
 
 main()
