@@ -1,8 +1,8 @@
 'use client';
 
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import Underline from '@tiptap/extension-underline';
+import { Underline } from '@tiptap/extension-underline';
 import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Undo, Redo } from 'lucide-react';
 import { useEffect } from 'react';
 
@@ -15,7 +15,7 @@ interface RichTextEditorProps {
   placeholder?: string;
 }
 
-const MenuBar = ({ editor }: { editor: any }) => {
+const MenuBar = ({ editor }: { editor: Editor | null }) => {
   if (!editor) {
     return null;
   }
@@ -93,8 +93,7 @@ export default function RichTextEditor({
   onChange, 
   readOnly = false, 
   onFocus, 
-  onBlur,
-  placeholder 
+  onBlur
 }: RichTextEditorProps) {
   const editor = useEditor({
     extensions: [
@@ -103,6 +102,7 @@ export default function RichTextEditor({
     ],
     content: value,
     editable: !readOnly,
+    immediatelyRender: false,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },
