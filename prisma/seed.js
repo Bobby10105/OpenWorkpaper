@@ -11,13 +11,12 @@ async function main() {
   const hashedPassword = await bcrypt.hash('admin', 10);
   
   // Create IT Administrator (Identity Management)
-  // We now update the password on upsert to ensure default credentials work
+  // We only set the password during creation to avoid overwriting user-changed passwords on restart
   const itAdmin = await prisma.user.upsert({
     where: { username: 'it.admin' },
     update: { 
-      role: 'IT Administrator',
-      password: hashedPassword,
-      mustChangePassword: true
+      role: 'IT Administrator'
+      // password and mustChangePassword are NOT updated here to preserve user changes
     },
     create: {
       username: 'it.admin',
@@ -31,9 +30,8 @@ async function main() {
   const bizOps = await prisma.user.upsert({
     where: { username: 'biz.ops' },
     update: { 
-      role: 'Business Operations',
-      password: hashedPassword,
-      mustChangePassword: true
+      role: 'Business Operations'
+      // password and mustChangePassword are NOT updated here to preserve user changes
     },
     create: {
       username: 'biz.ops',
@@ -43,9 +41,8 @@ async function main() {
     },
   });
 
-  console.log('Seed successful: Roles separated and security hardened.');
-  console.log('IT Administrator: it.admin / admin (Password reset)');
-  console.log('Business Operations: biz.ops / admin (Password reset)');
+  console.log('Seed successful: Roles ensured.');
+  console.log('Default credentials (if newly created): admin / admin');
 }
 
 main()

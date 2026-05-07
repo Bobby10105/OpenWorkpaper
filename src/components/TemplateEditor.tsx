@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Save, Plus, Trash2, Loader2, AlertCircle, CheckCircle, Info, ArrowUp, ArrowDown, FolderPlus } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import DOMPurify from 'isomorphic-dompurify';
 import 'react-quill-new/dist/quill.snow.css';
 
 const ReactQuill = dynamic(async () => {
@@ -82,11 +83,24 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
     setSaving(true);
     setError('');
     setSuccess('');
+
+    // SECURITY: Sanitize rich text fields before saving
+    const sanitizedTemplate = {
+      ...template,
+      groups: template.groups.map(g => ({
+        ...g,
+        procedures: g.procedures.map(p => ({
+          ...p,
+          purpose: p.purpose ? DOMPurify.sanitize(p.purpose) : p.purpose
+        }))
+      }))
+    };
+
     try {
       const res = await fetch(`/api/admin/templates/${templateId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(template),
+        body: JSON.stringify(sanitizedTemplate),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -316,7 +330,7 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
           {phaseGroups.length === 0 && (
             <div className="py-20 text-center border-2 border-dashed border-gray-100 rounded-2xl">
               <p className="text-gray-400 font-medium mb-4">No groups defined for {activePhase}.</p>
-              <button onClick={addGroup} className="bg-white border border-indigo-200 text-indigo-700 px-6 py-2 rounded-xl font-bold hover:bg-indigo-50 transition-all text-sm shadow-sm">
+              <button onClick={addGroup} className="bg-white border border-indigo-200 text-indigo-700 px-6 py-2 rounded-xl font-bold hover:bg-indigo-100 transition-all text-sm shadow-sm">
                 + Create First Group
               </button>
             </div>

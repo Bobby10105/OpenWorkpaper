@@ -191,7 +191,7 @@ This is the professional standard for deploying OpenWorkpaper. We recommend Opti
         ```
 
     *   **Option C: Quickstart (Development & Evaluation)**
-        *Best for rapid evaluation or developers. Includes debug logging. **Note**: If you want hot-reloading for code changes, edit your `.env` and set `NODE_ENV=development` and `DATABASE_URL="file:/app/prisma/dev.db"`.*
+        *Best for rapid evaluation or developers. Includes debug logging. **Note**: If you want hot-reloading for code changes, edit your `.env` and set `NODE_ENV=development` and `DATABASE_URL="file:/app/prisma/data/dev.db"`.*
         ```bash
         docker compose up --build
         ```
@@ -258,23 +258,28 @@ To apply a new version or your own custom code tweaks:
     ```bash
     git pull
     ```
-2.  **Rebuild and restart**:
+2.  **Clean and Rebuild**:
+    It is recommended to stop the current containers before rebuilding to ensure a clean state and prevent port conflicts.
 
     **Standard Deployment**:
     ```bash
+    docker compose -f docker-compose.prod.yml down
     docker compose -f docker-compose.prod.yml up -d --build
     ```
 
     **Secure HTTPS Deployment**:
     ```bash
+    docker compose -f docker-compose.secure.yml down
     docker compose -f docker-compose.secure.yml up -d --build
     ```
 
     **Development/Quickstart**:
     ```bash
+    docker compose down
     docker compose up -d --build
     ```
-    *This command rebuilds the application image with your new code, synchronizes any database schema changes, and restarts the service. Your audits and files will remain exactly as they were.*
+
+    *This process will rebuild the application image, synchronize any database schema changes, and restart the service. Your audits and files will remain exactly as they were thanks to the named volumes.*
 
 ### Database Schema Changes
 If an update introduces new features that require database changes (like a new column), the system handles this automatically. The startup script runs a synchronization task that aligns your existing data file with the new code structure without requiring manual SQL commands.

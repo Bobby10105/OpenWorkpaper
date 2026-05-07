@@ -1,12 +1,13 @@
 'use client';
 /** OpenWorkpaper ProcedureDetail - Full Page Editor with Auto-Save **/
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { Trash2, Save, Paperclip, File as FileIcon, X, MessageSquare, RefreshCw, Send, User, CheckCircle, Clock, Link as LinkIcon, Check, AlertCircle, ArrowLeft, Plus, ChevronDown, Lock, Unlock } from 'lucide-react';
 import type { Attachment, ProcedureMessage } from '@prisma/client';
 import type { ProcedureWithRelations } from '@/lib/types';
+import DOMPurify from 'isomorphic-dompurify';
 import 'react-quill-new/dist/quill.snow.css';
 
 const ReactQuill = dynamic(async () => {
@@ -32,6 +33,8 @@ export default function ProcedureDetail({
 }) {
   const router = useRouter();
 
+  const RICH_TEXT_FIELDS = useMemo(() => ['purpose', 'source', 'scope', 'methodology', 'results', 'conclusions'], []);
+
   const formatDateForInput = (date: any) => {
     if (!date) return '';
     try {
@@ -45,21 +48,30 @@ export default function ProcedureDetail({
 
   // Helper to get only the fields we care about for comparison
   const normalizeData = useCallback((p: any) => {
-    return JSON.stringify({
-      title: p.title || '',
+    const d: any = {
+      title: (p.title || '').trim(),
       purpose: p.purpose || '',
       source: p.source || '',
       scope: p.scope || '',
       methodology: p.methodology || '',
       results: p.results || '',
       conclusions: p.conclusions || '',
-      preparedBy: p.preparedBy || '',
+      preparedBy: (p.preparedBy || '').trim(),
       preparedDate: formatDateForInput(p.preparedDate),
-      reviewedBy: p.reviewedBy || '',
+      reviewedBy: (p.reviewedBy || '').trim(),
       reviewedDate: formatDateForInput(p.reviewedDate),
       assignedToId: p.assignedToId || '',
+    };
+
+    // Sanitize rich text fields so comparison is against what actually gets saved
+    RICH_TEXT_FIELDS.forEach(field => {
+      if (typeof d[field] === 'string') {
+        d[field] = DOMPurify.sanitize(d[field]).trim();
+      }
     });
-  }, []);
+
+    return JSON.stringify(d);
+  }, [RICH_TEXT_FIELDS]);
 
   const [data, setData] = useState(procedure);
   const [saving, setSaving] = useState(false);
@@ -80,11 +92,14 @@ export default function ProcedureDetail({
   const chatEndRef = useRef<HTMLDivElement>(null);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // CRITICAL FIX: Lock state must be based on the SERVER data (props), 
-  // not the local transient state (data), otherwise filling the review fields 
-  // blocks the request that actually saves the review.
-  const isLocked = !!(procedure.reviewedBy && procedure.reviewedDate);
+  // CRITICAL: Stability Ref pattern to break dependency cycles
+  const dataRef = useRef(data);
+  useEffect(() => { dataRef.current = data; }, [data]);
+  
+  const lastSavedDataRef = useRef(lastSavedData);
+  useEffect(() => { lastSavedDataRef.current = lastSavedData; }, [lastSavedData]);
 
+  const isLocked = !!(procedure.reviewedBy && procedure.reviewedDate);
   const isReviewed = data.reviewedBy && data.reviewedDate;
   const isPrepared = data.preparedBy && data.preparedDate;
 
@@ -103,21 +118,36 @@ export default function ProcedureDetail({
     }
   }, [newMessage, procedure.id]);
 
+  // Sync state when props change (e.g. after a refresh or navigation)
   useEffect(() => {
-    setData(procedure);
-    setAttachments(procedure.attachments || []);
-    setMessages(procedure.messages || []);
-    setLastSavedData(normalizeData(procedure));
-    setHasUnsavedChanges(false);
+    const normalizedProp = normalizeData(procedure);
+    const normalizedState = normalizeData(dataRef.current);
+    
+    // Only sync if the prop is actually different from our current state
+    // and different from what we last thought was saved.
+    if (normalizedProp !== lastSavedDataRef.current || normalizedProp !== normalizedState) {
+      setData(procedure);
+      setAttachments(procedure.attachments || []);
+      setMessages(procedure.messages || []);
+      setLastSavedData(normalizedProp);
+      setHasUnsavedChanges(false);
+    }
   }, [procedure, normalizeData]);
 
   const handleSave = useCallback(async (updatedData?: any) => {
-    if (isLocked) return; // Prevent saving if locked
+    if (isLocked) return;
 
-    const dataToSave = updatedData || data;
-    const currentDataStr = normalizeData(dataToSave);
+    // Use passed data or the latest ref data
+    const rawData = updatedData || dataRef.current;
+    
+    // Create a normalized version of the data we are about to save
+    const currentDataStr = normalizeData(rawData);
 
-    if (currentDataStr === lastSavedData && !updatedData) return;
+    // If identical to last saved, bail
+    if (currentDataStr === lastSavedDataRef.current) {
+      setHasUnsavedChanges(false);
+      return;
+    }
 
     setSaving(true);
     try {
@@ -126,40 +156,51 @@ export default function ProcedureDetail({
         headers: { 'Content-Type': 'application/json' },
         body: currentDataStr,
       });
+      
       if (res.ok) {
-        setLastSavedData(currentDataStr);
+        const savedProcedure = await res.json();
+        const savedNormalized = normalizeData(savedProcedure);
+        setLastSavedData(savedNormalized);
+        
+        // Update local state with the sanitized values from savedNormalized 
+        // to ensure the next comparison in the Auto-Save useEffect matches exactly.
+        const parsedSaved = JSON.parse(savedNormalized);
+        setData(prev => ({ ...prev, ...parsedSaved }));
         setHasUnsavedChanges(false);
+        
         router.refresh();
       } else if (res.status === 423) {
         alert("This procedure is locked for review and cannot be saved.");
       }
     } catch (err) {
-      console.error('Auto-save failed:', err);
+      console.error('Save failed:', err);
     } finally {
       setSaving(false);
     }
-  }, [data, procedure.id, lastSavedData, router, normalizeData, isLocked]);
+  }, [procedure.id, router, normalizeData, isLocked]);
 
-  // Debounced Auto-Save Logic
+  // Debounced Auto-Save Logic - Depends only on data/lastSavedData changes
   useEffect(() => {
     if (isLocked) return;
 
     const currentDataStr = normalizeData(data);
+    const isDirty = currentDataStr !== lastSavedData;
 
-    if (currentDataStr !== lastSavedData) {
-      setHasUnsavedChanges(true);
+    if (isDirty) {
+      if (!hasUnsavedChanges) setHasUnsavedChanges(true);
+      
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
       autoSaveTimerRef.current = setTimeout(() => {
         handleSave();
-      }, 3000); // 3 second debounce
+      }, 3000);
     } else {
-      setHasUnsavedChanges(false);
+      if (hasUnsavedChanges) setHasUnsavedChanges(false);
     }
 
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
-  }, [data, lastSavedData, handleSave, normalizeData, isLocked]);
+  }, [data, lastSavedData, handleSave, isLocked, hasUnsavedChanges]);
 
   const handleUnlock = async () => {
     if (!confirm("Unlocking this procedure will clear the existing sign-offs and require re-preparation and re-review. Continue?")) return;
