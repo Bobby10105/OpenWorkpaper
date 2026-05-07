@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, Loader2, AlertCircle, CheckCircle, Info, ArrowUp, ArrowDown, FolderPlus } from 'lucide-react';
+import { Save, Plus, Trash2, Loader2, AlertCircle, FolderPlus, ArrowUp, ArrowDown, Info } from 'lucide-react';
 import DOMPurify from 'isomorphic-dompurify';
 import RichTextEditor from './RichTextEditor';
 
@@ -14,8 +14,9 @@ interface Template {
 
 interface TemplateGroup {
   id: string;
-  name: string;
-  order: number;
+  title: string;
+  phase: string;
+  displayOrder: number;
   procedures: TemplateProcedure[];
 }
 
@@ -23,10 +24,8 @@ interface TemplateProcedure {
   id: string;
   title: string;
   purpose: string | null;
-  source: string | null;
-  scope: string | null;
-  methodology: string | null;
-  order: number;
+  phase: string;
+  displayOrder: number;
 }
 
 export default function TemplateEditor({ templateId }: { templateId: string }) {
@@ -65,11 +64,9 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
     const sanitizedTemplate = JSON.parse(JSON.stringify(template));
     sanitizedTemplate.groups.forEach((group: any) => {
       group.procedures.forEach((proc: any) => {
-        ['purpose', 'source', 'scope', 'methodology'].forEach(field => {
-          if (proc[field]) {
-            proc[field] = DOMPurify.sanitize(proc[field]);
-          }
-        });
+        if (proc.purpose) {
+          proc.purpose = DOMPurify.sanitize(proc.purpose);
+        }
       });
     });
 
@@ -79,12 +76,16 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(sanitizedTemplate),
       });
-      if (!res.ok) throw new Error('Failed to save template');
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.details || errData.error || 'Failed to save template');
+      }
       const updated = await res.json();
       setTemplate(updated);
       alert('Template saved successfully!');
     } catch (err: any) {
       setError(err.message);
+      alert(`Save failed: ${err.message}`);
     } finally {
       setSaving(false);
     }
@@ -94,29 +95,28 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
     if (!template) return;
     const newGroup: TemplateGroup = {
       id: `new-${Date.now()}`,
-      name: 'New Phase/Group',
-      order: template.groups.length,
+      title: 'New Phase/Group',
+      phase: 'Fieldwork',
+      displayOrder: template.groups.length,
       procedures: [],
     };
     setTemplate({ ...template, groups: [...template.groups, newGroup] });
     setActivePhase(newGroup.id);
   };
 
-  const addProcedure = (groupId: string) => {
+  const addProcedure = (group: TemplateGroup) => {
     if (!template) return;
     const newProc: TemplateProcedure = {
       id: `new-proc-${Date.now()}`,
       title: 'New Procedure',
       purpose: '',
-      source: '',
-      scope: '',
-      methodology: '',
-      order: 0,
+      phase: group.phase,
+      displayOrder: group.procedures.length,
     };
 
     const newGroups = template.groups.map(g => {
-      if (g.id === groupId) {
-        return { ...g, procedures: [...g.procedures, { ...newProc, order: g.procedures.length }] };
+      if (g.id === group.id) {
+        return { ...g, procedures: [...g.procedures, newProc] };
       }
       return g;
     });
@@ -164,7 +164,7 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
     if (newIndex < 0 || newIndex >= newGroups.length) return;
     [newGroups[index], newGroups[newIndex]] = [newGroups[newIndex], newGroups[index]];
     // Re-assign orders
-    const orderedGroups = newGroups.map((g, i) => ({ ...g, order: i }));
+    const orderedGroups = newGroups.map((g, i) => ({ ...g, displayOrder: i }));
     setTemplate({ ...template, groups: orderedGroups });
   };
 
@@ -176,7 +176,7 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
         const newIndex = direction === 'up' ? index - 1 : index + 1;
         if (newIndex < 0 || newIndex >= newProcs.length) return g;
         [newProcs[index], newProcs[newIndex]] = [newProcs[newIndex], newProcs[index]];
-        return { ...g, procedures: newProcs.map((p, i) => ({ ...p, order: i })) };
+        return { ...g, procedures: newProcs.map((p, i) => ({ ...p, displayOrder: i })) };
       }
       return g;
     });
@@ -251,7 +251,7 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
                         : 'text-gray-600 hover:bg-gray-50'
                     }`}
                   >
-                    <span className="truncate pr-8">{group.name}</span>
+                    <span className="truncate pr-8">{group.title}</span>
                     <span className="text-[10px] opacity-60 font-black">{group.procedures.length}</span>
                   </button>
                   <div className={`absolute right-10 top-1/2 -translate-y-1/2 flex items-center opacity-0 group-hover:opacity-100 transition-opacity ${activeGroup === group.id ? 'text-white' : 'text-gray-400'}`}>
@@ -270,7 +270,7 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
           <div className="bg-blue-50 p-6 rounded-[2rem] border border-blue-100 flex items-start space-x-4">
             <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
             <p className="text-xs text-blue-700 leading-relaxed font-medium">
-              Templates define the default structure for new audits. You can organize procedures into phases (like Planning, Fieldwork, Reporting).
+              Templates define the default structure for new audits. Standardized procedures only require a "Purpose" definition to maintain engagement speed.
             </p>
           </div>
         </div>
@@ -279,31 +279,64 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
         <div className="lg:col-span-3 space-y-6">
           {currentGroup ? (
             <>
-              <div className="flex items-center justify-between bg-white px-8 py-4 rounded-3xl border border-gray-100 shadow-sm">
-                <input
-                  value={currentGroup.name}
-                  onChange={(e) => {
-                    const newGroups = template.groups.map(g => g.id === currentGroup.id ? { ...g, name: e.target.value } : g);
-                    setTemplate({ ...template, groups: newGroups });
-                  }}
-                  className="text-lg font-bold text-gray-900 border-none focus:ring-0 p-0 bg-transparent placeholder:text-gray-300"
-                />
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => deleteGroup(currentGroup.id)}
-                    className="p-2 text-gray-400 hover:text-red-600 transition-colors"
-                    title="Delete Phase"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-                  <div className="w-px h-6 bg-gray-100 mx-2" />
-                  <button
-                    onClick={() => addProcedure(currentGroup.id)}
-                    className="flex items-center space-x-2 px-4 py-2 bg-emerald-600 text-white text-[10px] font-black rounded-xl hover:bg-emerald-700 transition-all uppercase tracking-widest shadow-lg shadow-emerald-50"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add Procedure</span>
-                  </button>
+              <div className="flex flex-col space-y-4 bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 max-w-md">
+                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Group Title</label>
+                    <input
+                      value={currentGroup.title}
+                      onChange={(e) => {
+                        const newGroups = template.groups.map(g => g.id === currentGroup.id ? { ...g, title: e.target.value } : g);
+                        setTemplate({ ...template, groups: newGroups });
+                      }}
+                      className="text-lg font-bold text-gray-900 border-none focus:ring-0 p-0 bg-transparent w-full placeholder:text-gray-300"
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => deleteGroup(currentGroup.id)}
+                      className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                      title="Delete Phase"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                    <div className="w-px h-6 bg-gray-100 mx-2" />
+                    <button
+                      onClick={() => addProcedure(currentGroup)}
+                      className="flex items-center space-x-2 px-4 py-2 bg-emerald-600 text-white text-[10px] font-black rounded-xl hover:bg-emerald-700 transition-all uppercase tracking-widest shadow-lg shadow-emerald-50"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Procedure</span>
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-4 pt-2 border-t border-gray-50">
+                  <div className="flex-1 max-w-[200px]">
+                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Phase Mapping</label>
+                    <select
+                      value={currentGroup.phase}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const newGroups = template.groups.map(g => {
+                          if (g.id === currentGroup.id) {
+                            return { 
+                              ...g, 
+                              phase: val,
+                              procedures: g.procedures.map(p => ({ ...p, phase: val }))
+                            };
+                          }
+                          return g;
+                        });
+                        setTemplate({ ...template, groups: newGroups });
+                      }}
+                      className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-1.5 text-[10px] font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500/50 transition-all appearance-none cursor-pointer"
+                    >
+                      <option value="Planning">Planning</option>
+                      <option value="Fieldwork">Fieldwork</option>
+                      <option value="Reporting">Reporting</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -339,42 +372,14 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
                         </button>
                       </div>
                     </div>
-                    <div className="p-8 space-y-8">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="space-y-3">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Purpose Template</label>
-                          <RichTextEditor
-                            value={proc.purpose || ''}
-                            onChange={(val) => updateProcedure(currentGroup.id, proc.id, 'purpose', val)}
-                            placeholder="Describe the objective of this procedure..."
-                          />
-                        </div>
-                        <div className="space-y-3">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Source Template</label>
-                          <RichTextEditor
-                            value={proc.source || ''}
-                            onChange={(val) => updateProcedure(currentGroup.id, proc.id, 'source', val)}
-                            placeholder="Identify systems or data sources..."
-                          />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="space-y-3">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Scope Template</label>
-                          <RichTextEditor
-                            value={proc.scope || ''}
-                            onChange={(val) => updateProcedure(currentGroup.id, proc.id, 'scope', val)}
-                            placeholder="Define boundaries or populations..."
-                          />
-                        </div>
-                        <div className="space-y-3">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Methodology Template</label>
-                          <RichTextEditor
-                            value={proc.methodology || ''}
-                            onChange={(val) => updateProcedure(currentGroup.id, proc.id, 'methodology', val)}
-                            placeholder="Step-by-step testing instructions..."
-                          />
-                        </div>
+                    <div className="p-8 space-y-4">
+                      <div className="space-y-3">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Procedure Purpose Template</label>
+                        <RichTextEditor
+                          value={proc.purpose || ''}
+                          onChange={(val) => updateProcedure(currentGroup.id, proc.id, 'purpose', val)}
+                          placeholder="Describe the objective and high-level steps for this procedure..."
+                        />
                       </div>
                     </div>
                   </div>
