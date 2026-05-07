@@ -3,20 +3,11 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
 import { Trash2, Save, Paperclip, File as FileIcon, X, MessageSquare, RefreshCw, Send, User, CheckCircle, Clock, Link as LinkIcon, Check, AlertCircle, ArrowLeft, Plus, ChevronDown, Lock, Unlock } from 'lucide-react';
 import type { Attachment, ProcedureMessage } from '@prisma/client';
 import type { ProcedureWithRelations } from '@/lib/types';
 import DOMPurify from 'isomorphic-dompurify';
-import 'react-quill-new/dist/quill.snow.css';
-
-const ReactQuill = dynamic(async () => {
-  const mod = await import('react-quill-new');
-  return mod.default || mod;
-}, { 
-  ssr: false,
-  loading: () => <div className="w-full h-[300px] bg-gray-50 animate-pulse rounded-2xl border border-gray-100" />
-});
+import RichTextEditor from './RichTextEditor';
 
 export default function ProcedureDetail({ 
   procedure, 
@@ -466,14 +457,6 @@ export default function ProcedureDetail({
     setData(prev => ({ ...prev, [fieldName]: content }));
   };
 
-  const modules = {
-    toolbar: isLocked ? false : [
-      ['bold', 'italic', 'underline'],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-      ['clean']
-    ],
-  };
-
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {isLocked && (
@@ -686,12 +669,10 @@ export default function ProcedureDetail({
                   </div>
 
                   <div className="rich-text-wrapper px-4 pb-4">
-                    <ReactQuill
-                      theme="snow"
+                    <RichTextEditor
                       readOnly={isLocked}
                       value={String(data[field.name as keyof ProcedureWithRelations] || '')}
                       onChange={(content) => handleRichTextChange(field.name, content)}
-                      modules={modules}
                       onFocus={() => setFocusedField(field.name)}
                       onBlur={() => {
                         setFocusedField(null);
@@ -987,35 +968,6 @@ export default function ProcedureDetail({
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background: #e2e8f0;
-        }
-        .rich-text-wrapper :global(.ql-toolbar.ql-snow) {
-          border: 1px solid #e2e8f0;
-          border-bottom: none;
-          padding: 1rem;
-          background-color: #f8fafc;
-          border-top-left-radius: 1.5rem;
-          border-top-right-radius: 1.5rem;
-        }
-        .rich-text-wrapper :global(.ql-container.ql-snow) {
-          border: 1px solid #e2e8f0;
-          min-height: 250px;
-          font-family: inherit;
-          border-bottom-left-radius: 1.5rem;
-          border-bottom-right-radius: 1.5rem;
-          background-color: white;
-        }
-        .rich-text-wrapper :global(.ql-editor) {
-          min-height: 250px;
-          font-size: 1rem;
-          line-height: 1.8;
-          padding: 2rem;
-          color: #1e293b;
-        }
-        .rich-text-wrapper :global(.ql-editor.ql-blank::before) {
-          left: 2rem;
-          color: #cbd5e1;
-          font-style: normal;
-          font-weight: 600;
         }
       `}</style>
     </div>
