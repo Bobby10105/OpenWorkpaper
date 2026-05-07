@@ -28,7 +28,8 @@ The following libraries are included in the production build:
 | `react` | UI Library | MIT |
 | `@prisma/client` | Database ORM | Apache-2.0 |
 | `isomorphic-dompurify` | XSS Protection & Input Sanitization | MIT |
-| `react-quill-new` | Rich Text Editor | BSD-3-Clause |
+| `@tiptap/core`, `@tiptap/react` | Modern Rich Text Editor (Modular) | MIT |
+| `@tiptap/starter-kit` | Tiptap Essential Extensions | MIT |
 | `xlsx` (SheetJS) | Excel report generation | Pro (Community Edition) |
 | `docx` | Word document export | MIT |
 | `jszip` | Audit backup & archival compression | MIT / GPLv3 |
