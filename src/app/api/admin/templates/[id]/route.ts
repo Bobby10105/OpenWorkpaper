@@ -56,7 +56,7 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
 
     const result = await prisma.$transaction(async (tx) => {
       // Update template details
-      const updatedTemplate = await tx.auditTemplate.update({
+      await tx.auditTemplate.update({
         where: { id: params.id },
         data: { name, description }
       });
@@ -92,8 +92,25 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
         }
       }
 
-      return updatedTemplate;
+      // Fetch and return the fully populated template
+      return await tx.auditTemplate.findUnique({
+        where: { id: params.id },
+        include: {
+          groups: {
+            orderBy: { displayOrder: 'asc' },
+            include: {
+              procedures: {
+                orderBy: { displayOrder: 'asc' }
+              }
+            }
+          }
+        }
+      });
     });
+
+    if (!result) {
+      return NextResponse.json({ error: 'Template not found after update' }, { status: 404 });
+    }
 
     await prisma.auditLog.create({
       data: {

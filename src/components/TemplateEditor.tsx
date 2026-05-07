@@ -60,6 +60,9 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
     setSaving(true);
     setError(null);
 
+    // Capture the current group title before saving to try and re-select it after ID change
+    const currentGroupTitle = groups.find(g => g.id === activeGroup)?.title;
+
     // Deep clone and sanitize before saving
     const sanitizedTemplate = JSON.parse(JSON.stringify(template));
     (sanitizedTemplate.groups || []).forEach((group: any) => {
@@ -81,7 +84,20 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
         throw new Error(errData.details || errData.error || 'Failed to save template');
       }
       const updated = await res.json();
+      
+      // Update template state with new data (contains permanent IDs)
       setTemplate(updated);
+
+      // Try to re-select the active group using the title, or fallback to the first group
+      if (updated.groups && updated.groups.length > 0) {
+        const matchingGroup = updated.groups.find((g: any) => g.title === currentGroupTitle);
+        if (matchingGroup) {
+          setActivePhase(matchingGroup.id);
+        } else {
+          setActivePhase(updated.groups[0].id);
+        }
+      }
+
       alert('Template saved successfully!');
     } catch (err: any) {
       setError(err.message);
