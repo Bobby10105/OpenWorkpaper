@@ -45,7 +45,7 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
       if (!res.ok) throw new Error('Failed to fetch template');
       const data = await res.json();
       setTemplate(data);
-      if (data.groups.length > 0) {
+      if (data.groups && data.groups.length > 0) {
         setActivePhase(data.groups[0].id);
       }
     } catch (err: any) {
@@ -62,8 +62,8 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
 
     // Deep clone and sanitize before saving
     const sanitizedTemplate = JSON.parse(JSON.stringify(template));
-    sanitizedTemplate.groups.forEach((group: any) => {
-      group.procedures.forEach((proc: any) => {
+    (sanitizedTemplate.groups || []).forEach((group: any) => {
+      (group.procedures || []).forEach((proc: any) => {
         if (proc.purpose) {
           proc.purpose = DOMPurify.sanitize(proc.purpose);
         }
@@ -97,10 +97,10 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
       id: `new-${Date.now()}`,
       title: 'New Phase/Group',
       phase: 'Fieldwork',
-      displayOrder: template.groups.length,
+      displayOrder: (template.groups || []).length,
       procedures: [],
     };
-    setTemplate({ ...template, groups: [...template.groups, newGroup] });
+    setTemplate({ ...template, groups: [...(template.groups || []), newGroup] });
     setActivePhase(newGroup.id);
   };
 
@@ -111,12 +111,12 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
       title: 'New Procedure',
       purpose: '',
       phase: group.phase,
-      displayOrder: group.procedures.length,
+      displayOrder: (group.procedures || []).length,
     };
 
-    const newGroups = template.groups.map(g => {
+    const newGroups = (template.groups || []).map(g => {
       if (g.id === group.id) {
-        return { ...g, procedures: [...g.procedures, newProc] };
+        return { ...g, procedures: [...(g.procedures || []), newProc] };
       }
       return g;
     });
@@ -125,11 +125,11 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
 
   const updateProcedure = (groupId: string, procId: string, field: string, value: string) => {
     if (!template) return;
-    const newGroups = template.groups.map(g => {
+    const newGroups = (template.groups || []).map(g => {
       if (g.id === groupId) {
         return {
           ...g,
-          procedures: g.procedures.map(p => p.id === procId ? { ...p, [field]: value } : p)
+          procedures: (g.procedures || []).map(p => p.id === procId ? { ...p, [field]: value } : p)
         };
       }
       return g;
@@ -139,9 +139,9 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
 
   const deleteProcedure = (groupId: string, procId: string) => {
     if (!template || !confirm('Delete this procedure template?')) return;
-    const newGroups = template.groups.map(g => {
+    const newGroups = (template.groups || []).map(g => {
       if (g.id === groupId) {
-        return { ...g, procedures: g.procedures.filter(p => p.id !== procId) };
+        return { ...g, procedures: (g.procedures || []).filter(p => p.id !== procId) };
       }
       return g;
     });
@@ -150,7 +150,7 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
 
   const deleteGroup = (groupId: string) => {
     if (!template || !confirm('Delete this group and all its procedures?')) return;
-    const newGroups = template.groups.filter(g => g.id !== groupId);
+    const newGroups = (template.groups || []).filter(g => g.id !== groupId);
     setTemplate({ ...template, groups: newGroups });
     if (activeGroup === groupId) {
       setActivePhase(newGroups.length > 0 ? newGroups[0].id : null);
@@ -158,7 +158,7 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
   };
 
   const moveGroup = (index: number, direction: 'up' | 'down') => {
-    if (!template) return;
+    if (!template || !template.groups) return;
     const newGroups = [...template.groups];
     const newIndex = direction === 'up' ? index - 1 : index + 1;
     if (newIndex < 0 || newIndex >= newGroups.length) return;
@@ -170,9 +170,9 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
 
   const moveProcedure = (groupId: string, index: number, direction: 'up' | 'down') => {
     if (!template) return;
-    const newGroups = template.groups.map(g => {
+    const newGroups = (template.groups || []).map(g => {
       if (g.id === groupId) {
-        const newProcs = [...g.procedures];
+        const newProcs = [...(g.procedures || [])];
         const newIndex = direction === 'up' ? index - 1 : index + 1;
         if (newIndex < 0 || newIndex >= newProcs.length) return g;
         [newProcs[index], newProcs[newIndex]] = [newProcs[newIndex], newProcs[index]];
@@ -197,7 +197,8 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
     </div>
   );
 
-  const currentGroup = template.groups.find(g => g.id === activeGroup);
+  const groups = template.groups || [];
+  const currentGroup = groups.find(g => g.id === activeGroup);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -241,7 +242,7 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
             </div>
             
             <div className="space-y-1">
-              {template.groups.map((group, index) => (
+              {groups.map((group, index) => (
                 <div key={group.id} className="group relative">
                   <button
                     onClick={() => setActivePhase(group.id)}
@@ -252,13 +253,13 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
                     }`}
                   >
                     <span className="truncate pr-8">{group.title}</span>
-                    <span className="text-[10px] opacity-60 font-black">{group.procedures.length}</span>
+                    <span className="text-[10px] opacity-60 font-black">{(group.procedures || []).length}</span>
                   </button>
                   <div className={`absolute right-10 top-1/2 -translate-y-1/2 flex items-center opacity-0 group-hover:opacity-100 transition-opacity ${activeGroup === group.id ? 'text-white' : 'text-gray-400'}`}>
                     <button onClick={(e) => { e.stopPropagation(); moveGroup(index, 'up'); }} className="p-1 hover:scale-125 transition-transform" disabled={index === 0}>
                       <ArrowUp className="w-3 h-3" />
                     </button>
-                    <button onClick={(e) => { e.stopPropagation(); moveGroup(index, 'down'); }} className="p-1 hover:scale-125 transition-transform" disabled={index === template.groups.length - 1}>
+                    <button onClick={(e) => { e.stopPropagation(); moveGroup(index, 'down'); }} className="p-1 hover:scale-125 transition-transform" disabled={index === groups.length - 1}>
                       <ArrowDown className="w-3 h-3" />
                     </button>
                   </div>
@@ -286,8 +287,8 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
                     <input
                       value={currentGroup.title}
                       onChange={(e) => {
-                        const newGroups = template.groups.map(g => g.id === currentGroup.id ? { ...g, title: e.target.value } : g);
-                        setTemplate({ ...template, groups: newGroups });
+                        const newGroups = groups.map(g => g.id === currentGroup.id ? { ...g, title: e.target.value } : g);
+                        setTemplate(template ? { ...template, groups: newGroups } : null);
                       }}
                       className="text-lg font-bold text-gray-900 border-none focus:ring-0 p-0 bg-transparent w-full placeholder:text-gray-300"
                     />
@@ -318,17 +319,17 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
                       value={currentGroup.phase}
                       onChange={(e) => {
                         const val = e.target.value;
-                        const newGroups = template.groups.map(g => {
+                        const newGroups = groups.map(g => {
                           if (g.id === currentGroup.id) {
                             return { 
                               ...g, 
                               phase: val,
-                              procedures: g.procedures.map(p => ({ ...p, phase: val }))
+                              procedures: (g.procedures || []).map(p => ({ ...p, phase: val }))
                             };
                           }
                           return g;
                         });
-                        setTemplate({ ...template, groups: newGroups });
+                        setTemplate(template ? { ...template, groups: newGroups } : null);
                       }}
                       className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-1.5 text-[10px] font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500/50 transition-all appearance-none cursor-pointer"
                     >
@@ -341,13 +342,13 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
               </div>
 
               <div className="space-y-6">
-                {currentGroup.procedures.length === 0 && (
+                {(currentGroup.procedures || []).length === 0 && (
                   <div className="text-center py-20 bg-white rounded-[2.5rem] border-2 border-dashed border-gray-100 text-gray-400">
                     <Plus className="w-12 h-12 mx-auto mb-4 opacity-20" />
                     <p className="font-bold uppercase tracking-widest text-sm opacity-40">No procedures in this phase</p>
                   </div>
                 )}
-                {currentGroup.procedures.map((proc, index) => (
+                {(currentGroup.procedures || []).map((proc, index) => (
                   <div key={proc.id} className="bg-white rounded-[2.5rem] border border-gray-200 shadow-lg overflow-hidden group/proc transition-all hover:border-blue-200">
                     <div className="px-8 py-5 border-b border-gray-50 flex items-center justify-between bg-gray-50/30">
                       <div className="flex items-center space-x-4 flex-1">
@@ -363,7 +364,7 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
                         <button onClick={() => moveProcedure(currentGroup.id, index, 'up')} className="p-2 text-gray-400 hover:text-blue-600" disabled={index === 0}>
                           <ArrowUp className="w-4 h-4" />
                         </button>
-                        <button onClick={() => moveProcedure(currentGroup.id, index, 'down')} className="p-2 text-gray-400 hover:text-blue-600" disabled={index === currentGroup.procedures.length - 1}>
+                        <button onClick={() => moveProcedure(currentGroup.id, index, 'down')} className="p-2 text-gray-400 hover:text-blue-600" disabled={index === (currentGroup.procedures || []).length - 1}>
                           <ArrowDown className="w-4 h-4" />
                         </button>
                         <div className="w-px h-4 bg-gray-200 mx-1" />
