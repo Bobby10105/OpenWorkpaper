@@ -296,7 +296,6 @@ export default async function DashboardPage() {
           avgReviewLag={managementData.avgReviewLag}
           agingCount={managementData.agingCount}
           auditorWorkloads={managementData.auditorWorkloads}
-          portfolioVelocity={portfolioProgress}
         />
       )}
 

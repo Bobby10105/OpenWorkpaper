@@ -15,7 +15,6 @@ interface ManagementInsightsProps {
   avgReviewLag: number;
   agingCount: number;
   auditorWorkloads: AuditorWorkload[];
-  portfolioVelocity: number;
 }
 
 function InsightCard({ 
@@ -50,8 +49,7 @@ function InsightCard({
 export default function ManagementInsights({ 
   avgReviewLag, 
   agingCount, 
-  auditorWorkloads, 
-  portfolioVelocity 
+  auditorWorkloads
 }: ManagementInsightsProps) {
   const [isExporting, setIsExporting] = useState(false);
 
@@ -94,7 +92,7 @@ export default function ManagementInsights({
         </button>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <InsightCard 
           label="Review Timeliness" 
           value={`${avgReviewLag.toFixed(1)}d`} 
@@ -108,13 +106,6 @@ export default function ManagementInsights({
           subValue="Pending Review > 30 Days"
           icon={AlertCircle} 
           color="bg-orange-500" 
-        />
-        <InsightCard 
-          label="Portfolio Velocity" 
-          value={`${portfolioVelocity}%`} 
-          subValue="Total Procedures Reviewed"
-          icon={CheckCircle2} 
-          color="bg-emerald-500" 
         />
         <InsightCard 
           label="Resource Capacity" 
