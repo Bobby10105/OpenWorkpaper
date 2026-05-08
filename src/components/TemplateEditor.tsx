@@ -60,6 +60,7 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
     setSaving(true);
     setError(null);
 
+    const groups = template.groups || [];
     // Capture the current group title before saving to try and re-select it after ID change
     const currentGroupTitle = groups.find(g => g.id === activeGroup)?.title;
 
@@ -107,12 +108,12 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
     }
   };
 
-  const addGroup = () => {
+  const addGroup = (phase: string = 'Fieldwork') => {
     if (!template) return;
     const newGroup: TemplateGroup = {
       id: `new-${Date.now()}`,
-      title: 'New Phase/Group',
-      phase: 'Fieldwork',
+      title: 'New Group',
+      phase,
       displayOrder: (template.groups || []).length,
       procedures: [],
     };
@@ -252,35 +253,71 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
           <div className="bg-white p-6 rounded-[2rem] border border-gray-200 shadow-lg space-y-4">
             <div className="flex items-center justify-between px-2">
               <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Program Phases</h3>
-              <button onClick={addGroup} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Add Phase">
-                <FolderPlus className="w-4 h-4" />
-              </button>
             </div>
             
-            <div className="space-y-1">
-              {groups.map((group, index) => (
-                <div key={group.id} className="group relative">
-                  <button
-                    onClick={() => setActivePhase(group.id)}
-                    className={`w-full text-left px-4 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-between ${
-                      activeGroup === group.id 
-                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-100 translate-x-1' 
-                        : 'text-gray-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    <span className="truncate pr-8">{group.title}</span>
-                    <span className="text-[10px] opacity-60 font-black">{(group.procedures || []).length}</span>
-                  </button>
-                  <div className={`absolute right-10 top-1/2 -translate-y-1/2 flex items-center opacity-0 group-hover:opacity-100 transition-opacity ${activeGroup === group.id ? 'text-white' : 'text-gray-400'}`}>
-                    <button onClick={(e) => { e.stopPropagation(); moveGroup(index, 'up'); }} className="p-1 hover:scale-125 transition-transform" disabled={index === 0}>
-                      <ArrowUp className="w-3 h-3" />
-                    </button>
-                    <button onClick={(e) => { e.stopPropagation(); moveGroup(index, 'down'); }} className="p-1 hover:scale-125 transition-transform" disabled={index === groups.length - 1}>
-                      <ArrowDown className="w-3 h-3" />
-                    </button>
+            <div className="space-y-6">
+              {['Planning', 'Fieldwork', 'Reporting'].map((phaseName) => {
+                const phaseGroups = groups.filter(g => g.phase === phaseName);
+                return (
+                  <div key={phaseName} className="space-y-2">
+                    <div className="flex items-center justify-between px-2">
+                      <h4 className="text-[9px] font-black text-blue-600 uppercase tracking-widest">{phaseName}</h4>
+                      <button 
+                        onClick={() => addGroup(phaseName)} 
+                        className="p-1 text-blue-400 hover:text-blue-600 transition-colors"
+                        title={`Add group to ${phaseName}`}
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    </div>
+                    <div className="space-y-1">
+                      {phaseGroups.length === 0 ? (
+                        <p className="px-4 py-2 text-[10px] text-gray-400 italic font-medium">No groups mapped</p>
+                      ) : (
+                        phaseGroups.map((group) => {
+                          const index = groups.findIndex(g => g.id === group.id);
+                          const isActive = activeGroup === group.id;
+                          return (
+                            <div key={group.id} className="space-y-1">
+                              <div className="group relative">
+                                <button
+                                  onClick={() => setActivePhase(group.id)}
+                                  className={`w-full text-left px-4 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-between ${
+                                    isActive 
+                                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-100 translate-x-1' 
+                                      : 'text-gray-600 hover:bg-gray-50'
+                                  }`}
+                                >
+                                  <span className="truncate pr-8">{group.title}</span>
+                                  <span className="text-[10px] opacity-60 font-black">{(group.procedures || []).length}</span>
+                                </button>
+                                <div className={`absolute right-10 top-1/2 -translate-y-1/2 flex items-center opacity-0 group-hover:opacity-100 transition-opacity ${isActive ? 'text-white' : 'text-gray-400'}`}>
+                                  <button onClick={(e) => { e.stopPropagation(); moveGroup(index, 'up'); }} className="p-1 hover:scale-125 transition-transform" disabled={index === 0}>
+                                    <ArrowUp className="w-3 h-3" />
+                                  </button>
+                                  <button onClick={(e) => { e.stopPropagation(); moveGroup(index, 'down'); }} className="p-1 hover:scale-125 transition-transform" disabled={index === groups.length - 1}>
+                                    <ArrowDown className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </div>
+                              {isActive && (group.procedures || []).length > 0 && (
+                                <div className="ml-4 border-l-2 border-blue-100 pl-3 space-y-1 py-1 animate-in slide-in-from-left-2 duration-200">
+                                  {(group.procedures || []).map((p) => (
+                                    <div key={p.id} className="text-[10px] text-gray-500 font-medium truncate py-0.5 flex items-center">
+                                      <span className="w-1 h-1 bg-gray-300 rounded-full mr-2 shrink-0" />
+                                      {p.title || 'Untitled Procedure'}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -407,7 +444,7 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
             <div className="bg-white p-20 rounded-[3rem] border border-gray-100 text-center shadow-sm">
               <FolderPlus className="w-16 h-16 text-gray-200 mx-auto mb-6" />
               <p className="text-gray-500 font-bold mb-6">Select a phase from the sidebar or create a new one to begin adding procedures.</p>
-              <button onClick={addGroup} className="inline-flex items-center space-x-2 px-8 py-3 bg-blue-600 text-white text-[10px] font-black rounded-xl hover:bg-blue-700 transition-all uppercase tracking-widest shadow-xl shadow-blue-100">
+              <button onClick={() => addGroup()} className="inline-flex items-center space-x-2 px-8 py-3 bg-blue-600 text-white text-[10px] font-black rounded-xl hover:bg-blue-700 transition-all uppercase tracking-widest shadow-xl shadow-blue-100">
                 <Plus className="w-4 h-4" />
                 <span>Create First Phase</span>
               </button>
