@@ -8,8 +8,6 @@ Deploy OpenWorkpaper on your terms with complete infrastructure-agnostic flexibi
 
 The purpose of this project is to provide free, open-source audit software to audit offices. 
 
-This software was "vibe-coded" by a CPA with 10 years of audit experience who was looking for a free, open-source alternative to expensive proprietary solutions. We believe that high-quality audit tools should be accessible to every auditor, regardless of budget.
-
 **Contributions are welcomed!** Whether you are an auditor with feature ideas or a developer looking to help, please feel free to open an issue or submit a pull request.
 
 ## 🚀 Key Features
@@ -261,16 +259,16 @@ To apply a new version or your own custom code tweaks:
 2.  **Clean and Rebuild**:
     It is recommended to stop the current containers before rebuilding to ensure a clean state and prevent port conflicts.
 
-    **Standard Deployment**:
-    ```bash
-    docker compose -f docker-compose.prod.yml down
-    docker compose -f docker-compose.prod.yml up -d --build
-    ```
-
     **Secure HTTPS Deployment**:
     ```bash
     docker compose -f docker-compose.secure.yml down
     docker compose -f docker-compose.secure.yml up -d --build
+    ```
+
+    **Standard Deployment**:
+    ```bash
+    docker compose -f docker-compose.prod.yml down
+    docker compose -f docker-compose.prod.yml up -d --build
     ```
 
     **Development/Quickstart**:
