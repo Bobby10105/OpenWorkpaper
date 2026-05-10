@@ -5,6 +5,45 @@ import type { Audit } from '@prisma/client';
 import fs from 'fs/promises';
 import path from 'path';
 
+interface RawProcedureGroup {
+  id: string;
+  auditId: string;
+  title: string;
+  phase: string;
+  displayOrder: number;
+}
+
+interface RawProcedure {
+  id: string;
+  auditId: string;
+  groupId: string | null;
+  phase: string;
+  title: string;
+  purpose: string | null;
+  status: string;
+  displayOrder: number;
+  assignedToId: string | null;
+  assignedToName?: string;
+  assignedToRole?: string;
+  assignedToEmail?: string;
+}
+
+interface RawAttachment {
+  id: string;
+  procedureId: string;
+  filename: string;
+  filepath: string;
+  displayOrder: number;
+}
+
+interface RawMessage {
+  id: string;
+  procedureId: string;
+  text: string;
+  sender: string;
+  createdAt: Date;
+}
+
 export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   const session = await getSession();
@@ -26,12 +65,12 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
   }
 
   // 2. Fetch Groups and Procedures with RAW logic
-  const rawGroups: any[] = await prisma.$queryRawUnsafe(
+  const rawGroups: RawProcedureGroup[] = await prisma.$queryRawUnsafe(
     `SELECT * FROM ProcedureGroup WHERE auditId = ? ORDER BY displayOrder ASC`,
     audit.id
   );
 
-  let rawProcedures: any[] = [];
+  let rawProcedures: RawProcedure[] = [];
   try {
     rawProcedures = await prisma.$queryRawUnsafe(
       `SELECT p.*, t.name as assignedToName, t.role as assignedToRole, t.email as assignedToEmail
@@ -40,7 +79,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
        WHERE p.auditId = ?`,
       audit.id
     );
-  } catch (e) {
+  } catch {
     console.warn('API AuditDetail: Full procedure join failed (schema syncing?). Falling back to basic fetch.');
     rawProcedures = await prisma.$queryRawUnsafe(
       `SELECT * FROM Procedure WHERE auditId = ?`,
@@ -50,12 +89,12 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
 
   // 3. For each procedure, fetch attachments and messages
   const proceduresWithRelations = await Promise.all(rawProcedures.map(async (proc) => {
-    const attachments: any[] = await prisma.$queryRawUnsafe(
+    const attachments: RawAttachment[] = await prisma.$queryRawUnsafe(
       `SELECT * FROM Attachment WHERE procedureId = ? ORDER BY displayOrder ASC`,
       proc.id
     );
     
-    const messages: any[] = await prisma.$queryRawUnsafe(
+    const messages: RawMessage[] = await prisma.$queryRawUnsafe(
       `SELECT * FROM ProcedureMessage WHERE procedureId = ? ORDER BY createdAt ASC`,
       proc.id
     );
@@ -124,8 +163,8 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
         const fullPath = path.join(process.cwd(), 'public', currentAudit.milestoneAttachmentUrl);
         try {
           await fs.unlink(fullPath);
-        } catch (e) {
-          console.warn("Could not delete milestone attachment file:", e);
+        } catch {
+          console.warn("Could not delete milestone attachment file:");
         }
       }
       updateData.milestoneAttachmentUrl = null;
@@ -139,8 +178,8 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
         const fullPath = path.join(process.cwd(), 'public', currentAudit.pbcAttachmentUrl);
         try {
           await fs.unlink(fullPath);
-        } catch (e) {
-          console.warn("Could not delete PBC attachment file:", e);
+        } catch {
+          console.warn("Could not delete PBC attachment file:");
         }
       }
       updateData.pbcAttachmentUrl = null;
@@ -171,7 +210,7 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
       }
       
       // Re-fetch to get current state (using raw to be safe)
-      const rawAudits: any[] = await prisma.$queryRawUnsafe(
+      const rawAudits: Audit[] = await prisma.$queryRawUnsafe(
         `SELECT * FROM Audit WHERE id = ? LIMIT 1`,
         params.id
       );
@@ -189,12 +228,13 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
           performedBy: session.user.username,
         }
       });
-    } catch (e) {}
+    } catch {}
     
     return NextResponse.json(audit);
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('Audit update error:', error);
-    return NextResponse.json({ error: 'Failed to update audit', message: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to update audit', message }, { status: 500 });
   }
 }
 
@@ -228,19 +268,19 @@ export async function DELETE(req: Request, props: { params: Promise<{ id: string
       // Delete milestone attachment if exists
       if (audit.milestoneAttachmentUrl) {
         const milestonePath = path.join(publicDir, audit.milestoneAttachmentUrl);
-        try { await fs.unlink(milestonePath); } catch (e) {}
+        try { await fs.unlink(milestonePath); } catch {}
       }
 
       // Delete PBC attachment if exists
       if (audit.pbcAttachmentUrl) {
         const pbcPath = path.join(publicDir, audit.pbcAttachmentUrl);
-        try { await fs.unlink(pbcPath); } catch (e) {}
+        try { await fs.unlink(pbcPath); } catch {}
       }
 
       for (const procedure of audit.procedures) {
         for (const attachment of procedure.attachments) {
           const fullPath = path.join(publicDir, attachment.filepath);
-          try { await fs.unlink(fullPath); } catch (e) {}
+          try { await fs.unlink(fullPath); } catch {}
         }
       }
 
@@ -258,7 +298,8 @@ export async function DELETE(req: Request, props: { params: Promise<{ id: string
     }
     
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json({ error: 'Delete failed', details: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: 'Delete failed', details: message }, { status: 500 });
   }
 }

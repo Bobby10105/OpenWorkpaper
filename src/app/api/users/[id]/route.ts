@@ -14,25 +14,13 @@ export async function PATCH(
 
     const canManageUsers = session.user.role === 'IT Administrator';
     if (!canManageUsers) {
-      return NextResponse.json({ error: 'Forbidden: Only IT Administrators can update roles' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const params = await props.params;
     const { role } = await req.json();
 
-    if (!role) {
-      return NextResponse.json({ error: 'Role is required' }, { status: 400 });
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: params.id },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
-    const updatedUser = await prisma.user.update({
+    const user = await prisma.user.update({
       where: { id: params.id },
       data: { role },
       select: {
@@ -44,26 +32,16 @@ export async function PATCH(
       }
     });
 
-    // Log the action
-    await prisma.auditLog.create({
-      data: {
-        action: 'UPDATE_ROLE',
-        entityType: 'USER',
-        entityId: params.id,
-        details: `Updated role for user: ${user.username} from ${user.role} to ${role}`,
-        performedBy: session.user.username,
-      }
-    });
-
-    return NextResponse.json(updatedUser);
-  } catch (error: any) {
+    return NextResponse.json(user);
+  } catch (error: unknown) {
     console.error('Update user role error:', error);
-    return NextResponse.json({ error: 'Failed to update user role', details: error.message }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Update failed';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
 export async function DELETE(
-  req: Request,
+  _req: Request,
   props: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -71,41 +49,21 @@ export async function DELETE(
     const params = await props.params;
 
     const canManageUsers = session?.user?.role === 'IT Administrator';
-
-    if (!canManageUsers) {
+    if (!canManageUsers || !session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     if (session.user.id === params.id) {
-      return NextResponse.json({ error: 'Cannot delete your own account' }, { status: 400 });
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: params.id },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Cannot delete yourself' }, { status: 400 });
     }
 
     await prisma.user.delete({
       where: { id: params.id },
     });
 
-    // Log the action
-    await prisma.auditLog.create({
-      data: {
-        action: 'DELETE',
-        entityType: 'USER',
-        entityId: params.id,
-        details: `Deleted user: ${user.username}`,
-        performedBy: session.user.username,
-      }
-    });
-
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Delete user error:', error);
-    return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });
+    return NextResponse.json({ error: 'Delete failed' }, { status: 500 });
   }
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { UserPlus, Trash2, Mail, Briefcase, User, Loader2, AlertCircle, Search, ChevronDown } from 'lucide-react';
+import { UserPlus, Trash2, Mail, Briefcase, User, Loader2, AlertCircle, ChevronDown } from 'lucide-react';
 
 interface TeamMember {
   id: string;
@@ -24,13 +24,12 @@ export default function TeamMembersTab({
   user
 }: { 
   auditId: string, 
-  initialTeamMembers: any[],
+  initialTeamMembers: TeamMember[],
   user?: { username: string; role: string; id: string }
 }) {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(initialTeamMembers);
   const [systemUsers, setSystemUsers] = useState<SystemUser[]>([]);
   const [creating, setCreating] = useState(false);
-  const [loadingUsers, setLoadingUsers] = useState(true);
   const [error, setError] = useState('');
   const router = useRouter();
 
@@ -48,8 +47,6 @@ export default function TeamMembersTab({
         }
       } catch (err) {
         console.error('Failed to fetch system users:', err);
-      } finally {
-        setLoadingUsers(false);
       }
     }
     fetchUsers();
@@ -79,9 +76,9 @@ export default function TeamMembersTab({
         const data = await res.json();
         throw new Error(data.error || 'Failed to add team member');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Add member error:', err);
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'Failed to add team member');
     } finally {
       setCreating(false);
     }
@@ -107,7 +104,7 @@ export default function TeamMembersTab({
         throw new Error('Failed to save changes');
       }
       router.refresh();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Save member error:', err);
       setError('Failed to save team member details.');
     }
@@ -127,9 +124,9 @@ export default function TeamMembersTab({
       } else {
         throw new Error('Failed to remove team member');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Delete member error:', err);
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'Failed to remove team member');
     }
   };
 

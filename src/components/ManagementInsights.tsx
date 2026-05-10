@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { TrendingUp, Clock, AlertCircle, Users, FileDown, Loader2, ChevronRight, CheckCircle2, Inbox } from 'lucide-react';
+import { TrendingUp, Clock, AlertCircle, Users, FileDown, Loader2, Inbox } from 'lucide-react';
 import { saveAs } from 'file-saver';
 
 interface AuditorWorkload {
@@ -27,7 +27,7 @@ function InsightCard({
   label: string;
   value: string | number;
   subValue?: string;
-  icon: any;
+  icon: React.ElementType;
   color: string;
 }) {
   return (

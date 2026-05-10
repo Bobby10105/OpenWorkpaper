@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { RotateCcw, Loader2, Upload } from 'lucide-react';
+import { RotateCcw, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function RestoreAuditButton() {
-  const [restoring, setRestoring] = useState(false);
+  const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -13,55 +13,50 @@ export default function RestoreAuditButton() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!confirm('Restore audit from this backup file? A new audit will be created with "RESTORED:" prefix.')) {
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      return;
-    }
-
-    setRestoring(true);
-    const formData = new FormData();
-    formData.append('file', file);
-
+    setLoading(true);
     try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
       const res = await fetch('/api/audits/restore', {
         method: 'POST',
-        body: formData,
+        body: formData, // Send as multipart/form-data
       });
 
       if (res.ok) {
-        const newAudit = await res.json();
-        router.push(`/audits/${newAudit.id}`);
         router.refresh();
+        alert('Audit restored successfully. Refresh your dashboard to see the new entry.');
       } else {
-        const err = await res.json();
-        alert(`Restore failed: ${err.details || err.error || 'Unknown error'}`);
+        const errData = await res.json().catch(() => ({}));
+        alert(`Failed to restore audit: ${errData.error || 'Unknown error'}`);
       }
-    } catch (error) {
-      console.error(error);
-      alert('An error occurred during restoration.');
+    } catch (err: unknown) {
+      console.error('Restore error:', err);
+      const message = err instanceof Error ? err.message : 'Connection error during restore';
+      alert(message);
     } finally {
-      setRestoring(false);
+      setLoading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
   return (
     <>
-      <button
-        onClick={() => fileInputRef.current?.click()}
-        disabled={restoring}
-        className="flex items-center space-x-2 px-4 py-2 bg-white text-gray-700 font-bold rounded-lg hover:bg-gray-50 border border-gray-200 transition-all shadow-sm active:scale-95 disabled:opacity-50"
-      >
-        {restoring ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
-        <span>{restoring ? 'Restoring...' : 'Restore Backup'}</span>
-      </button>
       <input
         type="file"
         ref={fileInputRef}
         onChange={handleFileChange}
         className="hidden"
-        accept=".zip"
+        accept=".json,.zip"
       />
+      <button
+        onClick={() => fileInputRef.current?.click()}
+        disabled={loading}
+        className="flex items-center space-x-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-6 py-3 rounded-2xl transition-all shadow-lg active:scale-95 disabled:opacity-70 font-bold text-sm uppercase tracking-widest border border-slate-200"
+      >
+        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <RotateCcw className="w-5 h-5" />}
+        <span>Restore</span>
+      </button>
     </>
   );
 }

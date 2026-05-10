@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Trash2, Save, Paperclip, File as FileIcon, X, MessageSquare, RefreshCw, Send, User, CheckCircle, Clock, Link as LinkIcon, Check, AlertCircle, ArrowLeft, Plus, ChevronDown, Lock, Unlock } from 'lucide-react';
-import type { Attachment, ProcedureMessage } from '@prisma/client';
+import { Trash2, Save, Paperclip, File as FileIcon, X, MessageSquare, RefreshCw, Send, User, CheckCircle, Clock, Link as LinkIcon, Check, ArrowLeft, Plus, ChevronDown, Lock, Unlock } from 'lucide-react';
+import type { Attachment, ProcedureMessage, TeamMember } from '@prisma/client';
 import type { ProcedureWithRelations } from '@/lib/types';
 import DOMPurify from 'isomorphic-dompurify';
 import RichTextEditor from './RichTextEditor';
@@ -19,14 +19,14 @@ export default function ProcedureDetail({
   procedure: ProcedureWithRelations, 
   nomenclature: string, 
   user?: { username: string; role: string; id: string },
-  teamMembers?: any[],
+  teamMembers?: TeamMember[],
   auditId: string
 }) {
   const router = useRouter();
 
   const RICH_TEXT_FIELDS = useMemo(() => ['purpose', 'source', 'scope', 'methodology', 'results', 'conclusions'], []);
 
-  const formatDateForInput = (date: any) => {
+  const formatDateForInput = (date: Date | string | null | number | undefined) => {
     if (!date) return '';
     try {
       const d = new Date(date);
@@ -38,8 +38,8 @@ export default function ProcedureDetail({
   };
 
   // Helper to get only the fields we care about for comparison
-  const normalizeData = useCallback((p: any) => {
-    const d: any = {
+  const normalizeData = useCallback((p: ProcedureWithRelations) => {
+    const d: Record<string, string> = {
       title: (p.title || '').trim(),
       purpose: p.purpose || '',
       source: p.source || '',
@@ -123,9 +123,10 @@ export default function ProcedureDetail({
       setLastSavedData(normalizedProp);
       setHasUnsavedChanges(false);
     }
-  }, [procedure, normalizeData]);
+    }, [procedure, normalizeData]);
 
-  const handleSave = useCallback(async (updatedData?: any) => {
+
+  const handleSave = useCallback(async (updatedData?: ProcedureWithRelations) => {
     if (isLocked) return;
 
     // Use passed data or the latest ref data
@@ -163,7 +164,7 @@ export default function ProcedureDetail({
       } else if (res.status === 423) {
         alert("This procedure is locked for review and cannot be saved.");
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Save failed:', err);
     } finally {
       setSaving(false);
@@ -191,7 +192,7 @@ export default function ProcedureDetail({
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
-  }, [data, lastSavedData, handleSave, isLocked, hasUnsavedChanges]);
+  }, [data, lastSavedData, handleSave, isLocked, hasUnsavedChanges, normalizeData]);
 
   const handleUnlock = async () => {
     if (!confirm("Unlocking this procedure will clear the existing sign-offs and require re-preparation and re-review. Continue?")) return;
@@ -210,7 +211,7 @@ export default function ProcedureDetail({
         const err = await res.json();
         alert(err.error || "Failed to unlock procedure");
       }
-    } catch (e) {
+    } catch (e: unknown) {
       console.error(e);
       alert("Network error unlocking procedure");
     } finally {
@@ -850,13 +851,13 @@ export default function ProcedureDetail({
                 </div>
               )}
               {messages.map((msg) => (
-                <div key={msg.id} className={`flex flex-col ${msg.author === user?.username ? 'items-end' : 'items-start'}`}>
+                <div key={msg.id} className={`flex flex-col ${msg.sender === user?.username ? 'items-end' : 'items-start'}`}>
                   <div className="flex items-center space-x-3 mb-2 px-1">
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{msg.author}</span>
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{msg.sender}</span>
                     <span suppressHydrationWarning className="text-[9px] text-gray-300 font-mono">{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
                   <div className={`px-6 py-4 rounded-2xl max-w-[90%] text-sm shadow-sm leading-relaxed border ${
-                    msg.author === user?.username 
+                    msg.sender === user?.username 
                       ? 'bg-blue-600 text-white rounded-tr-none border-blue-500 shadow-blue-50' 
                       : 'bg-gray-50 text-gray-800 border-gray-100 rounded-tl-none'
                   }`}>

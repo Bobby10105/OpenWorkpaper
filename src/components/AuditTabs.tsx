@@ -124,7 +124,7 @@ export default function AuditTabs({
                 auditId={audit.id} 
                 phase={activePhase} 
                 audit={audit}
-                user={user as any}
+                user={user as unknown as { username: string; role: string; id: string }}
               />
             )}
           </div>

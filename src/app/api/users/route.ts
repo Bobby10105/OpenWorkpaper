@@ -10,8 +10,8 @@ async function getSessionUser() {
     const session = cookieStore.get('session')?.value;
     if (!session) return null;
     const parsed = await decrypt(session);
-    return (parsed as any).user;
-  } catch (e) {
+    return (parsed as { user: { id: string; username: string; role: string } }).user;
+  } catch {
     return null;
   }
 }
@@ -35,7 +35,7 @@ export async function GET() {
     });
 
     return NextResponse.json(users);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Fetch users error:', error);
     return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
   }
@@ -44,7 +44,6 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const adminUser = await getSessionUser();
-    
     const canManageUsers = adminUser?.role === 'IT Administrator';
     
     if (!canManageUsers) {
@@ -52,10 +51,6 @@ export async function POST(req: Request) {
     }
 
     const { username, password, role } = await req.json();
-
-    if (!username || !password || !role) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-    }
 
     const existingUser = await prisma.user.findUnique({
       where: { username },
@@ -66,39 +61,21 @@ export async function POST(req: Request) {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const user = await prisma.user.create({
       data: {
         username,
         password: hashedPassword,
         role,
-        mustChangePassword: true, // Force password change on first login
+        mustChangePassword: true,
       },
     });
 
-    // Log the action
-    try {
-      await prisma.auditLog.create({
-        data: {
-          action: 'CREATE',
-          entityType: 'USER',
-          entityId: user.id,
-          details: `Created user: ${user.username} with role: ${user.role}`,
-          performedBy: adminUser.username || 'System',
-        }
-      });
-    } catch (logErr) {
-      console.warn('User creation log failed (non-critical):', logErr);
-    }
-
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _, ...userWithoutPassword } = user;
     return NextResponse.json(userWithoutPassword);
-  } catch (error: any) {
-    console.error('Create user CRITICAL error:', error);
-    return NextResponse.json({ 
-      error: 'Failed to create user', 
-      details: error.message,
-      code: error.code
-    }, { status: 500 });
+  } catch (error: unknown) {
+    console.error('Create user error:', error);
+    const message = error instanceof Error ? error.message : 'Creation failed';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

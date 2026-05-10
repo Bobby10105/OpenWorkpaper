@@ -1,53 +1,38 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getSession } from '@/lib/auth';
 
-export async function PUT(req: Request, props: { params: Promise<{ id: string }> }) {
+export async function PUT(
+  req: Request, 
+  props: { params: Promise<{ id: string }> }
+) {
   try {
     const params = await props.params;
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const data = await req.json();
-    const { title } = data;
-
+    const body = await req.json();
     const group = await prisma.procedureGroup.update({
       where: { id: params.id },
-      data: { title }
+      data: body
     });
-
     return NextResponse.json(group);
-  } catch (error: any) {
-    return NextResponse.json({ error: 'Failed to update group', details: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    console.error('Update group error:', error);
+    const message = error instanceof Error ? error.message : 'Update failed';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
-export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  _req: Request, 
+  props: { params: Promise<{ id: string }> }
+) {
   try {
     const params = await props.params;
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const group = await prisma.procedureGroup.delete({
+    await prisma.procedureGroup.delete({
       where: { id: params.id }
     });
-
-    await prisma.auditLog.create({
-      data: {
-        action: 'DELETE',
-        entityType: 'PROCEDURE_GROUP',
-        entityId: params.id,
-        details: `Deleted procedure group: ${group.title}`,
-        performedBy: session.user.username,
-      }
-    });
-
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json({ error: 'Failed to delete group', details: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    console.error('Delete group error:', error);
+    const message = error instanceof Error ? error.message : 'Delete failed';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -35,9 +35,10 @@ export async function GET() {
     
     console.log(`[API/Templates] Found ${templates.length} templates`);
     return NextResponse.json(templates);
-  } catch (error: any) {
-    console.error('[API/Templates] GET Error:', error.message);
-    return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[API/Templates] GET Error:', message);
+    return NextResponse.json({ error: 'Internal Server Error', details: message }, { status: 500 });
   }
 }
 
@@ -75,11 +76,12 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json(template);
-  } catch (error: any) {
-    console.error('[API/Templates] POST Error:', error.message);
-    if (error.code === 'P2002') {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[API/Templates] POST Error:', message);
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
       return NextResponse.json({ error: 'Template name already exists' }, { status: 400 });
     }
-    return NextResponse.json({ error: 'Failed to create template', details: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to create template', details: message }, { status: 500 });
   }
 }

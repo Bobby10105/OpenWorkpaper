@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { LayoutDashboard, AlertTriangle, ChevronRight, ArrowRight, ExternalLink, X, ClipboardList, User } from 'lucide-react';
 import Link from 'next/link';
 
@@ -21,7 +21,6 @@ interface DashboardStatsProps {
   activeCount: number;
   portfolioProgress: number;
   totalPendingReview: number;
-  upcomingDeadlines: number;
   totalToComplete: number;
   pendingAudits: PendingAudit[];
   toCompleteAudits: PendingAudit[];
@@ -37,7 +36,7 @@ function StatCard({
 }: { 
   label: string, 
   value: string | number, 
-  icon: any, 
+  icon: React.ElementType, 
   color: string,
   onClick?: () => void,
   isActive?: boolean

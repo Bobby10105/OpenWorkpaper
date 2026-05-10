@@ -32,33 +32,32 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
   const [template, setTemplate] = useState<Template | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [activeGroup, setActivePhase] = useState<string | null>(null);
 
   useEffect(() => {
+    const fetchTemplate = async () => {
+      try {
+        const res = await fetch(`/api/admin/templates/${templateId}`);
+        if (!res.ok) throw new Error('Failed to fetch template');
+        const data = await res.json();
+        setTemplate(data);
+        if (data.groups && data.groups.length > 0) {
+          setActivePhase(data.groups[0].id);
+        }
+      } catch (err: unknown) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchTemplate();
   }, [templateId]);
 
-  const fetchTemplate = async () => {
-    try {
-      const res = await fetch(`/api/admin/templates/${templateId}`);
-      if (!res.ok) throw new Error('Failed to fetch template');
-      const data = await res.json();
-      setTemplate(data);
-      if (data.groups && data.groups.length > 0) {
-        setActivePhase(data.groups[0].id);
-      }
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSave = async () => {
     if (!template) return;
     setSaving(true);
-    setError(null);
 
     const groups = template.groups || [];
     // Capture the current group title before saving to try and re-select it after ID change
@@ -66,8 +65,8 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
 
     // Deep clone and sanitize before saving
     const sanitizedTemplate = JSON.parse(JSON.stringify(template));
-    (sanitizedTemplate.groups || []).forEach((group: any) => {
-      (group.procedures || []).forEach((proc: any) => {
+    (sanitizedTemplate.groups || []).forEach((group: TemplateGroup) => {
+      (group.procedures || []).forEach((proc: TemplateProcedure) => {
         if (proc.purpose) {
           proc.purpose = DOMPurify.sanitize(proc.purpose);
         }
@@ -84,14 +83,14 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
         const errData = await res.json().catch(() => ({}));
         throw new Error(errData.details || errData.error || 'Failed to save template');
       }
-      const updated = await res.json();
+      const updated: Template = await res.json();
       
       // Update template state with new data (contains permanent IDs)
       setTemplate(updated);
 
       // Try to re-select the active group using the title, or fallback to the first group
       if (updated.groups && updated.groups.length > 0) {
-        const matchingGroup = updated.groups.find((g: any) => g.title === currentGroupTitle);
+        const matchingGroup = updated.groups.find((g: TemplateGroup) => g.title === currentGroupTitle);
         if (matchingGroup) {
           setActivePhase(matchingGroup.id);
         } else {
@@ -100,9 +99,9 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
       }
 
       alert('Template saved successfully!');
-    } catch (err: any) {
-      setError(err.message);
-      alert(`Save failed: ${err.message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'An unknown error occurred';
+      alert(`Save failed: ${message}`);
     } finally {
       setSaving(false);
     }
@@ -324,7 +323,7 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
           <div className="bg-blue-50 p-6 rounded-[2rem] border border-blue-100 flex items-start space-x-4">
             <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
             <p className="text-xs text-blue-700 leading-relaxed font-medium">
-              Templates define the default structure for new audits. Standardized procedures only require a "Purpose" definition to maintain engagement speed.
+              Templates define the default structure for new audits. Standardized procedures only require a &quot;Purpose&quot; definition to maintain engagement speed.
             </p>
           </div>
         </div>

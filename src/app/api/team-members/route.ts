@@ -9,7 +9,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Role-based access: Any role except Specialist can manage team assignments
     if (session.user.role === 'Specialist') {
       return NextResponse.json({ error: 'Forbidden: Specialists cannot manage team members' }, { status: 403 });
     }
@@ -17,7 +16,7 @@ export async function POST(req: Request) {
     let data;
     try {
       data = await req.json();
-    } catch (e) {
+    } catch {
       return NextResponse.json({ error: 'Invalid JSON payload' }, { status: 400 });
     }
 
@@ -26,7 +25,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Audit ID is required' }, { status: 400 });
     }
 
-    // Attempt to create the member with minimal requirements
     const teamMember = await prisma.teamMember.create({
       data: {
         auditId: auditId,
@@ -36,7 +34,6 @@ export async function POST(req: Request) {
       }
     });
 
-    // Attempt logging silently so it doesn't break the main action
     try {
       const audit = await prisma.audit.findUnique({
         where: { id: auditId },
@@ -53,16 +50,16 @@ export async function POST(req: Request) {
         }
       });
     } catch (logErr) {
-      console.warn('Silent log failure:', logErr);
+      console.warn('Log error (non-critical):', logErr);
     }
 
     return NextResponse.json(teamMember);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('CRITICAL Team Member Creation Error:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ 
       error: 'Failed to create team member', 
-      details: error.message,
-      code: error.code 
+      details: message
     }, { status: 500 });
   }
 }

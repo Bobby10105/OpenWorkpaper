@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { BookOpen, X, CheckCircle, Loader2, AlertCircle, Search, ChevronRight } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
 interface Template {
   id: string;
@@ -28,7 +27,6 @@ export default function ApplyTemplateModal({
   const [applying, setApplying] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
-  const router = useRouter();
 
   useEffect(() => {
     fetchTemplates();
@@ -40,8 +38,8 @@ export default function ApplyTemplateModal({
       if (!res.ok) throw new Error('Failed to load template library');
       const data = await res.json();
       setTemplates(data);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
@@ -66,8 +64,8 @@ export default function ApplyTemplateModal({
       
       onSuccess();
       onClose();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setApplying(false);
     }

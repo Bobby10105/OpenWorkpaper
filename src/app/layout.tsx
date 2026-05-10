@@ -8,6 +8,8 @@ import UserMenu from '@/components/UserMenu';
 
 const inter = Inter({ subsets: ['latin'] });
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'OpenWorkpaper - Audit Management',
   description: 'Open Source Audit Management System',

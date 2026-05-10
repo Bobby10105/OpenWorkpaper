@@ -1,20 +1,11 @@
 'use client';
 
-import { CheckCircle2, Circle, Clock, ChevronLeft, ChevronRight, Map as MapIcon } from 'lucide-react';
+import React from 'react';
+import { ChevronRight, CheckCircle2, Circle, Clock, ChevronDown } from 'lucide-react';
+import type { ProcedureGroupWithRelations } from '@/lib/types';
 
 interface ProcedureMiniMapProps {
-  procedureGroups: {
-    id: string;
-    title: string;
-    procedures: {
-      id: string;
-      title: string | null;
-      preparedBy: string | null;
-      reviewedBy: string | null;
-      preparedDate: any;
-      reviewedDate: any;
-    }[];
-  }[];
+  procedureGroups: ProcedureGroupWithRelations[];
   phaseNum: number;
   isMinimized: boolean;
   setIsMinimized: (val: boolean) => void;
@@ -22,130 +13,86 @@ interface ProcedureMiniMapProps {
 
 export default function ProcedureMiniMap({ 
   procedureGroups, 
-  phaseNum, 
-  isMinimized, 
-  setIsMinimized 
+  phaseNum,
+  isMinimized,
+  setIsMinimized
 }: ProcedureMiniMapProps) {
-  const getLetter = (index: number) => String.fromCharCode(97 + index);
-
-  const scrollToProcedure = (nomenclature: string) => {
-    const element = document.getElementById(`proc-${nomenclature}`);
-    if (element) {
-      const offset = 100;
-      const bodyRect = document.body.getBoundingClientRect().top;
-      const elementRect = element.getBoundingClientRect().top;
-      const elementPosition = elementRect - bodyRect;
-      const offsetPosition = elementPosition - offset;
-
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-      });
-    }
-  };
+  if (isMinimized) {
+    return (
+      <button 
+        onClick={() => setIsMinimized(false)}
+        className="bg-white/80 backdrop-blur-xl border border-slate-200 p-4 rounded-2xl shadow-xl hover:bg-slate-50 transition-all group flex items-center space-x-3"
+      >
+        <div className="bg-blue-600 p-1.5 rounded-lg shadow-sm">
+          <ChevronRight className="w-4 h-4 text-white" />
+        </div>
+        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-slate-900 transition-colors">Workspace Navigator</span>
+      </button>
+    );
+  }
 
   return (
-    <aside 
-      className={`sticky top-24 self-start flex-shrink-0 hidden xl:block transition-all duration-300 ease-in-out ${
-        isMinimized ? 'w-12' : 'w-72'
-      }`}
-    >
-      <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden">
-        {/* Toggle Header */}
-        <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-          {!isMinimized && (
-            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] flex items-center ml-1">
-              <MapIcon className="w-3.5 h-3.5 mr-2 text-blue-600" />
-              Navigator
-            </h3>
-          )}
-          <button 
-            onClick={() => setIsMinimized(!isMinimized)}
-            className={`p-1.5 rounded-lg hover:bg-gray-200 text-gray-400 transition-all duration-300 ${isMinimized ? 'mx-auto' : ''}`}
-            title={isMinimized ? "Expand Navigator" : "Minimize Navigator"}
-          >
-            {isMinimized ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-          </button>
-        </div>
-
-        <div className={`p-2 space-y-5 max-h-[calc(100vh-250px)] overflow-y-auto custom-scrollbar`}>
-          {procedureGroups.map((group, groupIndex) => {
-            const groupNomenclature = `${phaseNum}.${groupIndex + 1}`;
-            
-            return (
-              <div key={group.id} className="space-y-1.5">
-                {!isMinimized && (
-                  <p className="text-[9px] font-bold text-indigo-900/40 uppercase truncate px-3 tracking-wider">
-                    {groupNomenclature} {group.title}
-                  </p>
-                )}
-                <div className={`space-y-0.5 ${isMinimized ? 'flex flex-col items-center' : 'ml-2 border-l border-gray-100 pl-1'}`}>
-                  {group.procedures.map((proc, procIndex) => {
-                    const nomenclature = `${groupNomenclature}.${getLetter(procIndex)}`;
-                    const isReviewed = proc.reviewedBy && proc.reviewedDate;
-                    const isPrepared = proc.preparedBy && proc.preparedDate;
-                    
-                    let StatusIcon = Circle;
-                    let iconColor = 'text-gray-300';
-                    let bgHover = 'hover:bg-blue-50';
-                    if (isReviewed) {
-                      StatusIcon = CheckCircle2;
-                      iconColor = 'text-blue-500';
-                    } else if (isPrepared) {
-                      StatusIcon = Clock;
-                      iconColor = 'text-green-500';
-                    }
-
-                    return (
-                      <button
-                        key={proc.id}
-                        onClick={() => scrollToProcedure(nomenclature)}
-                        className={`w-full flex items-center rounded-lg ${bgHover} transition-all group text-left ${
-                          isMinimized ? 'justify-center p-2' : 'space-x-3 px-3 py-2'
-                        }`}
-                        title={`${nomenclature}: ${proc.title || 'Untitled'}`}
-                      >
-                        <StatusIcon className={`w-3.5 h-3.5 flex-shrink-0 ${iconColor} transition-all duration-300 group-hover:scale-125`} />
-                        {!isMinimized && (
-                          <span className="text-[11px] font-semibold text-gray-600 group-hover:text-blue-700 transition-colors truncate leading-tight">
-                            <span className="text-[9px] text-gray-400 mr-1.5 font-mono">{nomenclature}</span>
-                            {proc.title || 'Untitled'}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Mini Legend when minimized */}
-        {isMinimized && (
-          <div className="py-5 border-t border-gray-100 flex flex-col items-center space-y-4 opacity-40 bg-gray-50/50">
-            <CheckCircle2 className="w-3.5 h-3.5 text-blue-500" />
-            <Clock className="w-3.5 h-3.5 text-green-500" />
-            <Circle className="w-3.5 h-3.5 text-gray-300" />
-          </div>
-        )}
+    <div className="bg-white/80 backdrop-blur-xl border border-slate-200 rounded-[2.5rem] shadow-2xl w-[320px] overflow-hidden flex flex-col animate-in slide-in-from-left-4 duration-500">
+      <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Workspace Navigator</h3>
+        <button 
+          onClick={() => setIsMinimized(true)}
+          className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-900 transition-all"
+        >
+          <ChevronDown className="w-4 h-4 rotate-90" />
+        </button>
       </div>
+      
+      <div className="p-4 overflow-y-auto max-h-[600px] scrollbar-thin scrollbar-thumb-slate-200">
+        <div className="space-y-8">
+          {procedureGroups.map((group, groupIndex) => (
+            <div key={group.id} className="space-y-4">
+              <div className="px-2 flex items-center space-x-3">
+                <div className="bg-blue-600 text-white text-[9px] font-black w-10 h-7 flex items-center justify-center rounded-lg shadow-md border border-blue-500">
+                  {phaseNum}.{groupIndex + 1}
+                </div>
+                <span className="text-[11px] font-black text-slate-900 uppercase tracking-tight truncate">{group.title}</span>
+              </div>
+              
+              <div className="space-y-1 relative pl-5">
+                <div className="absolute left-[24px] top-0 bottom-0 w-px bg-slate-100" />
+                
+                {group.procedures.map((proc, procIndex) => {
+                  const isCompleted = !!(proc.preparedDate && proc.reviewedDate);
+                  const isAwaitingReview = !!(proc.preparedDate && !proc.reviewedDate);
+                  const getLetter = (index: number) => String.fromCharCode(97 + index);
+                  
+                  const getStatusIcon = () => {
+                    if (isCompleted) return <CheckCircle2 className="w-3 h-3 text-emerald-500" />;
+                    if (isAwaitingReview) return <Clock className="w-3 h-3 text-orange-400" />;
+                    return <Circle className="w-3 h-3 text-slate-300" />;
+                  };
 
-      <style jsx>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #e5e7eb;
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #d1d5db;
-        }
-      `}</style>
-    </aside>
+                  return (
+                    <a
+                      key={proc.id}
+                      href={`#proc-${phaseNum}.${groupIndex + 1}.${getLetter(procIndex)}`}
+                      className="w-full flex items-center rounded-xl hover:bg-blue-50 transition-all group p-2"
+                    >
+                      <div className="w-6 flex justify-center z-10">
+                        {getStatusIcon()}
+                      </div>
+                      <div className="flex items-center min-w-0 space-x-2">
+                        <span className="text-[9px] font-bold text-slate-400 w-4">
+                          {getLetter(procIndex)}
+                        </span>
+                        <span className="text-[11px] font-bold text-slate-600 group-hover:text-blue-600 truncate transition-colors">
+                          {proc.title || 'Untitled'}
+                        </span>
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }

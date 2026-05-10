@@ -2,6 +2,17 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 
+interface TemplateProcedureInput {
+  title: string;
+  purpose: string;
+}
+
+interface TemplateGroupInput {
+  phase: string;
+  title: string;
+  procedures: TemplateProcedureInput[];
+}
+
 export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   console.log(`[API/Templates/${params.id}] GET request received`);
@@ -36,9 +47,10 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
 
     console.log(`[API/Templates/${params.id}] Found template: ${template.name} with ${template.groups.length} groups`);
     return NextResponse.json(template);
-  } catch (error: any) {
-    console.error(`[API/Templates/${params.id}] GET Error:`, error.message);
-    return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error(`[API/Templates/${params.id}] GET Error:`, message);
+    return NextResponse.json({ error: 'Internal Server Error', details: message }, { status: 500 });
   }
 }
 
@@ -52,7 +64,7 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
   }
 
   try {
-    const { name, description, groups } = await req.json();
+    const { name, description, groups }: { name: string, description: string, groups: TemplateGroupInput[] } = await req.json();
 
     const result = await prisma.$transaction(async (tx) => {
       // Update template details
@@ -79,7 +91,7 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
 
           if (g.procedures && Array.isArray(g.procedures)) {
             await tx.templateProcedure.createMany({
-              data: g.procedures.map((p: any, pIndex: number) => ({
+              data: g.procedures.map((p: TemplateProcedureInput, pIndex: number) => ({
                 templateId: params.id,
                 groupId: group.id,
                 phase: g.phase,
@@ -123,9 +135,10 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
     });
 
     return NextResponse.json(result);
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('Update template error:', error);
-    return NextResponse.json({ error: 'Failed to update template', details: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to update template', details: message }, { status: 500 });
   }
 }
 
@@ -154,7 +167,8 @@ export async function DELETE(req: Request, props: { params: Promise<{ id: string
     });
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json({ error: 'Failed to delete template', details: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: 'Failed to delete template', details: message }, { status: 500 });
   }
 }

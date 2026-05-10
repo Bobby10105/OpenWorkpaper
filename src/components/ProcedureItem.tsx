@@ -6,15 +6,11 @@ export default function ProcedureItem({
   procedure, 
   nomenclature, 
   onDelete,
-  user,
-  teamMembers,
   auditId
 }: { 
   procedure: ProcedureWithRelations, 
   nomenclature: string, 
   onDelete?: () => void,
-  user?: any,
-  teamMembers: any[],
   auditId: string
 }) {
   const isReviewed = procedure.reviewedBy && procedure.reviewedDate;

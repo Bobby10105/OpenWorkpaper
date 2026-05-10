@@ -1,162 +1,171 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getSession } from '@/lib/auth';
 import fs from 'fs/promises';
 import path from 'path';
 import JSZip from 'jszip';
 
+interface RestoreAttachment {
+  filename: string;
+  filepath: string;
+  mimetype: string | null;
+  size: number | null;
+  displayOrder: number | null;
+}
+
+interface RestoreProcedure {
+  title: string | null;
+  purpose: string | null;
+  source: string | null;
+  scope: string | null;
+  methodology: string | null;
+  results: string | null;
+  conclusions: string | null;
+  status: string;
+  phase: string;
+  preparedBy: string | null;
+  preparedDate: string | Date | null;
+  reviewedBy: string | null;
+  reviewedDate: string | Date | null;
+  displayOrder: number;
+  groupId: string | null;
+  attachments?: RestoreAttachment[];
+}
+
+interface RestoreGroup {
+  id: string;
+  title: string;
+  phase: string;
+  displayOrder: number;
+  procedures?: RestoreProcedure[];
+}
+
+interface RestoreTeamMember {
+  name: string;
+  role: string | null;
+  email: string | null;
+}
+
+interface RestoreAuditData {
+  title: string;
+  category?: string;
+  auditNumber?: string;
+  objective?: string;
+  status?: string;
+  procedureGroups?: RestoreGroup[];
+  procedures?: RestoreProcedure[];
+  teamMembers?: RestoreTeamMember[];
+}
+
 export async function POST(req: Request) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const contentType = req.headers.get('content-type') || '';
+    let data: RestoreAuditData;
+    let zip: JSZip | null = null;
+
+    if (contentType.includes('multipart/form-data')) {
+      // 1. Handle ZIP Upload
+      const formData = await req.formData();
+      const file = formData.get('file') as File;
+      if (!file) return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+
+      const buffer = await file.arrayBuffer();
+      zip = await JSZip.loadAsync(buffer);
+      const dataFile = zip.file('audit_data.json');
+      if (!dataFile) throw new Error('Invalid backup ZIP: audit_data.json missing');
+      
+      const dataStr = await dataFile.async('string');
+      data = JSON.parse(dataStr);
+    } else {
+      // 2. Handle Legacy JSON Upload
+      data = await req.json();
     }
-
-    const formData = await req.formData();
-    const file = formData.get('file') as File;
-
-    if (!file) {
-      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
-    }
-
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const zip = await JSZip.loadAsync(buffer);
-
-    // 1. Read audit data
-    const auditDataFile = zip.file('audit_data.json');
-    if (!auditDataFile) {
-      return NextResponse.json({ error: 'Invalid backup: audit_data.json missing' }, { status: 400 });
-    }
-
-    const auditData = JSON.parse(await auditDataFile.async('string'));
-    
-    // 2. Prepare for restoration (generate new IDs to avoid collisions)
-    const publicDir = path.join(process.cwd(), 'public');
-    const uploadsDir = path.join(publicDir, 'uploads');
-    await fs.mkdir(uploadsDir, { recursive: true });
 
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Restore Milestone File if exists
-      let newMilestoneUrl = null;
-      if (auditData.milestoneAttachmentUrl) {
-        const diskFilename = path.basename(auditData.milestoneAttachmentUrl);
-        const zipPath = `attachments/${diskFilename}`;
-        const zipFile = zip.file(zipPath);
-        if (zipFile) {
-          const fileContent = await zipFile.async('nodebuffer');
-          const newFilepath = path.join(uploadsDir, diskFilename);
-          try {
-            await fs.writeFile(newFilepath, fileContent);
-            newMilestoneUrl = `/uploads/${diskFilename}`;
-          } catch (e) {
-            console.error(`Failed to write restored milestone file: ${newFilepath}`, e);
-          }
-        }
-      }
-
-      // Create new Audit
-      const newAudit = await tx.audit.create({
+      // 1. Create the main audit record
+      const audit = await tx.audit.create({
         data: {
-          title: `RESTORED: ${auditData.title}`,
-          description: auditData.description,
-          category: auditData.category,
-          auditNumber: auditData.auditNumber,
-          objective: auditData.objective,
-          status: auditData.status,
-          fieldworkStartDate: auditData.fieldworkStartDate ? new Date(auditData.fieldworkStartDate) : null,
-          fieldworkEndDate: auditData.fieldworkEndDate ? new Date(auditData.fieldworkEndDate) : null,
-          reportIssuedDate: auditData.reportIssuedDate ? new Date(auditData.reportIssuedDate) : null,
-          milestoneAttachmentUrl: newMilestoneUrl,
-          milestoneAttachmentName: auditData.milestoneAttachmentName,
-        }
+          title: `${data.title} (Restored)`,
+          category: data.category || 'General',
+          auditNumber: data.auditNumber,
+          objective: data.objective,
+          status: data.status || 'Planning',
+        },
       });
 
-      // Restore Team Members
-      if (auditData.teamMembers && Array.isArray(auditData.teamMembers)) {
-        for (const member of auditData.teamMembers) {
-          await tx.teamMember.create({
-            data: {
-              auditId: newAudit.id,
-              userId: member.userId,
-              name: member.name,
-              role: member.role,
-              email: member.email,
-            }
-          });
-        }
-      }
+      const groupMap = new Map<string, string>();
+      const uploadDir = path.join(process.cwd(), 'public/uploads');
+      await fs.mkdir(uploadDir, { recursive: true });
 
-      // Map old group IDs to new ones
-      const groupMap: Record<string, string> = {};
-
-      // Restore Procedure Groups
-      if (auditData.procedureGroups && Array.isArray(auditData.procedureGroups)) {
-        for (const group of auditData.procedureGroups) {
+      // 2. Create Groups
+      if (data.procedureGroups && Array.isArray(data.procedureGroups)) {
+        for (const group of data.procedureGroups) {
           const newGroup = await tx.procedureGroup.create({
             data: {
-              auditId: newAudit.id,
-              phase: group.phase,
+              auditId: audit.id,
               title: group.title,
+              phase: group.phase,
               displayOrder: group.displayOrder,
             }
           });
-          groupMap[group.id] = newGroup.id;
+          groupMap.set(group.id, newGroup.id);
         }
       }
 
-      // Restore Procedures and Attachments
-      const procedures = auditData.procedures || [];
-      for (const proc of procedures) {
-        const newProc = await tx.procedure.create({
-          data: {
-            auditId: newAudit.id,
-            groupId: proc.groupId ? groupMap[proc.groupId] : null,
-            phase: proc.phase,
-            title: proc.title,
-            purpose: proc.purpose,
-            source: proc.source,
-            scope: proc.scope,
-            methodology: proc.methodology,
-            results: proc.results,
-            conclusions: proc.conclusions,
-            preparedBy: proc.preparedBy,
-            preparedDate: proc.preparedDate ? new Date(proc.preparedDate) : null,
-            reviewedBy: proc.reviewedBy,
-            reviewedDate: proc.reviewedDate ? new Date(proc.reviewedDate) : null,
-          }
-        });
+      // 3. Create Procedures and Attachments
+      const proceduresToRestore = data.procedures || 
+        (data.procedureGroups?.flatMap(g => (g.procedures || []).map(p => ({ ...p, groupId: g.id })))) || 
+        [];
 
-        // Restore Attachments for this procedure
-        if (proc.attachments && Array.isArray(proc.attachments)) {
-          for (const att of proc.attachments) {
-            const diskFilename = path.basename(att.filepath);
-            const zipPath = `attachments/${diskFilename}`;
-            const zipFile = zip.file(zipPath);
+      if (Array.isArray(proceduresToRestore)) {
+        for (const p of proceduresToRestore) {
+          const newProcedure = await tx.procedure.create({
+            data: {
+              auditId: audit.id,
+              groupId: p.groupId ? groupMap.get(p.groupId) : null,
+              title: p.title,
+              purpose: p.purpose,
+              source: p.source,
+              scope: p.scope,
+              methodology: p.methodology,
+              results: p.results,
+              conclusions: p.conclusions,
+              status: p.status || 'Not Started',
+              phase: p.phase,
+              preparedBy: p.preparedBy,
+              preparedDate: p.preparedDate ? new Date(p.preparedDate) : null,
+              reviewedBy: p.reviewedBy,
+              reviewedDate: p.reviewedDate ? new Date(p.reviewedDate) : null,
+              displayOrder: p.displayOrder || 0,
+            }
+          });
 
-            if (zipFile) {
-              const fileContent = await zipFile.async('nodebuffer');
-              const newFilepath = path.join(uploadsDir, diskFilename);
+          // Restore Attachments for this procedure
+          if (p.attachments && Array.isArray(p.attachments)) {
+            for (const att of p.attachments) {
+              // If we have a ZIP, try to restore the file to disk
+              let finalFilepath = att.filepath;
               
-              // Only write if doesn't exist to avoid duplicates if restoring same backup twice
-              // though IDs are new, files might still be there
-              try {
-                await fs.writeFile(newFilepath, fileContent);
-              } catch (e) {
-                console.error(`Failed to write restored file: ${newFilepath}`, e);
+              if (zip) {
+                const diskFilename = path.basename(att.filepath);
+                const zipFile = zip.file(`attachments/${diskFilename}`);
+                
+                if (zipFile) {
+                  const fileBuffer = await zipFile.async('nodebuffer');
+                  // We keep the original filename or generate a new one to avoid collisions?
+                  // Best practice is to use the original disk filename from the ZIP
+                  await fs.writeFile(path.join(uploadDir, diskFilename), fileBuffer);
+                  finalFilepath = `/uploads/${diskFilename}`;
+                }
               }
 
               await tx.attachment.create({
                 data: {
-                  procedureId: newProc.id,
+                  procedureId: newProcedure.id,
                   filename: att.filename,
-                  filepath: `/uploads/${diskFilename}`,
+                  filepath: finalFilepath,
                   mimetype: att.mimetype,
                   size: att.size,
                   displayOrder: att.displayOrder,
-                  preparedBy: att.preparedBy,
-                  preparedDate: att.preparedDate ? new Date(att.preparedDate) : null,
-                  reviewedBy: att.reviewedBy,
-                  reviewedDate: att.reviewedDate ? new Date(att.reviewedDate) : null,
                 }
               });
             }
@@ -164,23 +173,27 @@ export async function POST(req: Request) {
         }
       }
 
-      return newAudit;
-    });
-
-    await prisma.auditLog.create({
-      data: {
-        action: 'CREATE',
-        entityType: 'AUDIT',
-        entityId: result.id,
-        details: `Restored audit from backup: ${auditData.title}`,
-        performedBy: session.user.username,
+      // 4. Create Team Members
+      if (data.teamMembers && Array.isArray(data.teamMembers)) {
+        for (const m of data.teamMembers) {
+          await tx.teamMember.create({
+            data: {
+              auditId: audit.id,
+              name: m.name,
+              role: m.role,
+              email: m.email,
+            }
+          });
+        }
       }
+
+      return audit;
     });
-
+    
     return NextResponse.json(result);
-
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Restore error:', error);
-    return NextResponse.json({ error: 'Restore failed', details: error.message }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Restore failed';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

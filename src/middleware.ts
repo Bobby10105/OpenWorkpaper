@@ -6,7 +6,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // 1. Setup Response and Security Headers
-  let response = NextResponse.next();
+  const response = NextResponse.next();
   
   // Security Headers (NIST/OMB M-15-13 Compliance)
   response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
@@ -34,7 +34,7 @@ export async function middleware(request: NextRequest) {
     try {
       await decrypt(session);
       return NextResponse.redirect(new URL('/', request.url));
-    } catch (error) {
+    } catch {
       // Session invalid or expired, proceed to login page
     }
   }
@@ -55,7 +55,7 @@ export async function middleware(request: NextRequest) {
 
   try {
     const decrypted = await decrypt(session);
-    const user = (decrypted as any).user;
+    const user = (decrypted as { user: { mustChangePassword?: boolean } }).user;
 
     // Check if user must change password
     if (user?.mustChangePassword && 
@@ -71,8 +71,9 @@ export async function middleware(request: NextRequest) {
     }
 
     return response;
-  } catch (error: any) {
-    if (!error.message.includes('signature') && !error.message.includes('expired')) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : '';
+    if (!message.includes('signature') && !message.includes('expired')) {
       console.error('[Middleware] Session decryption failed:', error);
     }
     const loginUrl = new URL('/login', request.url);

@@ -24,11 +24,12 @@ export async function decrypt(input: string): Promise<JWTPayload> {
       algorithms: ['HS256'],
     });
     return payload;
-  } catch (error: any) {
-    if (error.code === 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED') {
+  } catch (error: unknown) {
+    const err = error as { code?: string };
+    if (err.code === 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED') {
       throw new Error('Invalid session signature. The secret key may have changed.');
     }
-    if (error.code === 'ERR_JWT_EXPIRED') {
+    if (err.code === 'ERR_JWT_EXPIRED') {
       throw new Error('Session has expired.');
     }
     throw error;
@@ -43,14 +44,13 @@ export async function getSession(): Promise<{ user: { id: string; username: stri
       return null;
     }
     const decrypted = await decrypt(sessionCookie);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return decrypted as any;
-  } catch (error: any) {
-    // Only log significant errors, not common ones like expiration or signature mismatch from old cookies
-    if (!error.message.includes('Invalid session signature') && !error.message.includes('expired')) {
+    return decrypted as unknown as { user: { id: string; username: string; role: string; mustChangePassword: boolean } };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    if (!message.includes('Invalid session signature') && !message.includes('expired')) {
       console.error('[Auth] Session retrieval error:', error);
     } else {
-      console.debug(`[Auth] ${error.message}`);
+      console.debug(`[Auth] ${message}`);
     }
     return null;
   }
@@ -58,7 +58,7 @@ export async function getSession(): Promise<{ user: { id: string; username: stri
 
 export async function login(user: { id: string; username: string; role: string; mustChangePassword: boolean }) {
   const expires = new Date(Date.now() + SESSION_DURATION * 1000);
-  const session = await encrypt({ user, expires });
+  const session = await encrypt({ user, expires: Math.floor(expires.getTime() / 1000) });
 
   const cookieStore = await cookies();
   
@@ -95,7 +95,7 @@ export async function updateSession(request: NextRequest) {
   try {
     const parsed = await decrypt(session);
     const expires = new Date(Date.now() + SESSION_DURATION * 1000);
-    parsed.expires = expires;
+    parsed.expires = Math.floor(expires.getTime() / 1000);
     
     const isProduction = process.env.NODE_ENV === 'production';
     const isSecureEnv = request.nextUrl.protocol === 'https:';
@@ -111,8 +111,7 @@ export async function updateSession(request: NextRequest) {
       path: '/',
     });
     return res;
-  } catch (e) {
-    // If update fails (expired or bad sig), just let it go - middleware will handle redirect
+  } catch {
     return NextResponse.next();
   }
 }

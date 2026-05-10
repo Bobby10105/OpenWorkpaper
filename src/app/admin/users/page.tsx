@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { UserPlus, Trash2, Shield, Loader2, AlertCircle, Users, FileUp, Download, KeyRound, User as UserIcon, Mail, Briefcase, ChevronDown, X, Edit2, Check } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { UserPlus, Trash2, Shield, Loader2, AlertCircle, Users, FileUp, KeyRound, Mail, Briefcase, ChevronDown, X, Edit2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Papa from 'papaparse';
 
@@ -37,11 +37,7 @@ export default function UserManagementPage() {
     'IT Administrator'
   ];
 
-  useEffect(() => {
-    fetchSessionAndUsers();
-  }, []);
-
-  const fetchSessionAndUsers = async () => {
+  const fetchSessionAndUsers = useCallback(async () => {
     try {
       const sessionRes = await fetch('/api/auth/session');
       if (sessionRes.ok) {
@@ -63,7 +59,11 @@ export default function UserManagementPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
+
+  useEffect(() => {
+    fetchSessionAndUsers();
+  }, [fetchSessionAndUsers]);
 
   const isAdmin = currentUser?.role === 'IT Administrator';
 
@@ -88,8 +88,8 @@ export default function UserManagementPage() {
       setIsAdding(false);
       setFormData({ username: '', password: '', role: 'Auditor' });
       setSuccess(`User ${data.username} created successfully.`);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
       console.error('User creation error:', err);
     } finally {
       setSubmitting(false);
@@ -117,8 +117,8 @@ export default function UserManagementPage() {
         const data = await res.json();
         throw new Error(data.error || 'Failed to update role');
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setUpdatingRoleId(null);
     }
@@ -149,8 +149,8 @@ export default function UserManagementPage() {
           
           setSuccess(`Import complete: ${data.created} users created.`);
           fetchSessionAndUsers();
-        } catch (err: any) {
-          setError(err.message);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : String(err));
         } finally {
           setSubmitting(false);
           if (fileInputRef.current) fileInputRef.current.value = '';
@@ -179,7 +179,7 @@ export default function UserManagementPage() {
         const data = await res.json();
         setError(data.error || 'Failed to delete user');
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred.');
     }
   };

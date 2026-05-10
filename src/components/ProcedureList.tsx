@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { Plus, BookOpen, Trash2, Loader2, FolderPlus, ChevronRight, ChevronDown, Edit3 } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Plus, BookOpen, Trash2, FolderPlus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ProcedureItem from './ProcedureItem';
 import ApplyTemplateModal from './ApplyTemplateModal';
-import type { AuditWithRelations, ProcedureGroupWithRelations, ProcedureWithRelations } from '@/lib/types';
+import type { AuditWithRelations } from '@/lib/types';
 
 const PHASE_MAP: Record<string, number> = {
   'Planning': 1,
@@ -83,9 +83,10 @@ export default function ProcedureList({
         const errData = await res.json().catch(() => ({}));
         alert(`Failed to create group: ${errData.details || errData.error || res.statusText}`);
       }
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
-      alert(`Network error creating group: ${e.message}`);
+      const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+      alert(`Network error creating group: ${errorMessage}`);
     } finally {
       setCreating(false);
     }
@@ -133,16 +134,17 @@ export default function ProcedureList({
           const data = JSON.parse(rawText);
           console.log('[ProcedureList] SUCCESS:', data);
           router.refresh();
-        } catch (e) {
+        } catch {
           console.warn('[ProcedureList] SUCCESS but could not parse response JSON');
           router.refresh();
         }
       } else {
         alert(`Error (Status ${res.status}): ${rawText || res.statusText}`);
       }
-    } catch (e: any) {
+    } catch (e) {
       console.error('[ProcedureList] Critical Fetch Error:', e);
-      alert(`Network error: ${e.message}`);
+      const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+      alert(`Network error: ${errorMessage}`);
     } finally {
       setCreating(false);
     }
@@ -302,8 +304,6 @@ export default function ProcedureList({
                       procedure={proc}
                       nomenclature={`${groupNomenclature}.${getLetter(procIndex)}`}
                       onDelete={() => handleDeleteProcedure(proc.id)}
-                      user={user}
-                      teamMembers={audit.teamMembers}
                       auditId={auditId}
                     />
 
@@ -340,8 +340,6 @@ export default function ProcedureList({
                     procedure={proc} 
                     nomenclature={`${phaseNum}.?.${index + 1}`}
                     onDelete={() => handleDeleteProcedure(proc.id)} 
-                    user={user}
-                    teamMembers={audit.teamMembers}
                     auditId={auditId}
                   />
                 ))}

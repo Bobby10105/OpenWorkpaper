@@ -5,7 +5,7 @@ import path from 'path';
 import JSZip from 'jszip';
 
 export async function GET(
-  req: Request, 
+  _req: Request, 
   props: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -53,11 +53,9 @@ export async function GET(
     // Add procedure attachments
     for (const procedure of audit.procedures) {
       for (const attachment of procedure.attachments) {
-        // attachment.filepath is like "/uploads/..."
         const fullPath = path.join(publicDir, attachment.filepath);
         try {
           const fileBuffer = await fs.readFile(fullPath);
-          // Store in a flat 'attachments' folder inside the zip
           const diskFilename = path.basename(attachment.filepath);
           zip.file(`attachments/${diskFilename}`, fileBuffer);
         } catch (err) {
@@ -71,7 +69,7 @@ export async function GET(
     const safeTitle = audit.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
 
-    return new Response(zipContent as any, {
+    return new Response(zipContent as unknown as BodyInit, {
       status: 200,
       headers: {
         'Content-Type': 'application/zip',
@@ -79,8 +77,9 @@ export async function GET(
       },
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Backup error:', error);
-    return NextResponse.json({ error: 'Backup failed' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Backup failed';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

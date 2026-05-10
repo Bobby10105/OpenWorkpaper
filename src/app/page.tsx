@@ -2,18 +2,39 @@
  * OpenWorkpaper Dashboard - Unified Task Engine
  */
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import Link from 'next/link';
-import { PlusCircle, Calendar, ChevronRight, Archive, Inbox, Clock, CheckCircle2, Tag, Hash, LayoutDashboard, Target, AlertTriangle, Users2, Timer, ClipboardList, User as UserIcon, ArrowRight, ExternalLink } from 'lucide-react';
-import { format, addDays, formatDistanceToNow } from 'date-fns';
+import { PlusCircle, Archive, Inbox, ChevronRight } from 'lucide-react';
 import { getSession } from '@/lib/auth';
 import RestoreAuditButton from '@/components/RestoreAuditButton';
 import DashboardStats from '@/components/DashboardStats';
 import { redirect } from 'next/navigation';
 import ManagementInsights from '@/components/ManagementInsights';
+import type { Audit } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
 
-function AuditSummaryCard({ audit }: { audit: any }) {
+interface AuditWithCount extends Audit {
+  _count?: {
+    procedures: number;
+  };
+  reviewedCount?: number;
+}
+
+interface PendingProcedure {
+  id: string;
+  auditId: string;
+  title: string | null;
+  assignedTo?: { name: string } | null;
+}
+
+interface PendingAuditData {
+  id: string;
+  title: string;
+  pendingProcedures: PendingProcedure[];
+}
+
+function AuditSummaryCard({ audit }: { audit: AuditWithCount }) {
   const totalProcedures = audit._count?.procedures || 0;
   const reviewedProcedures = audit.reviewedCount || 0;
   const progress = totalProcedures > 0 ? Math.round((reviewedProcedures / totalProcedures) * 100) : 0;
@@ -80,9 +101,10 @@ export default async function DashboardPage() {
   const session = await getSession();
   const user = session?.user;
 
-  if (!user) return <div className="p-20 text-center font-bold">Session required.</div>;
+  if (!user) {
+    redirect('/login');
+  }
 
-  // IT Administrators don't use the audit dashboard, they use Logs and User Directory
   if (user.role === 'IT Administrator') {
     redirect('/admin/users');
   }
@@ -91,94 +113,60 @@ export default async function DashboardPage() {
   const userMatch = user.username;
   const userId = user.id;
 
-  // 1. Fetch Authorized Audits
-  let whereClause: any = {};
-  if (!isGlobalManager) {
-    whereClause = {
-      teamMembers: {
-        some: {
-          OR: [
-            { userId: user.id },
-            { name: user.username },
-            { email: user.username }
-          ]
-        }
-      }
-    };
+  let audits: AuditWithCount[] = [];
+  if (isGlobalManager) {
+    audits = await prisma.audit.findMany({
+      include: { _count: { select: { procedures: true } } },
+      orderBy: { updatedAt: 'desc' }
+    });
+  } else {
+    audits = await prisma.audit.findMany({
+      where: { teamMembers: { some: { userId: userId } } },
+      include: { _count: { select: { procedures: true } } },
+      orderBy: { updatedAt: 'desc' }
+    });
   }
 
-  const audits = await prisma.audit.findMany({
-    where: whereClause,
-    include: {
-      _count: { select: { procedures: true } }
-    },
-    orderBy: { createdAt: 'desc' }
-  });
-
-  // Global Stat Accumulators
+  const pendingAuditsData: PendingAuditData[] = [];
+  const toCompleteAuditsData: PendingAuditData[] = [];
   let globalTotalProcedures = 0;
   let globalTotalReviewed = 0;
   let globalTotalPendingReview = 0;
   let globalTotalToComplete = 0;
-  
-  const pendingAuditsData: any[] = [];
-  const toCompleteAuditsData: any[] = [];
 
-  // Management Insights Data (BizOps only)
-  let managementData = {
+  const managementData = {
     avgReviewLag: 0,
     agingCount: 0,
-    auditorWorkloads: [] as any[]
+    auditorWorkloads: [] as { name: string, completed: number, pending: number, awaitingReview: number }[]
   };
 
   if (isGlobalManager) {
     try {
-      // A. Avg Review Lag (Historical + Current Awaiting Review)
-      // Handles both ISO strings and BigInt timestamps stored in SQLite
-      const lagResults: any[] = await prisma.$queryRawUnsafe(`
-        SELECT AVG(
-          CASE 
-            WHEN reviewedDate IS NOT NULL THEN (
-              (CASE WHEN reviewedDate GLOB '*T*' THEN julianday(reviewedDate) ELSE julianday(reviewedDate / 1000, 'unixepoch') END) - 
-              (CASE WHEN preparedDate GLOB '*T*' THEN julianday(preparedDate) ELSE julianday(preparedDate / 1000, 'unixepoch') END)
-            )
-            ELSE (
-              julianday('now') - 
-              (CASE WHEN preparedDate GLOB '*T*' THEN julianday(preparedDate) ELSE julianday(preparedDate / 1000, 'unixepoch') END)
-            )
-          END
-        ) as avgLag 
+      const lagResults = await prisma.$queryRaw<{ avgLag: number }[]>(
+        Prisma.sql`SELECT AVG(julianday(reviewedDate) - julianday(preparedDate)) as avgLag 
         FROM Procedure 
-        WHERE preparedDate IS NOT NULL
-      `);
+        WHERE preparedBy IS NOT NULL AND preparedDate IS NOT NULL AND reviewedBy IS NOT NULL AND reviewedDate IS NOT NULL`
+      );
       managementData.avgReviewLag = Number(lagResults[0]?.avgLag || 0);
 
-      // B. Aging Count (> 30 days)
-      const agingResults: any[] = await prisma.$queryRawUnsafe(`
-        SELECT COUNT(*) as count 
-        FROM Procedure 
-        WHERE preparedDate IS NOT NULL 
-          AND reviewedDate IS NULL 
-          AND (
-            julianday('now') - 
-            (CASE WHEN preparedDate GLOB '*T*' THEN julianday(preparedDate) ELSE julianday(preparedDate / 1000, 'unixepoch') END)
-          ) > 30
-      `);
+      const agingResults = await prisma.$queryRaw<{ count: bigint }[]>(
+        Prisma.sql`SELECT COUNT(*) as count FROM Procedure 
+        WHERE preparedBy IS NOT NULL AND preparedDate IS NOT NULL AND reviewedBy IS NULL 
+          AND (julianday('now') - julianday(preparedDate)) > 30`
+      );
       managementData.agingCount = Number(agingResults[0]?.count || 0);
 
-      // C. Auditor Workloads
-      const workloadResults: any[] = await prisma.$queryRawUnsafe(`
-        SELECT 
-          t.name,
-          COUNT(CASE WHEN p.reviewedDate IS NOT NULL THEN 1 END) as completed,
-          COUNT(CASE WHEN p.reviewedDate IS NULL AND p.preparedDate IS NULL AND p.assignedToId IS NOT NULL THEN 1 END) as inProgress,
-          COUNT(CASE WHEN p.reviewedDate IS NULL AND p.preparedDate IS NOT NULL THEN 1 END) as awaitingReview
+      const workloadResults = await prisma.$queryRaw<{ name: string, completed: bigint, inProgress: bigint, awaitingReview: bigint }[]>(
+        Prisma.sql`SELECT t.name,
+          COUNT(CASE WHEN p.reviewedBy IS NOT NULL AND p.reviewedDate IS NOT NULL THEN 1 END) as completed,
+          COUNT(CASE WHEN p.reviewedBy IS NULL AND p.preparedBy IS NULL AND p.assignedToId IS NOT NULL THEN 1 END) as inProgress,
+          COUNT(CASE WHEN p.reviewedBy IS NULL AND p.preparedBy IS NOT NULL THEN 1 END) as awaitingReview
         FROM TeamMember t
         JOIN Procedure p ON t.id = p.assignedToId
         GROUP BY t.name
         HAVING completed > 0 OR inProgress > 0 OR awaitingReview > 0
-        ORDER BY awaitingReview DESC, inProgress DESC
-      `);
+        ORDER BY awaitingReview DESC, inProgress DESC`
+      );
       managementData.auditorWorkloads = workloadResults.map(r => ({
         name: r.name,
         completed: Number(r.completed),
@@ -190,19 +178,14 @@ export default async function DashboardPage() {
     }
   }
 
-  // 2. Process each audit for deep metrics
   const processedAudits = await Promise.all(audits.map(async (audit) => {
-    // A. Count Reviewed (Sign-off complete)
-    const reviewedResults: any[] = await prisma.$queryRawUnsafe(
-      `SELECT COUNT(*) as count FROM Procedure WHERE auditId = ? AND reviewedBy IS NOT NULL AND reviewedDate IS NOT NULL`,
-      audit.id
+    const reviewedResults = await prisma.$queryRaw<{ count: bigint }[]>(
+      Prisma.sql`SELECT COUNT(*) as count FROM Procedure WHERE auditId = ${audit.id} AND reviewedBy IS NOT NULL AND reviewedDate IS NOT NULL`
     );
     const reviewedCount = Number(reviewedResults[0]?.count || 0);
 
-    // B. Find Pending Review (Prepared by someone, but no reviewer sign-off yet)
-    const pendingResults: any[] = await prisma.$queryRawUnsafe(
-      `SELECT id, auditId, title FROM Procedure WHERE auditId = ? AND preparedBy IS NOT NULL AND preparedDate IS NOT NULL AND (reviewedBy IS NULL OR reviewedDate IS NULL)`,
-      audit.id
+    const pendingResults = await prisma.$queryRaw<{ id: string, auditId: string, title: string | null }[]>(
+      Prisma.sql`SELECT id, auditId, title FROM Procedure WHERE auditId = ${audit.id} AND preparedBy IS NOT NULL AND preparedDate IS NOT NULL AND (reviewedBy IS NULL OR reviewedDate IS NULL)`
     );
     
     if (pendingResults.length > 0) {
@@ -214,22 +197,13 @@ export default async function DashboardPage() {
       globalTotalPendingReview += pendingResults.length;
     }
 
-    // C. Find "My Tasks" (Assigned to you, but no preparer sign-off yet)
-    const myTaskResults: any[] = await prisma.$queryRawUnsafe(
-      `SELECT p.id, p.auditId, p.title, t.name as assignedToName
+    const myTaskResults = await prisma.$queryRaw<{ id: string, auditId: string, title: string | null, assignedToName: string | null }[]>(
+      Prisma.sql`SELECT p.id, p.auditId, p.title, t.name as assignedToName
        FROM Procedure p 
        LEFT JOIN TeamMember t ON p.assignedToId = t.id
-       WHERE p.auditId = ? 
+       WHERE p.auditId = ${audit.id} 
          AND (p.preparedBy IS NULL OR p.preparedDate IS NULL) 
-         AND (
-           t.userId = ? OR 
-           t.name = ? OR 
-           t.email = ?
-         )`,
-      audit.id,
-      userId,
-      userMatch,
-      userMatch
+         AND (t.userId = ${userId} OR t.name = ${userMatch} OR t.email = ${userMatch})`
     );
 
     if (myTaskResults.length > 0) {
@@ -255,14 +229,12 @@ export default async function DashboardPage() {
   const activeAudits = processedAudits.filter(a => a.status !== 'Completed');
   const completedAudits = processedAudits.filter(a => a.status === 'Completed');
   
-  // Calculate Global Portfolio Progress
   const portfolioProgress = globalTotalProcedures > 0 
     ? Math.round((globalTotalReviewed / globalTotalProcedures) * 100) 
     : 0;
 
   return (
     <div className="max-w-7xl mx-auto space-y-16 py-8 px-4 sm:px-6 lg:px-8">
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
           <h1 className="text-4xl font-black text-slate-900 tracking-tight">Dashboard</h1>
@@ -279,18 +251,15 @@ export default async function DashboardPage() {
         )}
       </div>
 
-      {/* Stats Cards - Now using global totals */}
       <DashboardStats 
         activeCount={activeAudits.length}
         portfolioProgress={portfolioProgress}
         totalPendingReview={globalTotalPendingReview}
-        upcomingDeadlines={0}
         totalToComplete={globalTotalToComplete}
         pendingAudits={pendingAuditsData}
         toCompleteAudits={toCompleteAuditsData}
       />
 
-      {/* Management Insights Panel (BizOps Only) */}
       {isGlobalManager && (
         <ManagementInsights 
           avgReviewLag={managementData.avgReviewLag}
@@ -299,7 +268,6 @@ export default async function DashboardPage() {
         />
       )}
 
-      {/* Portfolio List */}
       <section className="space-y-8">
         <div className="flex items-center space-x-4 px-2">
           <div className="bg-slate-900 p-2.5 rounded-2xl shadow-lg">

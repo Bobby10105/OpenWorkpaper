@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
+import type { Procedure } from '@prisma/client';
 
 export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
@@ -10,7 +11,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
   }
 
   try {
-    const { templateId, phase } = await req.json();
+    const { templateId, phase }: { templateId: string, phase?: string } = await req.json();
     
     if (!templateId) {
       return NextResponse.json({ error: 'templateId is required' }, { status: 400 });
@@ -32,7 +33,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
       return NextResponse.json({ error: 'Template not found' }, { status: 404 });
     }
 
-    const createdProcedures: any[] = [];
+    const createdProcedures: Procedure[] = [];
 
     await prisma.$transaction(async (tx) => {
       // 1. Process Groups
@@ -99,8 +100,9 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
       count: createdProcedures.length,
       procedures: createdProcedures 
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('Apply template error:', error);
-    return NextResponse.json({ error: 'Failed to apply template', details: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to apply template', details: message }, { status: 500 });
   }
 }

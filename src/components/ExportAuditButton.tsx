@@ -16,7 +16,7 @@ import {
 } from 'docx';
 import { saveAs } from 'file-saver';
 import { format } from 'date-fns';
-import type { AuditWithRelations } from '@/lib/types';
+import type { AuditWithRelations, ProcedureWithRelations } from '@/lib/types';
 
 export default function ExportAuditButton({ audit }: { audit: AuditWithRelations }) {
   const [isExporting, setIsExporting] = useState(false);
@@ -29,7 +29,7 @@ export default function ExportAuditButton({ audit }: { audit: AuditWithRelations
     const doc = parser.parseFromString(html, 'text/html');
     const extractedText = doc.body.textContent || '';
 
-    // Decode any remaining HTML entities safely via the browser parser.
+    // Decode unknown remaining HTML entities safely via the browser parser.
     const textarea = document.createElement('textarea');
     textarea.innerHTML = extractedText;
     const decodedText = textarea.value;
@@ -37,7 +37,7 @@ export default function ExportAuditButton({ audit }: { audit: AuditWithRelations
     return decodedText.replace(/\s+/g, ' ').trim();
   };
 
-  const addProcedureDetails = (sections: any[], p: any) => {
+  const addProcedureDetails = (sections: (Paragraph | Table)[], p: ProcedureWithRelations) => {
     sections.push(
       new Paragraph({
         children: [new TextRun({ text: "Purpose:", bold: true })],

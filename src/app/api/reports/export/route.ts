@@ -1,9 +1,22 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 import * as XLSX from 'xlsx';
 
 export const dynamic = 'force-dynamic';
+
+interface ProcedureExport {
+  auditTitle: string;
+  auditStatus: string;
+  procedureId: string;
+  phase: string;
+  procedureTitle: string | null;
+  preparedBy: string | null;
+  preparedDate: string | number | null;
+  reviewedBy: string | null;
+  reviewedDate: string | number | null;
+  assignedToName: string | null;
+}
 
 export async function GET() {
   try {
@@ -12,10 +25,8 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized. Business Operations only.' }, { status: 403 });
     }
 
-    // 1. Fetch all procedures with Audit and TeamMember (assignedTo) data
-    // Using $queryRawUnsafe because it's safer for dynamic schema environments (like Docker)
-    const procedures: any[] = await prisma.$queryRawUnsafe(`
-      SELECT 
+    const procedures = await prisma.$queryRawUnsafe<ProcedureExport[]>(
+      `SELECT 
         a.title as auditTitle,
         a.status as auditStatus,
         p.id as procedureId,
@@ -29,10 +40,9 @@ export async function GET() {
       FROM Procedure p
       JOIN Audit a ON p.auditId = a.id
       LEFT JOIN TeamMember t ON p.assignedToId = t.id
-      ORDER BY a.createdAt DESC, p.phase, p.displayOrder ASC
-    `);
+      ORDER BY a.createdAt DESC, p.phase, p.displayOrder ASC`
+    );
 
-    // 2. Format data for Excel
     const reportData = procedures.map(p => {
       const prepDate = p.preparedDate ? new Date(p.preparedDate) : null;
       const revDate = p.reviewedDate ? new Date(p.reviewedDate) : null;
@@ -64,28 +74,16 @@ export async function GET() {
       };
     });
 
-    // 3. Create Workbook
     const worksheet = XLSX.utils.json_to_sheet(reportData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Global Procedures');
 
-    // Add some styling (Auto-size columns)
     const colWidths = [
-      { wch: 30 }, // Audit Title
-      { wch: 15 }, // Audit Status
-      { wch: 15 }, // Phase
-      { wch: 40 }, // Procedure Title
-      { wch: 15 }, // Status
-      { wch: 20 }, // Assigned To
-      { wch: 20 }, // Prepared By
-      { wch: 15 }, // Prepared Date
-      { wch: 20 }, // Reviewed By
-      { wch: 15 }, // Reviewed Date
-      { wch: 15 }, // Review Lag
+      { wch: 30 }, { wch: 15 }, { wch: 15 }, { wch: 40 }, { wch: 15 },
+      { wch: 20 }, { wch: 20 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 },
     ];
     worksheet['!cols'] = colWidths;
 
-    // 4. Return as Buffer
     const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
 
     return new Response(buffer, {
@@ -95,8 +93,9 @@ export async function GET() {
       }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[API/Export] Export Error:', error);
-    return NextResponse.json({ error: 'Failed to generate report', details: error.message }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: 'Failed to generate report', details: message }, { status: 500 });
   }
 }

@@ -9,7 +9,6 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Role-based access: Any role except Specialist can manage team assignments
     if (session.user.role === 'Specialist') {
       return NextResponse.json({ error: 'Forbidden: Specialists cannot manage team members' }, { status: 403 });
     }
@@ -41,20 +40,19 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
       }
     });
     return NextResponse.json(teamMember);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Update team member error:', error);
     return NextResponse.json({ error: 'Failed to update team member' }, { status: 500 });
   }
 }
 
-export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
+export async function DELETE(_req: Request, props: { params: Promise<{ id: string }> }) {
   try {
     const session = await getSession();
     if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Role-based access: Any role except Specialist can manage team assignments
     if (session.user.role === 'Specialist') {
       return NextResponse.json({ error: 'Forbidden: Specialists cannot manage team members' }, { status: 403 });
     }
@@ -66,7 +64,6 @@ export async function DELETE(req: Request, props: { params: Promise<{ id: string
     });
 
     if (teamMember) {
-      // Log the action
       try {
         await prisma.auditLog.create({
           data: {
@@ -77,7 +74,9 @@ export async function DELETE(req: Request, props: { params: Promise<{ id: string
             performedBy: session.user.username,
           }
         });
-      } catch (logErr) {}
+      } catch (logErr) {
+        console.warn('Log error (non-critical):', logErr);
+      }
 
       await prisma.teamMember.delete({
         where: { id: params.id }
@@ -85,7 +84,7 @@ export async function DELETE(req: Request, props: { params: Promise<{ id: string
     }
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Delete team member error:', error);
     return NextResponse.json({ error: 'Failed to delete team member' }, { status: 500 });
   }

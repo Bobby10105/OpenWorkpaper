@@ -3,17 +3,24 @@ import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 
+interface BulkUser {
+  username?: string;
+  email?: string;
+  role?: string;
+  password?: string;
+}
+
 export async function POST(req: Request) {
   try {
     const session = await getSession();
-    
     const canManageUsers = session?.user?.role === 'IT Administrator';
     
-    if (!canManageUsers) {
+    if (!canManageUsers || !session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { users } = await req.json();
+    const body = await req.json() as { users: BulkUser[] };
+    const { users } = body;
 
     if (!users || !Array.isArray(users)) {
       return NextResponse.json({ error: 'Invalid users list' }, { status: 400 });
@@ -46,40 +53,27 @@ export async function POST(req: Request) {
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
-
-        const newUser = await prisma.user.create({
+        await prisma.user.create({
           data: {
             username,
             password: hashedPassword,
             role,
-            mustChangePassword: true, // Force password change on first login
+            mustChangePassword: true,
           },
         });
 
-        try {
-          await prisma.auditLog.create({
-            data: {
-              action: 'CREATE',
-              entityType: 'USER',
-              entityId: newUser.id,
-              details: `Bulk imported user: ${newUser.username} with role: ${newUser.role}`,
-              performedBy: session.user.username || 'System',
-            }
-          });
-        } catch (logErr) {
-          console.warn('Bulk import log failed (non-critical):', logErr);
-        }
-
         results.created++;
-      } catch (err: any) {
-        console.error('Bulk import error for %s:', userData.username || 'unknown', err);
-        results.errors.push(`Failed to create ${userData.username || 'unknown'}: ${err.message}`);
+      } catch (err: unknown) {
+        console.error('Bulk import error:', err);
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        results.errors.push(`Failed to create ${userData.username}: ${message}`);
       }
     }
 
     return NextResponse.json(results);
-  } catch (error: any) {
-    console.error('Bulk create CRITICAL error:', error);
-    return NextResponse.json({ error: 'Failed to process bulk import', details: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    console.error('Bulk create error:', error);
+    const message = error instanceof Error ? error.message : 'Import failed';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

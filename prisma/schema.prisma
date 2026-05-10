@@ -28,6 +28,7 @@ model Audit {
   auditNumber             String?
   objective               String?
   status                  String       @default("In Progress")
+  pbcRequests             String?
   fieldworkStartDate      DateTime?
   fieldworkEndDate        DateTime?
   reportIssuedDate        DateTime?
@@ -69,6 +70,7 @@ model Procedure {
   methodology  String?
   results      String?
   conclusions  String?
+  status       String       @default("Not Started")
   preparedBy   String?
   preparedDate DateTime?
   reviewedBy   String?
@@ -101,7 +103,7 @@ model ProcedureMessage {
   id          String    @id @default(uuid())
   procedureId String
   text        String
-  author      String
+  sender      String
   createdAt   DateTime  @default(now())
   
   procedure   Procedure @relation(fields: [procedureId], references: [id], onDelete: Cascade)

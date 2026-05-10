@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { BookOpen, Plus, Trash2, Edit, Loader2, AlertCircle, FileText, ChevronRight, ShieldAlert, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import TemplateEditor from '@/components/TemplateEditor';
@@ -24,17 +24,13 @@ export default function TemplateManagementPage() {
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
 
-  useEffect(() => {
-    fetchSessionAndTemplates();
-  }, []);
-
-  const fetchSessionAndTemplates = async () => {
+  const fetchSessionAndTemplates = useCallback(async () => {
     try {
       const sessionRes = await fetch('/api/auth/session');
       if (sessionRes.ok) {
         const sessionData = await sessionRes.json();
         setUser(sessionData.user);
-        
+
         if (sessionData.user.role !== 'Business Operations') {
           setLoading(false);
           return;
@@ -51,13 +47,17 @@ export default function TemplateManagementPage() {
       }
       const data = await res.json();
       setTemplates(data);
-    } catch (err: any) {
-      setError(`Error: ${err.message}`);
-      console.error(err);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setError(message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
+
+  useEffect(() => {
+    fetchSessionAndTemplates();
+  }, [fetchSessionAndTemplates]);
 
   const handleAddTemplate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,8 +76,8 @@ export default function TemplateManagementPage() {
       setIsAdding(false);
       setFormData({ name: '', description: '' });
       setEditingTemplateId(data.id);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setSubmitting(false);
     }
@@ -90,8 +90,8 @@ export default function TemplateManagementPage() {
       const res = await fetch(`/api/admin/templates/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete template');
       setTemplates(templates.filter(t => t.id !== id));
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : String(err));
     }
   };
 

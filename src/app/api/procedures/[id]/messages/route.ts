@@ -1,48 +1,31 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
-import crypto from 'crypto';
 
 export async function POST(
-  req: Request,
+  req: Request, 
   props: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getSession();
-    const params = await props.params;
-    const { text } = await req.json();
-
     if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!text || !text.trim()) {
-      return NextResponse.json({ error: 'Message text is required' }, { status: 400 });
-    }
-
-    const messageId = crypto.randomUUID();
-    const now = new Date().toISOString();
-
-    // Use raw SQL to bypass Prisma Client sync issues
-    await prisma.$executeRawUnsafe(
-      `INSERT INTO ProcedureMessage (id, procedureId, text, author, createdAt)
-       VALUES (?, ?, ?, ?, ?)`,
-      messageId,
-      params.id,
-      text.trim(),
-      session.user.username,
-      now
-    );
-
-    return NextResponse.json({
-      id: messageId,
-      procedureId: params.id,
-      text: text.trim(),
-      author: session.user.username,
-      createdAt: now
+    const params = await props.params;
+    const body = await req.json();
+    
+    const message = await prisma.procedureMessage.create({
+      data: {
+        procedureId: params.id,
+        text: body.text,
+        sender: session.user.username,
+      }
     });
-  } catch (error: any) {
+    return NextResponse.json(message);
+  } catch (error: unknown) {
     console.error('Create message error:', error);
-    return NextResponse.json({ error: 'Failed to send message', details: error.message }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Creation failed';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
