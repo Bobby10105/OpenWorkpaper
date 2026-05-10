@@ -25,18 +25,7 @@ OpenWorkpaper is configured to be HTTPS.
 
 ## Reporting a Vulnerability
 
-We take the security of OpenWorkpaper seriously. If you discover a security vulnerability, please **do not open a public issue**. Instead, follow the process below to report it privately.
-
-### Private Reporting Process
-
-Please report all security vulnerabilities by emailing **robertsandidge10@gmail.com**.
-
-When reporting a vulnerability, please include:
-
-1.  **A descriptive title** of the vulnerability.
-2.  **Steps to reproduce** the issue (including proof-of-concept code, if possible).
-3.  **The potential impact** of the vulnerability.
-4.  **The version** of OpenWorkpaper you are using.
+We take the security of OpenWorkpaper seriously. If you discover a security vulnerability, please open a pull request.
 
 ### Our Commitment
 
@@ -44,7 +33,7 @@ We will acknowledge receipt of your report within and provide a timeline for add
 
 ---
 
-## Technical Compliance Checklist for Federal POCs
+## Technical Compliance Checklist.
 
 - [ ] **Database SSL:** Ensure the database connection string uses `sslmode=verify-full`.
 - [ ] **SSO Integration:** Configure `SAML_ENTRYPOINT` and `SAML_CERT` (or OIDC equivalents).
