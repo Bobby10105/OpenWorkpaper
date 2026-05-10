@@ -54,7 +54,7 @@ These tools are used during development and the build process but are not includ
 *   `postcss` / `tailwindcss`: CSS processing and styling.
 *   `prisma`: Database schema management and migrations.
 
-## 6. Compliance Mapping (NIST SP 800-53)
+## 6. Compliance Mapping 
 *   **AC-2 (Account Management)**: Handled via SSO integration.
 *   **AC-3 (Access Enforcement)**: Enforced through internal RBAC middleware.
 *   **AU-2 (Audit Events)**: Application-level logging for all sign-offs and status changes.
