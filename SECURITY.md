@@ -1,16 +1,16 @@
 # Security & Compliance Policy
 
-OpenWorkpaper is designed with federal security standards in mind, specifically targeting compliance with **NIST SP 800-53** and **FISMA** requirements.
+OpenWorkpaper is designed with security standards in mind.
 
 ## Security Controls
 
 ### Transport Layer Security (TLS)
-In accordance with **OMB M-15-13**, OpenWorkpaper is configured to be HTTPS-only. 
+OpenWorkpaper is configured to be HTTPS. 
 - **HSTS:** Enabled with a 2-year `max-age`.
 - **Encryption:** All data in transit must be encrypted using FIPS-validated cryptographic modules (e.g., TLS 1.2+).
 
 ### Identity & Access Management
-- **MFA Requirement:** Production deployments should integrate with an agency Identity Provider (IdP) supporting PIV/CAC (MFA) via SAML 2.0 or OIDC.
+- **MFA Requirement:** Production deployments should integrate with an agency Identity Provider (IdP) via SAML 2.0 or OIDC.
 - **Session Management:** Cookies are marked as `HttpOnly`, `Secure`, and `SameSite=Lax`.
 
 ### Input Validation & XSS Protection
@@ -40,7 +40,7 @@ When reporting a vulnerability, please include:
 
 ### Our Commitment
 
-We will acknowledge receipt of your report within **48 hours** and provide a timeline for addressing the issue. Once a fix is developed and tested, we will issue a new release.
+We will acknowledge receipt of your report within and provide a timeline for addressing the issue. Once a fix is developed and tested, we will issue a new release.
 
 ---
 
