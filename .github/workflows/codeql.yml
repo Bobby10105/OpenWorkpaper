@@ -8,6 +8,10 @@ on:
   schedule:
     - cron: '28 17 * * 3'
 
+env:
+  # Opt into Node.js 24 as recommended by GitHub deprecation warning
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   analyze:
     name: Analyze
@@ -29,7 +33,7 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '20'
+        node-version: '24' # Future-proofed to Node 24
         cache: 'npm'
 
     - name: Install dependencies and Generate Prisma
@@ -38,12 +42,12 @@ jobs:
         npx prisma generate
 
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
+      uses: github/codeql-action/init@v4 # Upgraded to v4
       with:
         languages: ${{ matrix.language }}
         queries: security-extended,security-and-quality
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
+      uses: github/codeql-action/analyze@v4 # Upgraded to v4
       with:
         category: "/language:${{matrix.language}}"
