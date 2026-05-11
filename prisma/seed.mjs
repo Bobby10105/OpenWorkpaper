@@ -10,31 +10,32 @@ const adapter = new PrismaBetterSqlite3(sqliteInput);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  const hashedPassword = await bcrypt.hash('Admin123!', 10);
+  const hashedPassword = await bcrypt.hash('admin', 10);
 
   await prisma.user.upsert({
-    where: { username: 'itadmin' },
-    update: {},
+    where: { username: 'it.admin' },
+    update: {}, // Don't overwrite password on every restart
     create: {
-      username: 'itadmin',
+      username: 'it.admin',
       password: hashedPassword,
       role: 'IT Administrator',
-      mustChangePassword: false,
+      mustChangePassword: true, // Force change on first login
     },
   });
 
   await prisma.user.upsert({
-    where: { username: 'manager' },
-    update: {},
+    where: { username: 'biz.ops' },
+    update: {}, // Don't overwrite password on every restart
     create: {
-      username: 'manager',
+      username: 'biz.ops',
       password: hashedPassword,
       role: 'Business Operations',
-      mustChangePassword: false,
+      mustChangePassword: true, // Force change on first login
     },
   });
 
-  console.log('Seed data created successfully');
+  const userCount = await prisma.user.count();
+  console.log(`Seed data created/updated successfully. Total users: ${userCount}`);
 }
 
 main()

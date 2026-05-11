@@ -5,19 +5,26 @@ import bcrypt from 'bcryptjs';
 
 export async function POST(req: Request) {
   try {
-    const { username, password } = await req.json();
+    const body = await req.json();
+    const { username, password } = body;
+
+    if (!username || !password) {
+      return NextResponse.json({ error: 'Username and password are required' }, { status: 400 });
+    }
 
     const user = await prisma.user.findUnique({
       where: { username },
     });
 
     if (!user || !user.password) {
+      console.warn(`[Login] User not found or has no password: ${username}`);
       return NextResponse.json({ error: 'Invalid username or password' }, { status: 401 });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
+      console.warn(`[Login] Invalid password for user: ${username}`);
       return NextResponse.json({ error: 'Invalid username or password' }, { status: 401 });
     }
 
