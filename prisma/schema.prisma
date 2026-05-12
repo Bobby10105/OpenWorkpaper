@@ -103,7 +103,7 @@ model ProcedureMessage {
   id          String    @id @default(uuid())
   procedureId String
   text        String
-  sender      String
+  sender      String    @default("Unknown")
   createdAt   DateTime  @default(now())
   
   procedure   Procedure @relation(fields: [procedureId], references: [id], onDelete: Cascade)
