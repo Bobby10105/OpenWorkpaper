@@ -110,7 +110,7 @@ export default function ManagementInsights({
         <InsightCard 
           label="Resource Capacity" 
           value={auditorWorkloads.length} 
-          subValue="Active Team Members"
+          subValue="Active Auditors"
           icon={Users} 
           color="bg-blue-500" 
         />
@@ -147,7 +147,7 @@ export default function ManagementInsights({
                   </div>
                   <div className="h-8 w-px bg-slate-100" />
                   <div className="space-y-1">
-                    <p suppressHydrationWarning className="text-[10px] font-bold text-emerald-600 uppercase tracking-tighter">Completed</p>
+                    <p suppressHydrationWarning className="text-[10px] font-bold text-emerald-600 uppercase tracking-tighter">Reviewed</p>
                     <p className="text-xl font-black text-slate-900 leading-none">{workload.completed}</p>
                   </div>
                 </div>

@@ -68,6 +68,16 @@ export async function PUT(
       if (!isNaN(d.getTime())) updates.reviewedDate = d;
     }
 
+    // AUTO-FILL: If By is provided but Date is missing, set it to now
+    if (updates.preparedBy && !updates.preparedDate) {
+      // Only auto-fill if it wasn't already set in the DB or if it's being cleared/reset
+      // For simplicity, if the user sends preparedBy and NO preparedDate, we assume they want 'now'
+      updates.preparedDate = new Date();
+    }
+    if (updates.reviewedBy && !updates.reviewedDate) {
+      updates.reviewedDate = new Date();
+    }
+
     const procedure = await prisma.procedure.update({
       where: { id: params.id },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -145,22 +145,23 @@ export default async function DashboardPage() {
       const lagResults = await prisma.$queryRaw<{ avgLag: number }[]>(
         Prisma.sql`SELECT AVG(julianday(reviewedDate) - julianday(preparedDate)) as avgLag 
         FROM Procedure 
-        WHERE preparedBy IS NOT NULL AND preparedDate IS NOT NULL AND reviewedBy IS NOT NULL AND reviewedDate IS NOT NULL`
+        WHERE preparedBy IS NOT NULL AND preparedBy != '' AND preparedDate IS NOT NULL 
+          AND reviewedBy IS NOT NULL AND reviewedBy != '' AND reviewedDate IS NOT NULL`
       );
       managementData.avgReviewLag = Number(lagResults[0]?.avgLag || 0);
 
       const agingResults = await prisma.$queryRaw<{ count: bigint }[]>(
         Prisma.sql`SELECT COUNT(*) as count FROM Procedure 
-        WHERE preparedBy IS NOT NULL AND preparedDate IS NOT NULL AND reviewedBy IS NULL 
-          AND (julianday('now') - julianday(preparedDate)) > 30`
+        WHERE (reviewedBy IS NULL OR reviewedBy = '') 
+          AND (julianday('now') - julianday(COALESCE(preparedDate, createdAt))) > 30`
       );
       managementData.agingCount = Number(agingResults[0]?.count || 0);
 
       const workloadResults = await prisma.$queryRaw<{ name: string, completed: bigint, inProgress: bigint, awaitingReview: bigint }[]>(
         Prisma.sql`SELECT t.name,
-          COUNT(CASE WHEN p.reviewedBy IS NOT NULL AND p.reviewedDate IS NOT NULL THEN 1 END) as completed,
-          COUNT(CASE WHEN p.reviewedBy IS NULL AND p.preparedBy IS NULL AND p.assignedToId IS NOT NULL THEN 1 END) as inProgress,
-          COUNT(CASE WHEN p.reviewedBy IS NULL AND p.preparedBy IS NOT NULL THEN 1 END) as awaitingReview
+          COUNT(CASE WHEN p.reviewedBy IS NOT NULL AND p.reviewedBy != '' THEN 1 END) as completed,
+          COUNT(CASE WHEN (p.reviewedBy IS NULL OR p.reviewedBy = '') AND (p.preparedBy IS NULL OR p.preparedBy = '') AND p.assignedToId IS NOT NULL THEN 1 END) as inProgress,
+          COUNT(CASE WHEN (p.reviewedBy IS NULL OR p.reviewedBy = '') AND p.preparedBy IS NOT NULL AND p.preparedBy != '' THEN 1 END) as awaitingReview
         FROM TeamMember t
         JOIN Procedure p ON t.id = p.assignedToId
         GROUP BY t.name
@@ -180,12 +181,14 @@ export default async function DashboardPage() {
 
   const processedAudits = await Promise.all(audits.map(async (audit) => {
     const reviewedResults = await prisma.$queryRaw<{ count: bigint }[]>(
-      Prisma.sql`SELECT COUNT(*) as count FROM Procedure WHERE auditId = ${audit.id} AND reviewedBy IS NOT NULL AND reviewedDate IS NOT NULL`
+      Prisma.sql`SELECT COUNT(*) as count FROM Procedure 
+      WHERE auditId = ${audit.id} AND reviewedBy IS NOT NULL AND reviewedBy != ''`
     );
     const reviewedCount = Number(reviewedResults[0]?.count || 0);
 
     const pendingResults = await prisma.$queryRaw<{ id: string, auditId: string, title: string | null }[]>(
-      Prisma.sql`SELECT id, auditId, title FROM Procedure WHERE auditId = ${audit.id} AND preparedBy IS NOT NULL AND preparedDate IS NOT NULL AND (reviewedBy IS NULL OR reviewedDate IS NULL)`
+      Prisma.sql`SELECT id, auditId, title FROM Procedure 
+      WHERE auditId = ${audit.id} AND preparedBy IS NOT NULL AND preparedBy != '' AND (reviewedBy IS NULL OR reviewedBy = '')`
     );
     
     if (pendingResults.length > 0) {
@@ -202,7 +205,7 @@ export default async function DashboardPage() {
        FROM Procedure p 
        LEFT JOIN TeamMember t ON p.assignedToId = t.id
        WHERE p.auditId = ${audit.id} 
-         AND (p.preparedBy IS NULL OR p.preparedDate IS NULL) 
+         AND (p.preparedBy IS NULL OR p.preparedBy = '') 
          AND (t.userId = ${userId} OR t.name = ${userMatch} OR t.email = ${userMatch})`
     );
 

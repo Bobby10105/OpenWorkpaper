@@ -50,7 +50,7 @@ export default function LoginPage() {
           </div>
           <div className="space-y-2">
             <h2 className="text-4xl font-bold text-slate-900 tracking-tight leading-none">
-              Welcome Back
+              OpenWorkpaper
             </h2>
             <p className="text-slate-500 text-sm font-medium">
               Open Source Audit Management System
