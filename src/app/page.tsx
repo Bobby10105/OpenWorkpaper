@@ -143,10 +143,9 @@ export default async function DashboardPage() {
   if (isGlobalManager) {
     try {
       const lagResults = await prisma.$queryRaw<{ avgLag: number }[]>(
-        Prisma.sql`SELECT AVG(julianday(reviewedDate) - julianday(preparedDate)) as avgLag 
+        Prisma.sql`SELECT AVG(julianday(reviewedDate) - julianday(COALESCE(preparedDate, createdAt))) as avgLag 
         FROM Procedure 
-        WHERE preparedBy IS NOT NULL AND preparedBy != '' AND preparedDate IS NOT NULL 
-          AND reviewedBy IS NOT NULL AND reviewedBy != '' AND reviewedDate IS NOT NULL`
+        WHERE reviewedBy IS NOT NULL AND reviewedBy != '' AND reviewedDate IS NOT NULL`
       );
       managementData.avgReviewLag = Number(lagResults[0]?.avgLag || 0);
 

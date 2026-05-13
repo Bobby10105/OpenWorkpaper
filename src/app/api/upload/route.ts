@@ -5,12 +5,6 @@ import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
 
-interface RawAuditPBC {
-  id: string;
-  pbcAttachmentUrl: string | null;
-  title: string;
-}
-
 export async function POST(req: Request) {
   try {
     const session = await getSession();
@@ -97,11 +91,10 @@ export async function POST(req: Request) {
     }
 
     if (cleanAuditId && cleanType === 'pbc') {
-      const audits = await prisma.$queryRawUnsafe<RawAuditPBC[]>(
-        `SELECT id, pbcAttachmentUrl, title FROM Audit WHERE id = ? LIMIT 1`,
-        cleanAuditId
-      );
-      const audit = audits[0];
+      const audit = await prisma.audit.findUnique({
+        where: { id: cleanAuditId },
+        select: { id: true, pbcAttachmentUrl: true }
+      });
 
       if (!audit) return NextResponse.json({ error: 'Audit not found' }, { status: 404 });
 
@@ -109,14 +102,15 @@ export async function POST(req: Request) {
         try { await fs.unlink(path.join(process.cwd(), 'public', audit.pbcAttachmentUrl)); } catch { /* ignore */ }
       }
 
-      await prisma.$executeRawUnsafe(
-        `UPDATE Audit SET pbcAttachmentUrl = ?, pbcAttachmentName = ? WHERE id = ?`,
-        `/uploads/${diskFilename}`,
-        filenameAttr,
-        cleanAuditId
-      );
+      const updated = await prisma.audit.update({
+        where: { id: cleanAuditId },
+        data: {
+          pbcAttachmentUrl: `/uploads/${diskFilename}`,
+          pbcAttachmentName: filenameAttr,
+        }
+      });
 
-      return NextResponse.json({ ...audit, pbcAttachmentUrl: `/uploads/${diskFilename}` });
+      return NextResponse.json(updated);
     }
 
     if (!cleanProcedureId) return NextResponse.json({ error: 'procedureId required' }, { status: 400 });

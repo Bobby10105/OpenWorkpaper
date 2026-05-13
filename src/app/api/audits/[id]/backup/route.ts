@@ -17,12 +17,20 @@ export async function GET(
         procedureGroups: {
           include: {
             procedures: {
-              include: { attachments: true }
+              include: { 
+                attachments: true,
+                messages: true,
+                assignedTo: true
+              }
             }
           }
         },
         procedures: {
-          include: { attachments: true }
+          include: { 
+            attachments: true,
+            messages: true,
+            assignedTo: true
+          }
         }
       }
     });
@@ -47,6 +55,18 @@ export async function GET(
         zip.file(`attachments/${diskFilename}`, fileBuffer);
       } catch (err) {
         console.warn(`Could not read milestone file: ${fullPath}`, err);
+      }
+    }
+
+    // Add PBC attachment if exists
+    if (audit.pbcAttachmentUrl) {
+      const fullPath = path.join(publicDir, audit.pbcAttachmentUrl);
+      try {
+        const fileBuffer = await fs.readFile(fullPath);
+        const diskFilename = path.basename(audit.pbcAttachmentUrl);
+        zip.file(`attachments/${diskFilename}`, fileBuffer);
+      } catch (err) {
+        console.warn(`Could not read PBC file: ${fullPath}`, err);
       }
     }
 

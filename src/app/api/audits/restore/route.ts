@@ -12,6 +12,12 @@ interface RestoreAttachment {
   displayOrder: number | null;
 }
 
+interface RestoreMessage {
+  sender: string;
+  text: string;
+  createdAt: string | Date;
+}
+
 interface RestoreProcedure {
   title: string | null;
   purpose: string | null;
@@ -28,7 +34,9 @@ interface RestoreProcedure {
   reviewedDate: string | Date | null;
   displayOrder: number;
   groupId: string | null;
+  assignedToId: string | null;
   attachments?: RestoreAttachment[];
+  messages?: RestoreMessage[];
 }
 
 interface RestoreGroup {
@@ -40,6 +48,7 @@ interface RestoreGroup {
 }
 
 interface RestoreTeamMember {
+  id: string;
   name: string;
   role: string | null;
   email: string | null;
@@ -47,10 +56,19 @@ interface RestoreTeamMember {
 
 interface RestoreAuditData {
   title: string;
+  description?: string;
   category?: string;
   auditNumber?: string;
   objective?: string;
   status?: string;
+  pbcRequests?: string;
+  pbcAttachmentUrl?: string;
+  pbcAttachmentName?: string;
+  milestoneAttachmentUrl?: string;
+  milestoneAttachmentName?: string;
+  fieldworkStartDate?: string | Date;
+  fieldworkEndDate?: string | Date;
+  reportIssuedDate?: string | Date;
   procedureGroups?: RestoreGroup[];
   procedures?: RestoreProcedure[];
   teamMembers?: RestoreTeamMember[];
@@ -89,14 +107,35 @@ export async function POST(req: Request) {
           auditNumber: data.auditNumber,
           objective: data.objective,
           status: data.status || 'Planning',
+          pbcRequests: data.pbcRequests,
+          pbcAttachmentUrl: data.pbcAttachmentUrl,
+          pbcAttachmentName: data.pbcAttachmentName,
+          milestoneAttachmentUrl: data.milestoneAttachmentUrl,
+          milestoneAttachmentName: data.milestoneAttachmentName,
         },
       });
 
       const groupMap = new Map<string, string>();
+      const teamMemberMap = new Map<string, string>();
       const uploadDir = path.join(process.cwd(), 'public/uploads');
       await fs.mkdir(uploadDir, { recursive: true });
 
-      // 2. Create Groups
+      // 2. Create Team Members (needed for procedure assignments)
+      if (data.teamMembers && Array.isArray(data.teamMembers)) {
+        for (const m of data.teamMembers) {
+          const newMember = await tx.teamMember.create({
+            data: {
+              auditId: audit.id,
+              name: m.name,
+              role: m.role,
+              email: m.email,
+            }
+          });
+          if (m.id) teamMemberMap.set(m.id, newMember.id);
+        }
+      }
+
+      // 3. Create Groups
       if (data.procedureGroups && Array.isArray(data.procedureGroups)) {
         for (const group of data.procedureGroups) {
           const newGroup = await tx.procedureGroup.create({
@@ -111,7 +150,7 @@ export async function POST(req: Request) {
         }
       }
 
-      // 3. Create Procedures and Attachments
+      // 4. Create Procedures, Attachments, and Messages
       const proceduresToRestore = data.procedures || 
         (data.procedureGroups?.flatMap(g => (g.procedures || []).map(p => ({ ...p, groupId: g.id })))) || 
         [];
@@ -136,8 +175,23 @@ export async function POST(req: Request) {
               reviewedBy: p.reviewedBy,
               reviewedDate: p.reviewedDate ? new Date(p.reviewedDate) : null,
               displayOrder: p.displayOrder || 0,
+              assignedToId: p.assignedToId ? teamMemberMap.get(p.assignedToId) : null,
             }
           });
+
+          // Restore Messages (Review Notes)
+          if (p.messages && Array.isArray(p.messages)) {
+            for (const msg of p.messages) {
+              await tx.procedureMessage.create({
+                data: {
+                  procedureId: newProcedure.id,
+                  sender: msg.sender,
+                  text: msg.text,
+                  createdAt: msg.createdAt ? new Date(msg.createdAt) : undefined,
+                }
+              });
+            }
+          }
 
           // Restore Attachments for this procedure
           if (p.attachments && Array.isArray(p.attachments)) {
@@ -151,8 +205,6 @@ export async function POST(req: Request) {
                 
                 if (zipFile) {
                   const fileBuffer = await zipFile.async('nodebuffer');
-                  // We keep the original filename or generate a new one to avoid collisions?
-                  // Best practice is to use the original disk filename from the ZIP
                   await fs.writeFile(path.join(uploadDir, diskFilename), fileBuffer);
                   finalFilepath = `/uploads/${diskFilename}`;
                 }
@@ -173,17 +225,22 @@ export async function POST(req: Request) {
         }
       }
 
-      // 4. Create Team Members
-      if (data.teamMembers && Array.isArray(data.teamMembers)) {
-        for (const m of data.teamMembers) {
-          await tx.teamMember.create({
-            data: {
-              auditId: audit.id,
-              name: m.name,
-              role: m.role,
-              email: m.email,
+      // Restore PBC and Milestone files from ZIP if they exist
+      if (zip) {
+        const filesToRestore = [
+          { url: data.pbcAttachmentUrl, name: 'PBC' },
+          { url: data.milestoneAttachmentUrl, name: 'Milestone' }
+        ];
+
+        for (const f of filesToRestore) {
+          if (f.url) {
+            const diskFilename = path.basename(f.url);
+            const zipFile = zip.file(`attachments/${diskFilename}`);
+            if (zipFile) {
+              const fileBuffer = await zipFile.async('nodebuffer');
+              await fs.writeFile(path.join(uploadDir, diskFilename), fileBuffer);
             }
-          });
+          }
         }
       }
 
@@ -193,6 +250,11 @@ export async function POST(req: Request) {
     return NextResponse.json(result);
   } catch (error: unknown) {
     console.error('Restore error:', error);
+    const message = error instanceof Error ? error.message : 'Restore failed';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+sole.error('Restore error:', error);
     const message = error instanceof Error ? error.message : 'Restore failed';
     return NextResponse.json({ error: message }, { status: 500 });
   }

@@ -3,6 +3,95 @@ import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 import fs from 'fs/promises';
 import path from 'path';
+import crypto from 'crypto';
+
+export async function GET(
+  _req: Request, 
+  props: { params: Promise<{ id: string }> }
+) {
+  try {
+    const params = await props.params;
+    const attachment = await prisma.attachment.findUnique({
+      where: { id: params.id }
+    });
+
+    if (!attachment || !attachment.filepath) {
+      return NextResponse.json({ error: 'Attachment not found' }, { status: 404 });
+    }
+
+    const filepath = path.join(process.cwd(), 'public', attachment.filepath);
+    const fileBuffer = await fs.readFile(filepath);
+    
+    return new NextResponse(fileBuffer, {
+      headers: {
+        'Content-Type': attachment.mimetype || 'application/octet-stream',
+        'Content-Disposition': `inline; filename="${attachment.filename}"`,
+      },
+    });
+  } catch (error: unknown) {
+    console.error('Fetch attachment error:', error);
+    return NextResponse.json({ error: 'Failed to fetch file' }, { status: 404 });
+  }
+}
+
+export async function PUT(
+  req: Request, 
+  props: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getSession();
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const params = await props.params;
+    const formData = await req.formData();
+    const file = formData.get('file') as unknown as File;
+
+    if (!file || typeof file === 'string') {
+      return NextResponse.json({ error: 'Valid file is required' }, { status: 400 });
+    }
+
+    const attachment = await prisma.attachment.findUnique({
+      where: { id: params.id }
+    });
+
+    if (!attachment) {
+      return NextResponse.json({ error: 'Attachment not found' }, { status: 404 });
+    }
+
+    // Delete old file
+    const oldFilepath = path.join(process.cwd(), 'public', attachment.filepath);
+    try { await fs.unlink(oldFilepath); } catch { /* ignore */ }
+
+    // Save new file
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const uniqueSuffix = crypto.randomUUID();
+    const safeFilename = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const diskFilename = `${uniqueSuffix}-${safeFilename}`;
+    const uploadDir = path.join(process.cwd(), 'public/uploads');
+    const newFilepath = path.join(uploadDir, diskFilename);
+
+    await fs.mkdir(uploadDir, { recursive: true });
+    await fs.writeFile(newFilepath, buffer);
+
+    const updated = await prisma.attachment.update({
+      where: { id: params.id },
+      data: {
+        filename: file.name,
+        filepath: `/uploads/${diskFilename}`,
+        mimetype: file.type || 'application/octet-stream',
+        size: file.size,
+      }
+    });
+
+    return NextResponse.json(updated);
+  } catch (error: unknown) {
+    console.error('Replace attachment error:', error);
+    return NextResponse.json({ error: 'Failed to replace attachment' }, { status: 500 });
+  }
+}
 
 export async function PATCH(
   req: Request, 

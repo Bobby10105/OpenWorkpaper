@@ -120,7 +120,7 @@ export default function DashboardStats({
           label="Pending Review" 
           value={totalPendingReview} 
           icon={AlertTriangle} 
-          color="bg-gradient-to-br from-orange-500 to-amber-600 shadow-orange-500/10"
+          color="bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-500/10"
           onClick={() => { setShowPendingPanel(!showPendingPanel); setShowToCompletePanel(false); }}
           isActive={showPendingPanel}
         />
@@ -185,9 +185,9 @@ export default function DashboardStats({
       {showPendingPanel && totalPendingReview > 0 && (
         <div className="bg-white/95 backdrop-blur-3xl rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden animate-in slide-in-from-top-6 fade-in duration-500 ease-out">
           <div className="bg-slate-50 px-8 py-5 border-b border-slate-200 flex justify-between items-center">
-            <h3 className="font-bold text-orange-600 tracking-tight text-sm flex items-center">
-              <div className="bg-orange-500/10 p-1.5 rounded-lg mr-3 border border-orange-500/20">
-                <AlertTriangle className="w-4 h-4 text-orange-600" />
+            <h3 className="font-bold text-emerald-600 tracking-tight text-sm flex items-center">
+              <div className="bg-emerald-500/10 p-1.5 rounded-lg mr-3 border border-emerald-500/20">
+                <AlertTriangle className="w-4 h-4 text-emerald-600" />
               </div>
               Procedures Awaiting Sign-off
             </h3>
@@ -215,7 +215,7 @@ export default function DashboardStats({
                         href={`/audits/${proc.auditId || audit.id}/procedures/${proc.id}`}
                         className="flex items-center group/item p-2 rounded-lg hover:bg-slate-50 transition-colors"
                       >
-                        <div className="w-2 h-2 rounded-full bg-orange-500 mr-3 group-hover/item:scale-125 transition-transform shadow-[0_0_12px_rgba(249,115,22,0.2)]" />
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 mr-3 group-hover/item:scale-125 transition-transform shadow-[0_0_12px_rgba(16,185,129,0.2)]" />
                         <span className="text-xs text-slate-500 group-hover/item:text-blue-600 font-medium transition-colors line-clamp-1 flex-1">
                           {proc.title || 'Untitled Procedure'}
                         </span>

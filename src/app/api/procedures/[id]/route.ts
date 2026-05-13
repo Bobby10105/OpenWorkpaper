@@ -91,6 +91,58 @@ export async function PUT(
   }
 }
 
+export async function PATCH(
+  req: Request, 
+  props: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getSession();
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const params = await props.params;
+    const body = await req.json();
+
+    if (body.action === 'unlock') {
+      const allowedRoles = ['Auditor', 'Audit Manager', 'Audit Director', 'Audit Partner', 'Business Operations', 'Engagement Manager'];
+      if (!allowedRoles.includes(session.user.role)) {
+        return NextResponse.json({ error: 'Insufficient permissions to unlock procedure' }, { status: 403 });
+      }
+
+      const procedure = await prisma.procedure.update({
+        where: { id: params.id },
+        data: {
+          preparedBy: null,
+          preparedDate: null,
+          reviewedBy: null,
+          reviewedDate: null,
+          status: 'In Progress'
+        }
+      });
+
+      try {
+        await prisma.auditLog.create({
+          data: {
+            action: 'UPDATE',
+            entityType: 'PROCEDURE',
+            entityId: params.id,
+            details: 'Procedure unlocked for editing (sign-offs cleared)',
+            performedBy: session.user.username,
+          }
+        });
+      } catch { /* ignore log error */ }
+
+      return NextResponse.json(procedure);
+    }
+
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+  } catch (error: unknown) {
+    console.error('Unlock procedure error:', error);
+    return NextResponse.json({ error: 'Failed to unlock procedure' }, { status: 500 });
+  }
+}
+
 export async function DELETE(
   _req: Request, 
   props: { params: Promise<{ id: string }> }

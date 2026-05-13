@@ -63,8 +63,8 @@ export default function ProcedureMiniMap({
                   const getLetter = (index: number) => String.fromCharCode(97 + index);
                   
                   const getStatusIcon = () => {
-                    if (isCompleted) return <CheckCircle2 className="w-3 h-3 text-emerald-500" />;
-                    if (isAwaitingReview) return <Clock className="w-3 h-3 text-orange-400" />;
+                    if (isCompleted) return <CheckCircle2 className="w-3 h-3 text-blue-600" />;
+                    if (isAwaitingReview) return <Clock className="w-3 h-3 text-emerald-500" />;
                     return <Circle className="w-3 h-3 text-slate-300" />;
                   };
 
