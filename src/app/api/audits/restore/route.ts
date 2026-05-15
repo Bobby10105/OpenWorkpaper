@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getSession } from '@/lib/auth';
 import fs from 'fs/promises';
 import path from 'path';
 import JSZip from 'jszip';
@@ -76,6 +77,15 @@ interface RestoreAuditData {
 
 export async function POST(req: Request) {
   try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (session.user.role !== 'Business Operations') {
+      return NextResponse.json({ error: 'Forbidden: Business Operations only' }, { status: 403 });
+    }
+
     const contentType = req.headers.get('content-type') || '';
     let data: RestoreAuditData;
     let zip: JSZip | null = null;
@@ -250,11 +260,6 @@ export async function POST(req: Request) {
     return NextResponse.json(result);
   } catch (error: unknown) {
     console.error('Restore error:', error);
-    const message = error instanceof Error ? error.message : 'Restore failed';
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
-}
-sole.error('Restore error:', error);
     const message = error instanceof Error ? error.message : 'Restore failed';
     return NextResponse.json({ error: message }, { status: 500 });
   }

@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { decrypt } from '@/lib/auth';
 
 /**
- * Next.js Middleware for Authentication and Authorization logic.
- * Security headers are managed at the Nginx proxy level for performance and reliability.
+ * Next.js Proxy for Authentication and Authorization logic.
+ * This was previously called 'middleware'.
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const session = request.cookies.get('session')?.value;
   const { pathname } = request.nextUrl;
 
@@ -55,7 +55,7 @@ export async function middleware(request: NextRequest) {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : '';
     if (!message.includes('signature') && !message.includes('expired')) {
-      console.error('[Middleware] Session decryption failed:', error);
+      console.error('[Proxy] Session decryption failed:', error);
     }
     return NextResponse.redirect(new URL('/login', request.url));
   }

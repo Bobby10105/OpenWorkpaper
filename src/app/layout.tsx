@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import Link from 'next/link';
-import { Component, ClipboardList, Users, BookOpen, Home } from 'lucide-react';
+import { Component as LogoIcon, ClipboardList, Users, BookOpen, Home } from 'lucide-react';
 import { getSession } from '@/lib/auth';
 import UserMenu from '@/components/UserMenu';
 
@@ -37,7 +37,7 @@ export default async function RootLayout({
             <div className="flex items-center space-x-12">
               <Link href="/" className="flex items-center space-x-2 group">
                 <div className="bg-white p-1.5 rounded-lg group-hover:bg-blue-50 transition-all duration-300 shadow-md group-active:scale-95">
-                  <Component className="h-6 w-6 text-blue-600" />
+                  <LogoIcon className="h-6 w-6 text-blue-600" />
                 </div>
                 <span className="text-xl font-bold tracking-tight text-white group-hover:text-blue-100 transition-colors">OpenWorkpaper</span>
               </Link>

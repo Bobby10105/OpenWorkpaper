@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:docker": "docker compose up --build",
-    "build": "next build",
+    "build": "next build --debug-prerender",
     "start": "next start",
     "lint": "eslint"
   },
