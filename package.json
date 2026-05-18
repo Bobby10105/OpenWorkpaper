@@ -20,7 +20,7 @@
     "@tiptap/starter-kit": "3.22.5",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.9.0",
-    "brace-expansion": "5.0.5",
+    "brace-expansion": "5.0.6",
     "date-fns": "^4.1.0",
     "defu": "6.1.7",
     "docx": "^9.6.1",
