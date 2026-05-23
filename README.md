@@ -56,7 +56,7 @@ Key team roles include:
 *   **Lead Auditor**: Primary contact and coordinator for the audit engagement.
 *   **Quality Reviewer**: An independent reviewer (often from outside the immediate engagement team) who performs a final objective evaluation of the audit's significant judgments and conclusions.
 *   **Staff/Senior Auditor**: Core team members responsible for fieldwork and procedure documentation.
-*   **Specialist**: Subject matter experts (e.g., IT, Actuarial) providing focused support to the audit.
+*   **Specialist**: Subject matter experts (e.g., IT, Statistician) providing focused support to the audit.
 
 ### Access Control Rules
 *   **Audit Visibility**: Users (except Business Operations) can **only** see and access audits to which they have been explicitly added as a **Team Member**.
