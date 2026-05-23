@@ -14,7 +14,10 @@ async function main() {
 
   await prisma.user.upsert({
     where: { username: 'it.admin' },
-    update: {}, // Don't overwrite password on every restart
+    update: {
+      password: hashedPassword,
+      mustChangePassword: true,
+    },
     create: {
       username: 'it.admin',
       password: hashedPassword,
@@ -25,7 +28,10 @@ async function main() {
 
   await prisma.user.upsert({
     where: { username: 'biz.ops' },
-    update: {}, // Don't overwrite password on every restart
+    update: {
+      password: hashedPassword,
+      mustChangePassword: true,
+    },
     create: {
       username: 'biz.ops',
       password: hashedPassword,
