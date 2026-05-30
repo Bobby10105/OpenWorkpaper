@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
+import { canAccessAudit, canAccessProcedure } from '@/lib/audit-access';
 import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
@@ -8,6 +9,9 @@ import crypto from 'crypto';
 export async function POST(req: Request) {
   try {
     const session = await getSession();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     
     let formData: FormData;
     try {
@@ -35,6 +39,14 @@ export async function POST(req: Request) {
 
     if (!cleanProcedureId && !cleanAuditId) {
       return NextResponse.json({ error: 'ID is required' }, { status: 400 });
+    }
+    if (cleanAuditId) {
+      const canAccess = await canAccessAudit(session.user, cleanAuditId);
+      if (!canAccess) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    if (cleanProcedureId) {
+      const canAccess = await canAccessProcedure(session.user, cleanProcedureId);
+      if (!canAccess) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     let buffer: Buffer;

@@ -1,12 +1,35 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getSession } from '@/lib/auth';
+import { canAccessAudit } from '@/lib/audit-access';
+
+async function assertGroupAccess(user: { id: string; role: string }, groupId: string) {
+  const group = await prisma.procedureGroup.findUnique({
+    where: { id: groupId },
+    select: { auditId: true },
+  });
+  if (!group) return { ok: false as const, status: 404, message: 'Procedure group not found' };
+  const allowed = await canAccessAudit(user, group.auditId);
+  if (!allowed) return { ok: false as const, status: 403, message: 'Forbidden' };
+  return { ok: true as const };
+}
 
 export async function PUT(
   req: Request, 
   props: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getSession();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const params = await props.params;
+    const access = await assertGroupAccess(session.user, params.id);
+    if (!access.ok) {
+      return NextResponse.json({ error: access.message }, { status: access.status });
+    }
+
     const body = await req.json();
     const group = await prisma.procedureGroup.update({
       where: { id: params.id },
@@ -25,7 +48,17 @@ export async function DELETE(
   props: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getSession();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const params = await props.params;
+    const access = await assertGroupAccess(session.user, params.id);
+    if (!access.ok) {
+      return NextResponse.json({ error: access.message }, { status: access.status });
+    }
+
     await prisma.procedureGroup.delete({
       where: { id: params.id }
     });

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
+import { canAccessAudit } from '@/lib/audit-access';
 import type { Audit } from '@prisma/client';
 import fs from 'fs/promises';
 import path from 'path';
@@ -50,6 +51,10 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
   
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  const hasAccess = await canAccessAudit(session.user, params.id);
+  if (!hasAccess) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   // 1. Fetch main audit and team members
@@ -132,6 +137,10 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
     
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const hasAccess = await canAccessAudit(session.user, params.id);
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const data = await req.json();
@@ -250,6 +259,10 @@ export async function DELETE(req: Request, props: { params: Promise<{ id: string
     const canDeleteAudits = session.user.role === 'Business Operations';
 
     if (!canDeleteAudits) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    const hasAccess = await canAccessAudit(session.user, params.id);
+    if (!hasAccess) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

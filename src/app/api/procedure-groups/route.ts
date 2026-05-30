@@ -1,10 +1,25 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getSession } from '@/lib/auth';
+import { canAccessAudit } from '@/lib/audit-access';
 
 export async function POST(req: Request) {
   try {
+    const session = await getSession();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await req.json();
     const { auditId, phase, title } = body;
+    if (!auditId || !phase || !title) {
+      return NextResponse.json({ error: 'auditId, phase and title are required' }, { status: 400 });
+    }
+
+    const hasAccess = await canAccessAudit(session.user, auditId);
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const aggregate = await prisma.procedureGroup.aggregate({
       where: { auditId, phase },

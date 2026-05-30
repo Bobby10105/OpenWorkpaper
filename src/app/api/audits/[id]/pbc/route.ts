@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getSession } from '@/lib/auth';
+import { canAccessAudit } from '@/lib/audit-access';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -8,6 +10,14 @@ export async function GET(
   props: { params: Promise<{ id: string }> }
 ) {
   const params = await props.params;
+  const session = await getSession();
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  const hasAccess = await canAccessAudit(session.user, params.id);
+  if (!hasAccess) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
   
   try {
     const audit = await prisma.audit.findUnique({
@@ -47,6 +57,15 @@ export async function POST(
 ) {
   try {
     const params = await props.params;
+    const session = await getSession();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const hasAccess = await canAccessAudit(session.user, params.id);
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const body = await req.json();
     
     const audit = await prisma.audit.update({

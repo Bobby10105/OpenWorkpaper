@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const secretValue = process.env.JWT_SECRET;
 if (!secretValue && process.env.NODE_ENV === 'production') {
-  console.warn('[Auth] WARNING: JWT_SECRET is not set in production. Using insecure fallback.');
+  throw new Error('[Auth] JWT_SECRET must be set in production.');
 }
 
 const secretKey = new TextEncoder().encode(secretValue || 'fallback-secret-for-dev-only');

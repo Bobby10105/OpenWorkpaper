@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
+import { canAccessAttachment } from '@/lib/audit-access';
 import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
@@ -10,7 +11,17 @@ export async function GET(
   props: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getSession();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const params = await props.params;
+    const allowed = await canAccessAttachment(session.user, params.id);
+    if (!allowed) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const attachment = await prisma.attachment.findUnique({
       where: { id: params.id }
     });
@@ -45,6 +56,11 @@ export async function PUT(
     }
 
     const params = await props.params;
+    const allowed = await canAccessAttachment(session.user, params.id);
+    if (!allowed) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const formData = await req.formData();
     const file = formData.get('file') as unknown as File;
 
@@ -102,6 +118,11 @@ export async function PATCH(
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const params = await props.params;
+    const allowed = await canAccessAttachment(session.user, params.id);
+    if (!allowed) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const body = await req.json();
     
     // Sanitize incoming data to avoid Prisma validation errors
@@ -146,6 +167,11 @@ export async function DELETE(
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const params = await props.params;
+    const allowed = await canAccessAttachment(session.user, params.id);
+    if (!allowed) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const attachment = await prisma.attachment.findUnique({
       where: { id: params.id }
     });
