@@ -205,7 +205,7 @@ export default function TeamMembersTab({
                   {canManageTeam ? (
                     <div className="relative group/select">
                       <select
-                        value={member.email || ''}
+                        value={member.userId ? systemUsers.find(u => u.id === member.userId)?.username || member.email || '' : member.email || ''}
                         onChange={(e) => handleUserSelect(member.id, e.target.value)}
                         className="w-full pl-5 pr-10 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500/50 focus:bg-white transition-all text-gray-900 appearance-none font-semibold text-sm outline-none shadow-inner"
                       >

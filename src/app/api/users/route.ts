@@ -22,10 +22,7 @@ export async function GET() {
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    if (user.role !== 'IT Administrator') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
+    // Allow any authenticated user to view the user list for assigning team members
     const users = await prisma.user.findMany({
       select: {
         id: true,
