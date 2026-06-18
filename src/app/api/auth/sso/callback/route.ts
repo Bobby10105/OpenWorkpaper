@@ -97,6 +97,13 @@ export async function GET(req: Request) {
       where: { ssoId: tokenPayload.sub },
     });
 
+    if (user && user.mustChangePassword) {
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: { mustChangePassword: false },
+      });
+    }
+
     if (!user) {
       // If user doesn't exist by SSO ID, check by email/username
       const username = tokenPayload.preferred_username || tokenPayload.email || tokenPayload.sub;

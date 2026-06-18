@@ -44,7 +44,7 @@ async function main() {
   ];
 
   // Create 15 mock users for the team members
-  const users: any[] = [];
+  const users: { id: string; username: string; role: string; fullName: string; email: string }[] = [];
   console.log('Generating 15 users...');
   for (let i = 0; i < 15; i++) {
     const firstName = faker.person.firstName();
@@ -96,7 +96,7 @@ async function main() {
     // Assign team members
     // Randomly pick 3-7 users
     const shuffledUsers = faker.helpers.shuffle(users).slice(0, faker.number.int({ min: 3, max: 7 }));
-    const teamMembers: any[] = [];
+    const teamMembers: { id: string; name: string }[] = [];
     for (const u of shuffledUsers) {
       const tm = await prisma.teamMember.create({
         data: {
@@ -111,7 +111,7 @@ async function main() {
     }
 
     // Create Procedure Groups
-    const groups: any[] = [];
+    const groups: { id: string; phase: string }[] = [];
     for (const phase of ['Planning', 'Fieldwork', 'Reporting']) {
       const g = await prisma.procedureGroup.create({
         data: {
@@ -168,7 +168,7 @@ async function main() {
       "The vendor payment process is generally compliant with company policy, but the approval workflow should be reinforced to ensure strict adherence."
     ];
     
-    const createProcedure = async (group: any, titleOverride: any = null) => {
+    const createProcedure = async (group: { id: string; phase: string }, titleOverride: string | null = null) => {
       const tm = faker.helpers.arrayElement(teamMembers);
       const status = isArchived ? 'Reviewed' : faker.helpers.arrayElement(statuses);
       
