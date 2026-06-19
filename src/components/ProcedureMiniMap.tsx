@@ -38,6 +38,8 @@ export default function ProcedureMiniMap({
         <button 
           onClick={() => setIsMinimized(true)}
           className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-900 transition-all"
+          aria-label="Minimize navigator"
+          title="Minimize navigator"
         >
           <ChevronDown className="w-4 h-4 rotate-90" />
         </button>
