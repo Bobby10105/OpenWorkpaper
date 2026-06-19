@@ -4,6 +4,7 @@ import { getSession } from '@/lib/auth';
 import fs from 'fs/promises';
 import path from 'path';
 import JSZip from 'jszip';
+import crypto from 'crypto';
 
 interface RestoreAttachment {
   filename: string;
@@ -147,16 +148,22 @@ export async function POST(req: Request) {
 
       // 3. Create Groups
       if (data.procedureGroups && Array.isArray(data.procedureGroups)) {
-        for (const group of data.procedureGroups) {
-          const newGroup = await tx.procedureGroup.create({
-            data: {
-              auditId: audit.id,
-              title: group.title,
-              phase: group.phase,
-              displayOrder: group.displayOrder,
-            }
+        const groupsToCreate = data.procedureGroups.map((group) => {
+          const newId = crypto.randomUUID();
+          groupMap.set(group.id, newId);
+          return {
+            id: newId,
+            auditId: audit.id,
+            title: group.title,
+            phase: group.phase,
+            displayOrder: group.displayOrder,
+          };
+        });
+
+        if (groupsToCreate.length > 0) {
+          await tx.procedureGroup.createMany({
+            data: groupsToCreate,
           });
-          groupMap.set(group.id, newGroup.id);
         }
       }
 
