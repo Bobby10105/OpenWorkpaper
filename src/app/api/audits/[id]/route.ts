@@ -92,17 +92,20 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
     );
   }
 
-  // 3. For each procedure, fetch attachments and messages
-  const proceduresWithRelations = await Promise.all(rawProcedures.map(async (proc) => {
-    const attachments: RawAttachment[] = await prisma.$queryRawUnsafe(
-      `SELECT * FROM Attachment WHERE procedureId = ? ORDER BY displayOrder ASC`,
-      proc.id
-    );
-    
-    const messages: RawMessage[] = await prisma.$queryRawUnsafe(
-      `SELECT * FROM ProcedureMessage WHERE procedureId = ? ORDER BY createdAt ASC`,
-      proc.id
-    );
+  // 3. Batch fetch attachments and messages for procedures
+  const allAttachments = await prisma.$queryRawUnsafe<RawAttachment[]>(
+    `SELECT * FROM Attachment WHERE procedureId IN (SELECT id FROM Procedure WHERE auditId = ?) ORDER BY displayOrder ASC`,
+    audit.id
+  );
+
+  const allMessages = await prisma.$queryRawUnsafe<RawMessage[]>(
+    `SELECT * FROM ProcedureMessage WHERE procedureId IN (SELECT id FROM Procedure WHERE auditId = ?) ORDER BY createdAt ASC`,
+    audit.id
+  );
+
+  const proceduresWithRelations = rawProcedures.map((proc) => {
+    const attachments = allAttachments.filter(a => a.procedureId === proc.id);
+    const messages = allMessages.filter(m => m.procedureId === proc.id);
 
     return {
       ...proc,
@@ -115,7 +118,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
       attachments,
       messages
     };
-  }));
+  });
 
   // 4. Map procedures to groups
   const groupsWithProcedures = rawGroups.map(group => ({

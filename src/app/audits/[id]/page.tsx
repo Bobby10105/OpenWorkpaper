@@ -161,16 +161,20 @@ export default async function AuditDetail(props: { params: Promise<{ id: string 
         );
       }
 
-      const proceduresWithRelations = await Promise.all(rawProcedures.map(async (proc) => {
-        const attachments = await prisma.$queryRawUnsafe<AttachmentRaw[]>(
-          `SELECT * FROM Attachment WHERE procedureId = ? ORDER BY displayOrder ASC`,
-          proc.id
-        );
-        
-        const messages = await prisma.$queryRawUnsafe<ProcedureMessageRaw[]>(
-          `SELECT * FROM ProcedureMessage WHERE procedureId = ? ORDER BY createdAt ASC`,
-          proc.id
-        );
+      // Batch fetch attachments and messages to avoid N+1 queries
+      const allAttachments = await prisma.$queryRawUnsafe<AttachmentRaw[]>(
+        `SELECT * FROM Attachment WHERE procedureId IN (SELECT id FROM Procedure WHERE auditId = ?) ORDER BY displayOrder ASC`,
+        auditBase.id
+      );
+
+      const allMessages = await prisma.$queryRawUnsafe<ProcedureMessageRaw[]>(
+        `SELECT * FROM ProcedureMessage WHERE procedureId IN (SELECT id FROM Procedure WHERE auditId = ?) ORDER BY createdAt ASC`,
+        auditBase.id
+      );
+
+      const proceduresWithRelations = rawProcedures.map((proc) => {
+        const attachments = allAttachments.filter(a => a.procedureId === proc.id);
+        const messages = allMessages.filter(m => m.procedureId === proc.id);
 
         return {
           ...proc,
@@ -183,7 +187,7 @@ export default async function AuditDetail(props: { params: Promise<{ id: string 
           attachments,
           messages
         };
-      }));
+      });
 
       auditData = {
         auditBase,
