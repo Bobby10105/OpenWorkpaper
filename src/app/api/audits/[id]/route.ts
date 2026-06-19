@@ -92,18 +92,46 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
     );
   }
 
-  // 3. For each procedure, fetch attachments and messages
-  const proceduresWithRelations = await Promise.all(rawProcedures.map(async (proc) => {
-    const attachments: RawAttachment[] = await prisma.$queryRawUnsafe(
-      `SELECT * FROM Attachment WHERE procedureId = ? ORDER BY displayOrder ASC`,
-      proc.id
+  // 3. Fetch all attachments and messages for these procedures in bulk
+  const procedureIds = rawProcedures.map(p => p.id);
+
+  let allAttachments: RawAttachment[] = [];
+  let allMessages: RawMessage[] = [];
+
+  if (procedureIds.length > 0) {
+    const idsPlaceholders = procedureIds.map(() => '?').join(',');
+
+    allAttachments = await prisma.$queryRawUnsafe(
+      `SELECT * FROM Attachment WHERE procedureId IN (${idsPlaceholders}) ORDER BY displayOrder ASC`,
+      ...procedureIds
     );
     
-    const messages: RawMessage[] = await prisma.$queryRawUnsafe(
-      `SELECT * FROM ProcedureMessage WHERE procedureId = ? ORDER BY createdAt ASC`,
-      proc.id
+    allMessages = await prisma.$queryRawUnsafe(
+      `SELECT * FROM ProcedureMessage WHERE procedureId IN (${idsPlaceholders}) ORDER BY createdAt ASC`,
+      ...procedureIds
     );
+  }
 
+  const attachmentsByProcId: Record<string, RawAttachment[]> = {};
+  const messagesByProcId: Record<string, RawMessage[]> = {};
+
+  // Initialize maps
+  for (const id of procedureIds) {
+    attachmentsByProcId[id] = [];
+    messagesByProcId[id] = [];
+  }
+
+  // Populate maps
+  for (const att of allAttachments) {
+    attachmentsByProcId[att.procedureId].push(att);
+  }
+
+  for (const msg of allMessages) {
+    messagesByProcId[msg.procedureId].push(msg);
+  }
+
+  // 4. Map relations to procedures in memory
+  const proceduresWithRelations = rawProcedures.map(proc => {
     return {
       ...proc,
       assignedTo: proc.assignedToId ? {
@@ -112,12 +140,12 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
         role: proc.assignedToRole,
         email: proc.assignedToEmail
       } : null,
-      attachments,
-      messages
+      attachments: attachmentsByProcId[proc.id] || [],
+      messages: messagesByProcId[proc.id] || []
     };
-  }));
+  });
 
-  // 4. Map procedures to groups
+  // 5. Map procedures to groups
   const groupsWithProcedures = rawGroups.map(group => ({
     ...group,
     procedures: proceduresWithRelations.filter(p => p.groupId === group.id)
