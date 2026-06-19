@@ -10,6 +10,54 @@ interface BulkUser {
   password?: string;
 }
 
+async function processBulkUsers(users: BulkUser[]) {
+  const results = {
+    created: 0,
+    skipped: 0,
+    errors: [] as string[],
+  };
+
+  for (const userData of users) {
+    try {
+      const username = userData.username || userData.email;
+      const role = userData.role || 'Auditor';
+      const password = userData.password || 'Welcome123!';
+
+      if (!username) {
+        results.skipped++;
+        continue;
+      }
+
+      const existingUser = await prisma.user.findUnique({
+        where: { username },
+      });
+
+      if (existingUser) {
+        results.skipped++;
+        continue;
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+      await prisma.user.create({
+        data: {
+          username,
+          password: hashedPassword,
+          role,
+          mustChangePassword: true,
+        },
+      });
+
+      results.created++;
+    } catch (err: unknown) {
+      console.error('Bulk import error:', err);
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      results.errors.push(`Failed to create ${userData.username}: ${message}`);
+    }
+  }
+
+  return results;
+}
+
 export async function POST(req: Request) {
   try {
     const session = await getSession();
@@ -26,49 +74,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid users list' }, { status: 400 });
     }
 
-    const results = {
-      created: 0,
-      skipped: 0,
-      errors: [] as string[],
-    };
-
-    for (const userData of users) {
-      try {
-        const username = userData.username || userData.email;
-        const role = userData.role || 'Auditor';
-        const password = userData.password || 'Welcome123!'; 
-
-        if (!username) {
-          results.skipped++;
-          continue;
-        }
-
-        const existingUser = await prisma.user.findUnique({
-          where: { username },
-        });
-
-        if (existingUser) {
-          results.skipped++;
-          continue;
-        }
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-        await prisma.user.create({
-          data: {
-            username,
-            password: hashedPassword,
-            role,
-            mustChangePassword: true,
-          },
-        });
-
-        results.created++;
-      } catch (err: unknown) {
-        console.error('Bulk import error:', err);
-        const message = err instanceof Error ? err.message : 'Unknown error';
-        results.errors.push(`Failed to create ${userData.username}: ${message}`);
-      }
-    }
+    const results = await processBulkUsers(users);
 
     return NextResponse.json(results);
   } catch (error: unknown) {
