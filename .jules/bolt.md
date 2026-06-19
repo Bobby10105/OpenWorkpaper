@@ -1,0 +1,1 @@
+## 2026-06-19 - Avoiding Committing Lockfiles\n**Learning:** Running `pnpm install` can inadvertently generate a massive lockfile, polluting a small PR.\n**Action:** Use `git status` before committing and run `git restore --staged pnpm-lock.yaml` and delete it if it is unintentionally generated.
