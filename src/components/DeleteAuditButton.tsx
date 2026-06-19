@@ -4,21 +4,9 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Trash2 } from 'lucide-react';
 
-export default function DeleteAuditButton({ 
-  auditId, 
-  userRole 
-}: { 
-  auditId: string;
-  userRole?: string;
-}) {
+function useDeleteAudit(auditId: string) {
   const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
-
-  // Only show the delete button to Business Operations
-  const canDelete = userRole === 'Business Operations';
-  if (!canDelete) {
-    return null;
-  }
 
   const handleDelete = async () => {
     if (!confirm('Are you sure you want to delete this entire audit? This action cannot be undone and all procedures and attachments will be lost.')) {
@@ -45,6 +33,24 @@ export default function DeleteAuditButton({
       setIsDeleting(false);
     }
   };
+
+  return { isDeleting, handleDelete };
+}
+
+export default function DeleteAuditButton({
+  auditId,
+  userRole
+}: {
+  auditId: string;
+  userRole?: string;
+}) {
+  const { isDeleting, handleDelete } = useDeleteAudit(auditId);
+
+  // Only show the delete button to Business Operations
+  const canDelete = userRole === 'Business Operations';
+  if (!canDelete) {
+    return null;
+  }
 
   return (
     <button
