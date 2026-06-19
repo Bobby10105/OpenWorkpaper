@@ -88,12 +88,12 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
   );
 };
 
-export default function RichTextEditor({ 
-  value, 
-  onChange, 
-  readOnly = false, 
-  onFocus, 
-  onBlur
+function useRichTextEditorSetup({
+  value,
+  onChange,
+  readOnly = false,
+  onFocus,
+  onBlur,
 }: RichTextEditorProps) {
   const editor = useEditor({
     extensions: [
@@ -123,6 +123,13 @@ export default function RichTextEditor({
       editor.setEditable(!readOnly);
     }
   }, [readOnly, editor]);
+
+  return editor;
+}
+
+export default function RichTextEditor(props: RichTextEditorProps) {
+  const { readOnly = false } = props;
+  const editor = useRichTextEditorSetup(props);
 
   if (!editor) {
     return <div className="w-full h-[250px] bg-gray-50 animate-pulse rounded-2xl border border-gray-100" />;
