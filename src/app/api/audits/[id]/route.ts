@@ -274,6 +274,40 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
   }
 }
 
+type AuditWithAttachments = {
+  milestoneAttachmentUrl: string | null;
+  pbcAttachmentUrl: string | null;
+  procedures: {
+    attachments: { filepath: string }[];
+  }[];
+};
+
+async function deleteAuditFiles(audit: AuditWithAttachments) {
+  const publicDir = path.join(process.cwd(), 'storage');
+  const unlinkPromises: Promise<void>[] = [];
+
+  // Delete milestone attachment if exists
+  if (audit.milestoneAttachmentUrl) {
+    const milestonePath = path.join(publicDir, audit.milestoneAttachmentUrl);
+    unlinkPromises.push(fs.unlink(milestonePath).catch(() => {}));
+  }
+
+  // Delete PBC attachment if exists
+  if (audit.pbcAttachmentUrl) {
+    const pbcPath = path.join(publicDir, audit.pbcAttachmentUrl);
+    unlinkPromises.push(fs.unlink(pbcPath).catch(() => {}));
+  }
+
+  for (const procedure of audit.procedures) {
+    for (const attachment of procedure.attachments) {
+      const fullPath = path.join(publicDir, attachment.filepath);
+      unlinkPromises.push(fs.unlink(fullPath).catch(() => {}));
+    }
+  }
+
+  await Promise.all(unlinkPromises);
+}
+
 export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
   try {
     const params = await props.params;
@@ -303,30 +337,7 @@ export async function DELETE(req: Request, props: { params: Promise<{ id: string
     });
 
     if (audit) {
-      const publicDir = path.join(process.cwd(), 'storage');
-      
-      // Delete milestone attachment if exists
-      if (audit.milestoneAttachmentUrl) {
-        const milestonePath = path.join(publicDir, audit.milestoneAttachmentUrl);
-        try { await fs.unlink(milestonePath); } catch {}
-      }
-
-      // Delete PBC attachment if exists
-      if (audit.pbcAttachmentUrl) {
-        const pbcPath = path.join(publicDir, audit.pbcAttachmentUrl);
-        try { await fs.unlink(pbcPath); } catch {}
-      }
-
-      // Optimization: use Promise.all to unlink files concurrently instead of awaiting sequentially.
-      // Measured performance impact: reduced unlinking time for 200 files from ~27.8ms to ~2.3ms.
-      const unlinkPromises = [];
-      for (const procedure of audit.procedures) {
-        for (const attachment of procedure.attachments) {
-          const fullPath = path.join(publicDir, attachment.filepath);
-          unlinkPromises.push(fs.unlink(fullPath).catch(() => {}));
-        }
-      }
-      await Promise.all(unlinkPromises);
+      await deleteAuditFiles(audit);
 
       await prisma.auditLog.create({
         data: {
