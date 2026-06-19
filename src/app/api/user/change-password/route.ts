@@ -3,6 +3,53 @@ import { prisma } from '@/lib/prisma';
 import { getSession, logout } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 
+// Define user type instead of using 'any'
+interface UserWithPassword {
+  id: string;
+  username: string;
+  password?: string | null;
+}
+
+// Helper to validate the current password
+async function validateCurrentPassword(user: UserWithPassword, currentPassword: string) {
+  if (user.password) {
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isPasswordValid) {
+      return NextResponse.json({ error: 'Invalid current password' }, { status: 400 });
+    }
+  } else {
+    return NextResponse.json({ error: 'Password change not available for SSO users' }, { status: 400 });
+  }
+  return null;
+}
+
+// Helper to update password and log the action
+async function updatePasswordAndLog(user: UserWithPassword, newPassword: string) {
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      password: hashedPassword,
+      mustChangePassword: false // Clear the force change flag
+    },
+  });
+
+  // Clear the session - user must log back in with new password
+  await logout();
+
+  // Log the action
+  await prisma.auditLog.create({
+    data: {
+      action: 'UPDATE',
+      entityType: 'USER',
+      entityId: user.id,
+      details: 'User changed their password (session terminated)',
+      performedBy: user.username,
+    },
+  });
+}
+
 export async function POST(req: Request) {
   try {
     const session = await getSession();
@@ -20,39 +67,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // SSO users might not have a password
-    if (user.password) {
-      const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
-      if (!isPasswordValid) {
-        return NextResponse.json({ error: 'Invalid current password' }, { status: 400 });
-      }
-    } else {
-        return NextResponse.json({ error: 'Password change not available for SSO users' }, { status: 400 });
+    const validationError = await validateCurrentPassword(user, currentPassword);
+    if (validationError) {
+      return validationError;
     }
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { 
-        password: hashedPassword,
-        mustChangePassword: false // Clear the force change flag
-      },
-    });
-
-    // Clear the session - user must log back in with new password
-    await logout();
-
-    // Log the action
-    await prisma.auditLog.create({
-      data: {
-        action: 'UPDATE',
-        entityType: 'USER',
-        entityId: user.id,
-        details: 'User changed their password (session terminated)',
-        performedBy: user.username,
-      },
-    });
+    await updatePasswordAndLog(user, newPassword);
 
     return NextResponse.json({ success: true });
   } catch (error) {
