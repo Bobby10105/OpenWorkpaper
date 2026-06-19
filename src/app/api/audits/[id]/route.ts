@@ -70,39 +70,34 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
   }
 
   // 2. Fetch Groups and Procedures with RAW logic
-  const rawGroups: RawProcedureGroup[] = await prisma.$queryRawUnsafe(
-    `SELECT * FROM ProcedureGroup WHERE auditId = ? ORDER BY displayOrder ASC`,
-    audit.id
-  );
+  const rawGroups: RawProcedureGroup[] = await prisma.$queryRaw`
+    SELECT * FROM ProcedureGroup WHERE auditId = ${audit.id} ORDER BY displayOrder ASC
+  `;
 
   let rawProcedures: RawProcedure[] = [];
   try {
-    rawProcedures = await prisma.$queryRawUnsafe(
-      `SELECT p.*, t.name as assignedToName, t.role as assignedToRole, t.email as assignedToEmail
-       FROM Procedure p
-       LEFT JOIN TeamMember t ON p.assignedToId = t.id
-       WHERE p.auditId = ?`,
-      audit.id
-    );
+    rawProcedures = await prisma.$queryRaw`
+      SELECT p.*, t.name as assignedToName, t.role as assignedToRole, t.email as assignedToEmail
+      FROM Procedure p
+      LEFT JOIN TeamMember t ON p.assignedToId = t.id
+      WHERE p.auditId = ${audit.id}
+    `;
   } catch {
     console.warn('API AuditDetail: Full procedure join failed (schema syncing?). Falling back to basic fetch.');
-    rawProcedures = await prisma.$queryRawUnsafe(
-      `SELECT * FROM Procedure WHERE auditId = ?`,
-      audit.id
-    );
+    rawProcedures = await prisma.$queryRaw`
+      SELECT * FROM Procedure WHERE auditId = ${audit.id}
+    `;
   }
 
   // 3. For each procedure, fetch attachments and messages
   const proceduresWithRelations = await Promise.all(rawProcedures.map(async (proc) => {
-    const attachments: RawAttachment[] = await prisma.$queryRawUnsafe(
-      `SELECT * FROM Attachment WHERE procedureId = ? ORDER BY displayOrder ASC`,
-      proc.id
-    );
+    const attachments: RawAttachment[] = await prisma.$queryRaw`
+      SELECT * FROM Attachment WHERE procedureId = ${proc.id} ORDER BY displayOrder ASC
+    `;
     
-    const messages: RawMessage[] = await prisma.$queryRawUnsafe(
-      `SELECT * FROM ProcedureMessage WHERE procedureId = ? ORDER BY createdAt ASC`,
-      proc.id
-    );
+    const messages: RawMessage[] = await prisma.$queryRaw`
+      SELECT * FROM ProcedureMessage WHERE procedureId = ${proc.id} ORDER BY createdAt ASC
+    `;
 
     return {
       ...proc,
@@ -210,19 +205,15 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
       
       // Let's at least handle the pbc fields if they are present in updateData
       if ('pbcAttachmentUrl' in updateData || 'pbcAttachmentName' in updateData) {
-        await prisma.$executeRawUnsafe(
-          `UPDATE Audit SET pbcAttachmentUrl = ?, pbcAttachmentName = ? WHERE id = ?`,
-          updateData.pbcAttachmentUrl,
-          updateData.pbcAttachmentName,
-          params.id
-        );
+        await prisma.$executeRaw`
+          UPDATE Audit SET pbcAttachmentUrl = ${updateData.pbcAttachmentUrl ?? null}, pbcAttachmentName = ${updateData.pbcAttachmentName ?? null} WHERE id = ${params.id}
+        `;
       }
       
       // Re-fetch to get current state (using raw to be safe)
-      const rawAudits: Audit[] = await prisma.$queryRawUnsafe(
-        `SELECT * FROM Audit WHERE id = ? LIMIT 1`,
-        params.id
-      );
+      const rawAudits: Audit[] = await prisma.$queryRaw`
+        SELECT * FROM Audit WHERE id = ${params.id} LIMIT 1
+      `;
       audit = rawAudits[0];
     }
 
