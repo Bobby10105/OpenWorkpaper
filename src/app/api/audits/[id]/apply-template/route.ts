@@ -41,7 +41,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
         ? template.groups.filter(g => g.phase === phase)
         : template.groups;
 
-      for (const tg of templateGroups) {
+      const groupedProcsResults = await Promise.all(templateGroups.map(async (tg) => {
         const group = await tx.procedureGroup.create({
           data: {
             auditId: params.id,
@@ -62,8 +62,10 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
             }
           }))
         );
-        createdProcedures.push(...procs);
-      }
+        return procs;
+      }));
+
+      createdProcedures.push(...groupedProcsResults.flat());
 
       // 2. Process Ungrouped Procedures
       const ungroupedToCopy = phase 
