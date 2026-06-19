@@ -10,11 +10,87 @@ interface BulkUser {
   password?: string;
 }
 
+export async function processBulkUsers(users: BulkUser[]) {
+  const results = {
+    created: 0,
+    skipped: 0,
+    errors: [] as string[],
+  };
+
+  // Filter out valid users and handle missing usernames
+  const validUsers = users.map(u => ({
+    username: u.username || u.email,
+    role: u.role || 'Auditor',
+    password: u.password || 'Welcome123!',
+    originalData: u,
+  })).filter(u => {
+    if (!u.username) {
+      results.skipped++;
+      return false;
+    }
+    return true;
+  });
+
+  if (validUsers.length === 0) {
+    return results;
+  }
+
+  // Single query to find existing users
+  const usernames = validUsers.map(u => u.username as string);
+  const existingUsers = await prisma.user.findMany({
+    where: {
+      username: {
+        in: usernames,
+      },
+    },
+    select: { username: true },
+  });
+
+  const existingUsernames = new Set(existingUsers.map(u => u.username));
+
+  // Filter for new users only
+  const newUsersToCreate = [];
+  for (const u of validUsers) {
+    if (existingUsernames.has(u.username as string)) {
+      results.skipped++;
+    } else {
+      newUsersToCreate.push(u);
+    }
+  }
+
+  if (newUsersToCreate.length > 0) {
+    try {
+      // Parallelize password hashing
+      const usersWithHashedPasswords = await Promise.all(
+        newUsersToCreate.map(async (u) => ({
+          username: u.username as string,
+          role: u.role,
+          password: await bcrypt.hash(u.password, 10),
+          mustChangePassword: true,
+        }))
+      );
+
+      // Batch insert
+      const createResult = await prisma.user.createMany({
+        data: usersWithHashedPasswords,
+      });
+
+      results.created += createResult.count;
+    } catch (err: unknown) {
+      console.error('Bulk import error:', err);
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      results.errors.push(`Failed to bulk create users: ${message}`);
+    }
+  }
+
+  return results;
+}
+
 export async function POST(req: Request) {
   try {
     const session = await getSession();
     const canManageUsers = session?.user?.role === 'IT Administrator';
-    
+
     if (!canManageUsers || !session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -26,77 +102,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid users list' }, { status: 400 });
     }
 
-    const results = {
-      created: 0,
-      skipped: 0,
-      errors: [] as string[],
-    };
-
-    // Filter out valid users and handle missing usernames
-    const validUsers = users.map(u => ({
-      username: u.username || u.email,
-      role: u.role || 'Auditor',
-      password: u.password || 'Welcome123!',
-      originalData: u,
-    })).filter(u => {
-      if (!u.username) {
-        results.skipped++;
-        return false;
-      }
-      return true;
-    });
-
-    if (validUsers.length === 0) {
-      return NextResponse.json(results);
-    }
-
-    // Single query to find existing users
-    const usernames = validUsers.map(u => u.username as string);
-    const existingUsers = await prisma.user.findMany({
-      where: {
-        username: {
-          in: usernames,
-        },
-      },
-      select: { username: true },
-    });
-
-    const existingUsernames = new Set(existingUsers.map(u => u.username));
-
-    // Filter for new users only
-    const newUsersToCreate = [];
-    for (const u of validUsers) {
-      if (existingUsernames.has(u.username as string)) {
-        results.skipped++;
-      } else {
-        newUsersToCreate.push(u);
-      }
-    }
-
-    if (newUsersToCreate.length > 0) {
-      try {
-        // Parallelize password hashing
-        const usersWithHashedPasswords = await Promise.all(
-          newUsersToCreate.map(async (u) => ({
-            username: u.username as string,
-            role: u.role,
-            password: await bcrypt.hash(u.password, 10),
-            mustChangePassword: true,
-          }))
-        );
-
-        // Batch insert
-        const createResult = await prisma.user.createMany({
-          data: usersWithHashedPasswords,
-        });
-
-        results.created += createResult.count;
-      } catch (err: unknown) {
-        console.error('Bulk import error:', err);
-        const message = err instanceof Error ? err.message : 'Unknown error';
-        results.errors.push(`Failed to bulk create users: ${message}`);
-      }
-    }
+    const results = await processBulkUsers(users);
 
     return NextResponse.json(results);
   } catch (error: unknown) {
