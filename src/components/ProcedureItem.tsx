@@ -81,6 +81,8 @@ export default function ProcedureItem({
             onDelete();
           }}
           className="p-3 text-gray-300 hover:text-red-600 opacity-0 group-hover/row:opacity-100 transition-all hover:bg-red-50 rounded-xl"
+          aria-label="Delete procedure"
+          title="Delete procedure"
         >
           <Trash2 className="w-4 h-4" />
         </button>

@@ -29,21 +29,20 @@ export default function ApplyTemplateModal({
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
 
   useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const res = await fetch('/api/admin/templates');
+        if (!res.ok) throw new Error('Failed to load template library');
+        const data = await res.json();
+        setTemplates(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchTemplates();
   }, []);
-
-  const fetchTemplates = async () => {
-    try {
-      const res = await fetch('/api/admin/templates');
-      if (!res.ok) throw new Error('Failed to load template library');
-      const data = await res.json();
-      setTemplates(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleApply = async () => {
     if (!selectedTemplateId) return;
@@ -90,7 +89,7 @@ export default function ApplyTemplateModal({
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Importing standard procedures for {phase}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors" aria-label="Close modal" title="Close modal">
             <X className="w-5 h-5" />
           </button>
         </div>
