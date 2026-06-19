@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Component as LogoIcon, ClipboardList, Users, BookOpen, Home } from 'lucide-react';
 import { getSession } from '@/lib/auth';
 import UserMenu from '@/components/UserMenu';
+import { Toaster } from 'sonner';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -26,6 +27,7 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} bg-slate-50 text-slate-900 min-h-screen flex flex-col relative`}>
+        <Toaster position="top-right" richColors />
         {/* Subtle Light Background Accents */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
           <div className="absolute top-[-10%] right-[-10%] w-[60%] h-[60%] bg-blue-500/5 blur-[120px] rounded-full" />

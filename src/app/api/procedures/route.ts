@@ -1,11 +1,26 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
+import { canAccessAudit } from '@/lib/audit-access';
 
 export async function GET(req: Request) {
   try {
+    const session = await getSession();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
     const auditId = searchParams.get('auditId');
+    if (!auditId) {
+      return NextResponse.json({ error: 'auditId is required' }, { status: 400 });
+    }
+
+    const allowed = await canAccessAudit(session.user, auditId);
+    if (!allowed) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const phase = searchParams.get('phase');
 
     const procedures = await prisma.procedure.findMany({
@@ -36,6 +51,11 @@ export async function POST(req: Request) {
 
     const data = await req.json();
     const { auditId, phase, groupId, title, purpose } = data;
+
+    const allowed = await canAccessAudit(session.user, auditId);
+    if (!allowed) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const aggregate = await prisma.procedure.aggregate({
       where: { auditId, phase, groupId: groupId || null },

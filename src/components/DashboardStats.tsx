@@ -42,8 +42,8 @@ function StatCard({
   isActive?: boolean
 }) {
   const content = (
-    <div className="flex items-center space-x-5">
-      <div className={`p-3.5 rounded-2xl transition-all duration-500 group-hover:scale-110 shadow-lg ${color}`}>
+    <div className="relative flex items-center space-x-5 z-10">
+      <div className={`p-3.5 rounded-2xl transition-all duration-500 group-hover:scale-110 shadow-[0_0_20px_rgb(59,130,246,0.2)] border border-white/20 ${color}`}>
         <Icon className="w-6 h-6 text-white" />
       </div>
       <div>
@@ -58,26 +58,25 @@ function StatCard({
     </div>
   );
 
+  const baseClasses = "relative w-full text-left bg-white/70 backdrop-blur-xl p-6 rounded-[2rem] border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(59,130,246,0.1)] transition-all duration-500 overflow-hidden group";
+  const glow = <div className="absolute -inset-10 bg-blue-500/10 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />;
+
   if (onClick) {
     return (
       <button 
         onClick={onClick}
-        className={`w-full text-left bg-white backdrop-blur-2xl p-6 rounded-[2rem] border transition-all duration-500 shadow-xl group cursor-pointer hover:shadow-blue-500/10 hover:border-slate-300 active:scale-[0.98] ${isActive ? 'ring-2 ring-blue-500/50 border-transparent bg-slate-50' : 'border-slate-200'}`}
+        className={`${baseClasses} cursor-pointer active:scale-[0.98] ${isActive ? 'ring-2 ring-blue-500/50 bg-blue-50/50' : ''}`}
       >
+        {glow}
         {content}
       </button>
     );
   }
 
   return (
-    <div className="w-full text-left bg-white backdrop-blur-2xl p-6 rounded-[2rem] border border-slate-200 transition-all duration-500 shadow-xl flex items-center space-x-5">
-      <div className={`p-3.5 rounded-2xl shadow-lg ${color}`}>
-        <Icon className="w-6 h-6 text-white" />
-      </div>
-      <div>
-        <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider leading-none mb-2">{label}</p>
-        <p className="text-3xl font-bold text-slate-900 leading-none tracking-tight">{value}</p>
-      </div>
+    <div className={baseClasses}>
+      {glow}
+      {content}
     </div>
   );
 }
@@ -135,8 +134,8 @@ export default function DashboardStats({
               </div>
               Procedures Assigned to You
             </h3>
-            <button onClick={() => setShowToCompletePanel(false)} className="p-2 bg-white hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-900 transition-all shadow-sm border border-slate-200">
-              <X className="w-4 h-4" />
+            <button aria-label="Close assigned procedures panel" onClick={() => setShowToCompletePanel(false)} className="p-2 bg-white hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-900 transition-all shadow-sm border border-slate-200">
+              <X className="w-4 h-4" aria-hidden="true" />
             </button>
           </div>
           <div className="p-8">
@@ -191,8 +190,8 @@ export default function DashboardStats({
               </div>
               Procedures Awaiting Sign-off
             </h3>
-            <button onClick={() => setShowPendingPanel(false)} className="p-2 bg-white hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-900 transition-all shadow-sm border border-slate-200">
-              <X className="w-4 h-4" />
+            <button aria-label="Close pending review panel" onClick={() => setShowPendingPanel(false)} className="p-2 bg-white hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-900 transition-all shadow-sm border border-slate-200">
+              <X className="w-4 h-4" aria-hidden="true" />
             </button>
           </div>
           <div className="p-8">

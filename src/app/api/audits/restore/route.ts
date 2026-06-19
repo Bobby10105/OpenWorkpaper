@@ -127,7 +127,7 @@ export async function POST(req: Request) {
 
       const groupMap = new Map<string, string>();
       const teamMemberMap = new Map<string, string>();
-      const uploadDir = path.join(process.cwd(), 'public/uploads');
+      const uploadDir = path.join(process.cwd(), 'storage/uploads');
       await fs.mkdir(uploadDir, { recursive: true });
 
       // 2. Create Team Members (needed for procedure assignments)

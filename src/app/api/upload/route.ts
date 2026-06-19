@@ -61,7 +61,7 @@ export async function POST(req: Request) {
     const uniqueSuffix = crypto.randomUUID();
     const safeFilename = filenameAttr.replace(/[^a-zA-Z0-9.-]/g, '_');
     const diskFilename = `${uniqueSuffix}-${safeFilename}`;
-    const uploadDir = path.join(process.cwd(), 'public/uploads');
+    const uploadDir = path.join(process.cwd(), 'storage/uploads');
     const filepath = path.join(uploadDir, diskFilename);
 
     await fs.mkdir(uploadDir, { recursive: true });
@@ -76,7 +76,7 @@ export async function POST(req: Request) {
       if (!audit) return NextResponse.json({ error: 'Audit not found' }, { status: 404 });
 
       if (audit.milestoneAttachmentUrl) {
-        try { await fs.unlink(path.join(process.cwd(), 'public', audit.milestoneAttachmentUrl)); } catch { /* ignore */ }
+        try { await fs.unlink(path.join(process.cwd(), 'storage', audit.milestoneAttachmentUrl)); } catch { /* ignore */ }
       }
 
       const updated = await prisma.audit.update({
@@ -111,7 +111,7 @@ export async function POST(req: Request) {
       if (!audit) return NextResponse.json({ error: 'Audit not found' }, { status: 404 });
 
       if (audit.pbcAttachmentUrl) {
-        try { await fs.unlink(path.join(process.cwd(), 'public', audit.pbcAttachmentUrl)); } catch { /* ignore */ }
+        try { await fs.unlink(path.join(process.cwd(), 'storage', audit.pbcAttachmentUrl)); } catch { /* ignore */ }
       }
 
       const updated = await prisma.audit.update({

@@ -1,47 +1,38 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 import bcrypt from 'bcryptjs';
+import path from 'path';
 
-const dbUrl = process.env.DATABASE_URL || 'file:prisma/data/dev.db';
+const dbUrl = process.env.DATABASE_URL || 'file:./prisma/data/dev.db';
+const dbPath = dbUrl.replace(/^file:/, '');
 const sqliteInput = {
-  url: dbUrl.replace(/^file:/, '')
+  url: path.resolve(process.cwd(), dbPath)
 };
 const adapter = new PrismaBetterSqlite3(sqliteInput);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  const hashedPassword = await bcrypt.hash('admin', 10);
+  console.log('Running safe admin seed...');
+  const hashedPassword = await bcrypt.hash('password123', 10);
 
-  await prisma.user.upsert({
-    where: { username: 'it.admin' },
-    update: {
-      password: hashedPassword,
-      mustChangePassword: true,
-    },
-    create: {
-      username: 'it.admin',
-      password: hashedPassword,
-      role: 'IT Administrator',
-      mustChangePassword: true, // Force change on first login
-    },
-  });
+  const admins = [
+    { username: 'it.admin', role: 'IT Administrator', fullName: 'IT Admin', email: 'it.admin@example.com' },
+    { username: 'biz.ops', role: 'Business Operations', fullName: 'Biz Ops', email: 'biz.ops@example.com' }
+  ];
 
-  await prisma.user.upsert({
-    where: { username: 'biz.ops' },
-    update: {
-      password: hashedPassword,
-      mustChangePassword: true,
-    },
-    create: {
-      username: 'biz.ops',
-      password: hashedPassword,
-      role: 'Business Operations',
-      mustChangePassword: true, // Force change on first login
-    },
-  });
-
-  const userCount = await prisma.user.count();
-  console.log(`Seed data created/updated successfully. Total users: ${userCount}`);
+  for (const admin of admins) {
+    const user = await prisma.user.upsert({
+      where: { username: admin.username },
+      update: {},
+      create: {
+        username: admin.username,
+        password: hashedPassword,
+        role: admin.role,
+        mustChangePassword: false,
+      }
+    });
+    console.log(`Ensured user: ${user.username} | Role: ${user.role}`);
+  }
 }
 
 main()

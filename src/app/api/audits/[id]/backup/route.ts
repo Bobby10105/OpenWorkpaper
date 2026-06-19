@@ -3,13 +3,25 @@ import { prisma } from '@/lib/prisma';
 import fs from 'fs/promises';
 import path from 'path';
 import JSZip from 'jszip';
+import { getSession } from '@/lib/auth';
+import { canAccessAudit } from '@/lib/audit-access';
 
 export async function GET(
   _req: Request, 
   props: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getSession();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const params = await props.params;
+    const allowed = await canAccessAudit(session.user, params.id);
+    if (!allowed) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const audit = await prisma.audit.findUnique({
       where: { id: params.id },
       include: {
@@ -44,7 +56,7 @@ export async function GET(
     // Add audit data as JSON
     zip.file('audit_data.json', JSON.stringify(audit, null, 2));
 
-    const publicDir = path.join(process.cwd(), 'public');
+    const publicDir = path.join(process.cwd(), 'storage');
 
     // Add milestone attachment if exists
     if (audit.milestoneAttachmentUrl) {
