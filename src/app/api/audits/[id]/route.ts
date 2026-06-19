@@ -151,11 +151,11 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
   // 2. Fetch procedure groups and ungrouped procedures
   const { procedureGroups, procedures } = await getAuditProcedures(audit.id);
 
-    return NextResponse.json({
-      ...audit,
-      procedureGroups,
-      procedures
-    });
+  return NextResponse.json({
+    ...audit,
+    procedureGroups,
+    procedures
+  });
   } catch (error) {
     console.error('[GET /api/audits/:id] Error:', error);
     return NextResponse.json({ error: 'Failed to fetch audit details' }, { status: 500 });
@@ -242,19 +242,15 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
       
       // Let's at least handle the pbc fields if they are present in updateData
       if ('pbcAttachmentUrl' in updateData || 'pbcAttachmentName' in updateData) {
-        await prisma.$executeRawUnsafe(
-          `UPDATE Audit SET pbcAttachmentUrl = ?, pbcAttachmentName = ? WHERE id = ?`,
-          updateData.pbcAttachmentUrl,
-          updateData.pbcAttachmentName,
-          params.id
-        );
+        await prisma.$executeRaw`
+          UPDATE Audit SET pbcAttachmentUrl = ${updateData.pbcAttachmentUrl ?? null}, pbcAttachmentName = ${updateData.pbcAttachmentName ?? null} WHERE id = ${params.id}
+        `;
       }
       
       // Re-fetch to get current state (using raw to be safe)
-      const rawAudits: Audit[] = await prisma.$queryRawUnsafe(
-        `SELECT * FROM Audit WHERE id = ? LIMIT 1`,
-        params.id
-      );
+      const rawAudits: Audit[] = await prisma.$queryRaw`
+        SELECT * FROM Audit WHERE id = ${params.id} LIMIT 1
+      `;
       audit = rawAudits[0];
     }
 
