@@ -79,7 +79,7 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
 
       // Create new groups and procedures
       if (groups && Array.isArray(groups)) {
-        for (const [gIndex, g] of groups.entries()) {
+        await Promise.all(groups.map(async (g, gIndex) => {
           const group = await tx.templateGroup.create({
             data: {
               templateId: params.id,
@@ -101,7 +101,7 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
               }))
             });
           }
-        }
+        }));
       }
 
       // Fetch and return the fully populated template
