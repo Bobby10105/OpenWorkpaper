@@ -79,27 +79,88 @@ describe('audit-access', () => {
   });
 
   describe('canAccessAttachment', () => {
-    it('returns false if attachment does not exist', async () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it('should return false if attachment is not found', async () => {
       vi.mocked(prisma.attachment.findUnique).mockResolvedValue(null);
-      const result = await canAccessAttachment({ id: '1', role: 'User' }, 'att-1');
+      const user: SessionUserLike = { id: 'user1', role: 'Staff' };
+      const result = await canAccessAttachment(user, 'attachment1');
+      expect(result).toBe(false);
+      expect(prisma.attachment.findUnique).toHaveBeenCalledWith({
+        where: { id: 'attachment1' },
+        include: {
+          procedure: {
+            select: { auditId: true },
+          },
+        },
+      });
+    });
+
+    it('should return false if attachment has no procedure', async () => {
+      // @ts-ignore
+      vi.mocked(prisma.attachment.findUnique).mockResolvedValue({
+        id: 'attachment1',
+        procedure: null,
+      });
+      const user: SessionUserLike = { id: 'user1', role: 'Staff' };
+      const result = await canAccessAttachment(user, 'attachment1');
       expect(result).toBe(false);
     });
 
-    it('returns false if attachment has no procedure or auditId', async () => {
-      vi.mocked(prisma.attachment.findUnique).mockResolvedValue({ procedure: null } as any);
-      const result = await canAccessAttachment({ id: '1', role: 'User' }, 'att-1');
+    it('should return false if procedure has no auditId', async () => {
+      // @ts-ignore
+      vi.mocked(prisma.attachment.findUnique).mockResolvedValue({
+        id: 'attachment1',
+        procedure: { auditId: null },
+      });
+      const user: SessionUserLike = { id: 'user1', role: 'Staff' };
+      const result = await canAccessAttachment(user, 'attachment1');
       expect(result).toBe(false);
     });
 
-    it('delegates to canAccessAudit if attachment exists with auditId', async () => {
-      vi.mocked(prisma.attachment.findUnique).mockResolvedValue({ procedure: { auditId: 'audit-1' } } as any);
-      vi.mocked(prisma.teamMember.findFirst).mockResolvedValue({ id: 'member-1' } as any);
-      const result = await canAccessAttachment({ id: '1', role: 'User' }, 'att-1');
+    it('should return true if user has global audit access', async () => {
+      // @ts-ignore
+      vi.mocked(prisma.attachment.findUnique).mockResolvedValue({
+        id: 'attachment1',
+        procedure: { auditId: 'audit1' },
+      });
+      const user: SessionUserLike = { id: 'user1', role: 'Business Operations' };
+      const result = await canAccessAttachment(user, 'attachment1');
+      expect(result).toBe(true);
+    });
+
+    it('should return true if user is a team member for the audit', async () => {
+      // @ts-ignore
+      vi.mocked(prisma.attachment.findUnique).mockResolvedValue({
+        id: 'attachment1',
+        procedure: { auditId: 'audit1' },
+      });
+      // @ts-ignore
+      vi.mocked(prisma.teamMember.findFirst).mockResolvedValue({ id: 'membership1' });
+      const user: SessionUserLike = { id: 'user1', role: 'Staff' };
+      const result = await canAccessAttachment(user, 'attachment1');
       expect(result).toBe(true);
       expect(prisma.teamMember.findFirst).toHaveBeenCalledWith({
-        where: { auditId: 'audit-1', userId: '1' },
+        where: {
+          auditId: 'audit1',
+          userId: 'user1',
+        },
         select: { id: true },
       });
+    });
+
+    it('should return false if user is not a team member and has no global access', async () => {
+      // @ts-ignore
+      vi.mocked(prisma.attachment.findUnique).mockResolvedValue({
+        id: 'attachment1',
+        procedure: { auditId: 'audit1' },
+      });
+      vi.mocked(prisma.teamMember.findFirst).mockResolvedValue(null);
+      const user: SessionUserLike = { id: 'user1', role: 'Staff' };
+      const result = await canAccessAttachment(user, 'attachment1');
+      expect(result).toBe(false);
     });
   });
 });
