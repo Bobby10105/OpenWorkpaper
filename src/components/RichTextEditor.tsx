@@ -15,6 +15,33 @@ interface RichTextEditorProps {
   placeholder?: string;
 }
 
+const MenuButton = ({
+  onClick,
+  disabled,
+  isActive,
+  title,
+  children,
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+  isActive?: boolean;
+  title: string;
+  children: React.ReactNode;
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    disabled={disabled}
+    className={`p-2 rounded hover:bg-gray-200 transition-colors ${
+      isActive ? 'bg-gray-200 text-blue-600' : 'text-gray-600'
+    } disabled:opacity-30`}
+    title={title}
+    aria-label={title}
+  >
+    {children}
+  </button>
+);
+
 const MenuBar = ({ editor }: { editor: Editor | null }) => {
   if (!editor) {
     return null;
@@ -22,68 +49,59 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
 
   return (
     <div className="flex flex-wrap gap-2 p-2 border-b border-gray-100 bg-gray-50/50 rounded-t-xl transition-all">
-      <button
-        type="button"
+      <MenuButton
         onClick={() => editor.chain().focus().toggleBold().run()}
         disabled={!editor.can().chain().focus().toggleBold().run()}
-        className={`p-2 rounded hover:bg-gray-200 transition-colors ${editor.isActive('bold') ? 'bg-gray-200 text-blue-600' : 'text-gray-600'}`}
+        isActive={editor.isActive('bold')}
         title="Bold"
       >
         <Bold className="w-4 h-4" />
-      </button>
-      <button
-        type="button"
+      </MenuButton>
+      <MenuButton
         onClick={() => editor.chain().focus().toggleItalic().run()}
         disabled={!editor.can().chain().focus().toggleItalic().run()}
-        className={`p-2 rounded hover:bg-gray-200 transition-colors ${editor.isActive('italic') ? 'bg-gray-200 text-blue-600' : 'text-gray-600'}`}
+        isActive={editor.isActive('italic')}
         title="Italic"
       >
         <Italic className="w-4 h-4" />
-      </button>
-      <button
-        type="button"
+      </MenuButton>
+      <MenuButton
         onClick={() => editor.chain().focus().toggleUnderline().run()}
-        className={`p-2 rounded hover:bg-gray-200 transition-colors ${editor.isActive('underline') ? 'bg-gray-200 text-blue-600' : 'text-gray-600'}`}
+        isActive={editor.isActive('underline')}
         title="Underline"
       >
         <UnderlineIcon className="w-4 h-4" />
-      </button>
+      </MenuButton>
       <div className="w-px h-6 bg-gray-200 mx-1 self-center" />
-      <button
-        type="button"
+      <MenuButton
         onClick={() => editor.chain().focus().toggleBulletList().run()}
-        className={`p-2 rounded hover:bg-gray-200 transition-colors ${editor.isActive('bulletList') ? 'bg-gray-200 text-blue-600' : 'text-gray-600'}`}
+        isActive={editor.isActive('bulletList')}
         title="Bullet List"
       >
         <List className="w-4 h-4" />
-      </button>
-      <button
-        type="button"
+      </MenuButton>
+      <MenuButton
         onClick={() => editor.chain().focus().toggleOrderedList().run()}
-        className={`p-2 rounded hover:bg-gray-200 transition-colors ${editor.isActive('orderedList') ? 'bg-gray-200 text-blue-600' : 'text-gray-600'}`}
+        isActive={editor.isActive('orderedList')}
         title="Ordered List"
       >
         <ListOrdered className="w-4 h-4" />
-      </button>
+      </MenuButton>
       <div className="w-px h-6 bg-gray-200 mx-1 self-center" />
-      <button
-        type="button"
+      <MenuButton
         onClick={() => editor.chain().focus().undo().run()}
         disabled={!editor.can().chain().focus().undo().run()}
-        className="p-2 rounded hover:bg-gray-200 transition-colors text-gray-600 disabled:opacity-30"
         title="Undo"
       >
         <Undo className="w-4 h-4" />
-      </button>
-      <button
-        type="button"
+      </MenuButton>
+      <MenuButton
         onClick={() => editor.chain().focus().redo().run()}
         disabled={!editor.can().chain().focus().redo().run()}
-        className="p-2 rounded hover:bg-gray-200 transition-colors text-gray-600 disabled:opacity-30"
         title="Redo"
       >
         <Redo className="w-4 h-4" />
-      </button>
+      </MenuButton>
     </div>
   );
 };
