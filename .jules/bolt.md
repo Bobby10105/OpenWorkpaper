@@ -1,0 +1,1 @@
+## 2024-06-19 - Code Refactoring & Lock Files \n**Learning:** When using `pnpm` commands locally, it can inadvertently modify `pnpm-lock.yaml`. This should not be committed during code-health refactors unless intended.\n**Action:** Always check `git status` before submitting to ensure only intended files are tracked and avoid checking in unwanted `pnpm-lock.yaml` updates.
