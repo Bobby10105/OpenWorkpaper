@@ -9,6 +9,7 @@
     "build": "next build --debug-prerender",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
     "seed:demo": "tsx prisma/seed.ts"
   },
   "dependencies": {
@@ -61,7 +62,8 @@
     "prisma": "7.8.0",
     "tailwindcss": "^4",
     "tsx": "^4.22.4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.9"
   },
   "overrides": {
     "postcss": "8.5.14",
