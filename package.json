@@ -9,7 +9,8 @@
     "build": "next build --debug-prerender",
     "start": "next start",
     "lint": "eslint",
-    "seed:demo": "tsx prisma/seed.ts"
+    "seed:demo": "tsx prisma/seed.ts",
+    "test": "vitest run"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "7.8.0",
@@ -54,6 +55,7 @@
     "@types/papaparse": "^5.5.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^4.1.9",
     "dotenv": "^17.3.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
@@ -61,7 +63,9 @@
     "prisma": "7.8.0",
     "tailwindcss": "^4",
     "tsx": "^4.22.4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.9",
+    "vitest-mock-extended": "^4.0.0"
   },
   "overrides": {
     "postcss": "8.5.14",
