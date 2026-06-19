@@ -42,6 +42,30 @@ export async function GET(req: Request) {
   }
 }
 
+async function getNextProcedureOrder(auditId: string, phase: string, groupId: string | null) {
+  const aggregate = await prisma.procedure.aggregate({
+    where: { auditId, phase, groupId },
+    _max: { displayOrder: true }
+  });
+  return (aggregate._max.displayOrder || 0) + 1;
+}
+
+async function logProcedureCreation(procedureId: string, title: string, username: string) {
+  try {
+    await prisma.auditLog.create({
+      data: {
+        action: 'CREATE',
+        entityType: 'PROCEDURE',
+        entityId: procedureId,
+        details: `Created new procedure: ${title}`,
+        performedBy: username,
+      }
+    });
+  } catch {
+    // ignore log errors
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const session = await getSession();
@@ -57,12 +81,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const aggregate = await prisma.procedure.aggregate({
-      where: { auditId, phase, groupId: groupId || null },
-      _max: { displayOrder: true }
-    });
-    
-    const nextOrder = (aggregate._max.displayOrder || 0) + 1;
+    const nextOrder = await getNextProcedureOrder(auditId, phase, groupId || null);
 
     const procedure = await prisma.procedure.create({
       data: {
@@ -76,19 +95,7 @@ export async function POST(req: Request) {
       }
     });
 
-    try {
-      await prisma.auditLog.create({
-        data: {
-          action: 'CREATE',
-          entityType: 'PROCEDURE',
-          entityId: procedure.id,
-          details: `Created new procedure: ${procedure.title}`,
-          performedBy: session.user.username,
-        }
-      });
-    } catch {
-      // ignore log errors
-    }
+    await logProcedureCreation(procedure.id, procedure.title || 'New Procedure', session.user.username);
 
     return NextResponse.json(procedure);
   } catch (error: unknown) {
