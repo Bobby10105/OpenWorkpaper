@@ -10,3 +10,7 @@
 ## 2025-06-19 - Testing Prisma with Vitest
 **Learning:** Testing code that uses Prisma nested relational includes (`include: { procedure: { select: { auditId: true } } }`) requires returning a mocked object that precisely matches the deeply nested structure expected by the code.
 **Action:** When mocking Prisma's `findUnique` or `findFirst` methods that use `include` or `select`, construct the mock return value to contain the exact nested object properties rather than flat data.
+
+## 2026-06-19 - Testing Next.js Route Handlers With Cookies
+**Learning:** When writing Vitest tests for code that manipulates cookies through Next.js `next/headers`, `cookies()` must be mocked. Environment variables shouldn't be manipulated directly on the `process.env` object replacing its whole reference.
+**Action:** Use `vi.mock('next/headers')` and `vi.stubEnv()`/`vi.unstubAllEnvs()` to correctly test and manipulate environmental factors without detaching `process.env`.
