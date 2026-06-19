@@ -4,6 +4,21 @@ import { useState, useRef } from 'react';
 import { RotateCcw, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+async function uploadRestoreFile(file: File): Promise<void> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const res = await fetch('/api/audits/restore', {
+    method: 'POST',
+    body: formData, // Send as multipart/form-data
+  });
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(`Failed to restore audit: ${errData.error || 'Unknown error'}`);
+  }
+}
+
 export default function RestoreAuditButton() {
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -15,21 +30,9 @@ export default function RestoreAuditButton() {
 
     setLoading(true);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      const res = await fetch('/api/audits/restore', {
-        method: 'POST',
-        body: formData, // Send as multipart/form-data
-      });
-
-      if (res.ok) {
-        router.refresh();
-        alert('Audit restored successfully. Refresh your dashboard to see the new entry.');
-      } else {
-        const errData = await res.json().catch(() => ({}));
-        alert(`Failed to restore audit: ${errData.error || 'Unknown error'}`);
-      }
+      await uploadRestoreFile(file);
+      router.refresh();
+      alert('Audit restored successfully. Refresh your dashboard to see the new entry.');
     } catch (err: unknown) {
       console.error('Restore error:', err);
       const message = err instanceof Error ? err.message : 'Connection error during restore';

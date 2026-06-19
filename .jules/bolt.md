@@ -38,3 +38,7 @@
 ## 2025-02-18 - Avoid unintended lockfile commits
 **Learning:** Running `pnpm install` during regular code changes might generate a `pnpm-lock.yaml` file if it was missing or change it unintentionally.
 **Action:** Always check `git status` after installing dependencies or running tools, and use `git restore` and `rm` to remove unrequested lockfiles before committing.
+
+## 2025-03-01 - Avoid lockfile pollution
+**Learning:** Running `pnpm install` can update lockfiles implicitly. Unrelated lockfile changes should not be included in a PR unless dependencies are actually changed.
+**Action:** When working on code refactors, always make sure to checkout or reset any changes in `pnpm-lock.yaml` if no new dependencies were explicitly added, before running git status or creating commits.
