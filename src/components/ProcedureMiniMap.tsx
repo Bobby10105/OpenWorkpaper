@@ -2,7 +2,45 @@
 
 import React from 'react';
 import { ChevronRight, CheckCircle2, Circle, Clock, ChevronDown } from 'lucide-react';
-import type { ProcedureGroupWithRelations } from '@/lib/types';
+import type { ProcedureGroupWithRelations, ProcedureWithRelations } from '@/lib/types';
+
+interface ProcedureItemProps {
+  proc: ProcedureWithRelations;
+  phaseNum: number;
+  groupIndex: number;
+  procIndex: number;
+}
+
+function ProcedureItem({ proc, phaseNum, groupIndex, procIndex }: ProcedureItemProps) {
+  const isCompleted = !!(proc.preparedDate && proc.reviewedDate);
+  const isAwaitingReview = !!(proc.preparedDate && !proc.reviewedDate);
+  const getLetter = (index: number) => String.fromCharCode(97 + index);
+
+  const getStatusIcon = () => {
+    if (isCompleted) return <CheckCircle2 className="w-3 h-3 text-blue-600" />;
+    if (isAwaitingReview) return <Clock className="w-3 h-3 text-emerald-500" />;
+    return <Circle className="w-3 h-3 text-slate-300" />;
+  };
+
+  return (
+    <a
+      href={`#proc-${phaseNum}.${groupIndex + 1}.${getLetter(procIndex)}`}
+      className="w-full flex items-center rounded-xl hover:bg-blue-50 transition-all group p-2"
+    >
+      <div className="w-6 flex justify-center z-10">
+        {getStatusIcon()}
+      </div>
+      <div className="flex items-center min-w-0 space-x-2">
+        <span className="text-[9px] font-bold text-slate-400 w-4">
+          {getLetter(procIndex)}
+        </span>
+        <span className="text-[11px] font-bold text-slate-600 group-hover:text-blue-600 truncate transition-colors">
+          {proc.title || 'Untitled'}
+        </span>
+      </div>
+    </a>
+  );
+}
 
 interface ProcedureMiniMapProps {
   procedureGroups: ProcedureGroupWithRelations[];
@@ -57,37 +95,15 @@ export default function ProcedureMiniMap({
               <div className="space-y-1 relative pl-5">
                 <div className="absolute left-[24px] top-0 bottom-0 w-px bg-slate-100" />
                 
-                {group.procedures.map((proc, procIndex) => {
-                  const isCompleted = !!(proc.preparedDate && proc.reviewedDate);
-                  const isAwaitingReview = !!(proc.preparedDate && !proc.reviewedDate);
-                  const getLetter = (index: number) => String.fromCharCode(97 + index);
-                  
-                  const getStatusIcon = () => {
-                    if (isCompleted) return <CheckCircle2 className="w-3 h-3 text-blue-600" />;
-                    if (isAwaitingReview) return <Clock className="w-3 h-3 text-emerald-500" />;
-                    return <Circle className="w-3 h-3 text-slate-300" />;
-                  };
-
-                  return (
-                    <a
-                      key={proc.id}
-                      href={`#proc-${phaseNum}.${groupIndex + 1}.${getLetter(procIndex)}`}
-                      className="w-full flex items-center rounded-xl hover:bg-blue-50 transition-all group p-2"
-                    >
-                      <div className="w-6 flex justify-center z-10">
-                        {getStatusIcon()}
-                      </div>
-                      <div className="flex items-center min-w-0 space-x-2">
-                        <span className="text-[9px] font-bold text-slate-400 w-4">
-                          {getLetter(procIndex)}
-                        </span>
-                        <span className="text-[11px] font-bold text-slate-600 group-hover:text-blue-600 truncate transition-colors">
-                          {proc.title || 'Untitled'}
-                        </span>
-                      </div>
-                    </a>
-                  );
-                })}
+                {group.procedures.map((proc, procIndex) => (
+                  <ProcedureItem
+                    key={proc.id}
+                    proc={proc}
+                    phaseNum={phaseNum}
+                    groupIndex={groupIndex}
+                    procIndex={procIndex}
+                  />
+                ))}
               </div>
             </div>
           ))}
