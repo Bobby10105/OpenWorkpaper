@@ -25,16 +25,12 @@ export default function ExportAuditButton({ audit }: { audit: AuditWithRelations
     if (!html) return '';
 
     // Parse as HTML and extract text content to avoid incomplete regex-based sanitization.
+    // The browser's DOMParser automatically decodes HTML entities.
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
     const extractedText = doc.body.textContent || '';
 
-    // Decode unknown remaining HTML entities safely via the browser parser.
-    const textarea = document.createElement('textarea');
-    textarea.innerHTML = extractedText;
-    const decodedText = textarea.value;
-
-    return decodedText.replace(/\s+/g, ' ').trim();
+    return extractedText.replace(/\s+/g, ' ').trim();
   };
 
   const addProcedureDetails = (sections: (Paragraph | Table)[], p: ProcedureWithRelations) => {
