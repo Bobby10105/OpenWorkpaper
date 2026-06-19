@@ -1,0 +1,3 @@
+## 2024-06-19 - Safe Refactoring and Truncated Reads
+**Learning:** When using `read_file`, `cat`, or `grep`, output can sometimes be truncated. This can lead to hallucinated assumptions about the unread portion of the code. Also, running `pnpm install` might generate new files like `pnpm-lock.yaml` which shouldn't be included in the PR if they weren't explicitly requested or part of the tracked repo.
+**Action:** Always verify if file output is complete. If truncated, use tools like `sed` or `tail` to read the rest of the file before planning refactoring steps. Always run `git status` before committing to ensure no unintended files are included.
