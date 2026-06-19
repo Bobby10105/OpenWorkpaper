@@ -3,11 +3,11 @@ import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
 const secretValue = process.env.JWT_SECRET;
-if (!secretValue && process.env.NODE_ENV === 'production') {
-  throw new Error('[Auth] JWT_SECRET must be set in production.');
+if (!secretValue) {
+  throw new Error('[Auth] JWT_SECRET must be set.');
 }
 
-const secretKey = new TextEncoder().encode(secretValue || 'fallback-secret-for-dev-only');
+const secretKey = new TextEncoder().encode(secretValue);
 const SESSION_DURATION = parseInt(process.env.SESSION_DURATION_SECONDS || '3600', 10); // Default 1 hour
 
 export async function encrypt(payload: JWTPayload) {
