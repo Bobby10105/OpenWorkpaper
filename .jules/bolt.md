@@ -54,3 +54,7 @@
 ## 2026-06-19 - Avoiding Committing Lockfiles
 **Learning:** Running `pnpm install` can inadvertently generate a massive lockfile, polluting a small PR.
 **Action:** Use `git status` before committing and run `git restore --staged pnpm-lock.yaml` and delete it if it is unintentionally generated.
+
+## 2024-06-19 - Code Refactoring & Lock Files
+**Learning:** When using `pnpm` commands locally, it can inadvertently modify `pnpm-lock.yaml`. This should not be committed during code-health refactors unless intended.
+**Action:** Always check `git status` before submitting to ensure only intended files are tracked and avoid checking in unwanted `pnpm-lock.yaml` updates.
