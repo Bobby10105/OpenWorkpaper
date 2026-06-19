@@ -1,4 +1,4 @@
-import { login, encrypt, decrypt } from '../auth';
+import { login, encrypt, decrypt, logout } from '../auth';
 import { cookies } from 'next/headers';
 import { vi, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import { SignJWT } from 'jose';
@@ -159,5 +159,78 @@ describe('Auth - JWT encryption and decryption', () => {
     await expect(decrypt(expiredToken)).rejects.toThrowError(
       'Session has expired.'
     );
+  });
+});
+
+describe('Auth - logout', () => {
+  const originalEnv = process.env;
+  let mockSet: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.resetModules();
+    process.env = { ...originalEnv };
+
+    mockSet = vi.fn();
+    (cookies as ReturnType<typeof vi.fn>).mockResolvedValue({
+      set: mockSet,
+    });
+  });
+
+  afterAll(() => {
+    process.env = originalEnv;
+  });
+
+  it('should set an empty session cookie with expiration in the past', async () => {
+    await logout();
+
+    expect(cookies).toHaveBeenCalled();
+    expect(mockSet).toHaveBeenCalledWith('session', '', expect.objectContaining({
+      expires: new Date(0),
+      path: '/',
+    }));
+  });
+
+  it('should not set secure flag when not in production', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.NEXT_PUBLIC_BASE_URL = 'http://localhost:3000';
+
+    await logout();
+
+    expect(mockSet).toHaveBeenCalledWith('session', '', expect.objectContaining({
+      secure: false,
+    }));
+  });
+
+  it('should not set secure flag in production if URL is not https', async () => {
+    process.env.NODE_ENV = 'production';
+    process.env.NEXT_PUBLIC_BASE_URL = 'http://example.com';
+
+    await logout();
+
+    expect(mockSet).toHaveBeenCalledWith('session', '', expect.objectContaining({
+      secure: false,
+    }));
+  });
+
+  it('should set secure flag in production with https URL', async () => {
+    process.env.NODE_ENV = 'production';
+    process.env.NEXT_PUBLIC_BASE_URL = 'https://example.com';
+
+    await logout();
+
+    expect(mockSet).toHaveBeenCalledWith('session', '', expect.objectContaining({
+      secure: true,
+    }));
+  });
+
+  it('should handle undefined NEXT_PUBLIC_BASE_URL gracefully in production', async () => {
+    process.env.NODE_ENV = 'production';
+    delete process.env.NEXT_PUBLIC_BASE_URL;
+
+    await logout();
+
+    expect(mockSet).toHaveBeenCalledWith('session', '', expect.objectContaining({
+      secure: false,
+    }));
   });
 });
