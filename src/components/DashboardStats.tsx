@@ -26,6 +26,15 @@ interface DashboardStatsProps {
   toCompleteAudits: PendingAudit[];
 }
 
+interface StatCardProps {
+  label: string;
+  value: string | number;
+  icon: React.ElementType;
+  color: string;
+  onClick?: () => void;
+  isActive?: boolean;
+}
+
 function StatCard({ 
   label, 
   value, 
@@ -33,14 +42,7 @@ function StatCard({
   color, 
   onClick, 
   isActive 
-}: { 
-  label: string, 
-  value: string | number, 
-  icon: React.ElementType, 
-  color: string,
-  onClick?: () => void,
-  isActive?: boolean
-}) {
+}: StatCardProps) {
   const content = (
     <div className="relative flex items-center space-x-5 z-10">
       <div className={`p-3.5 rounded-2xl transition-all duration-500 group-hover:scale-110 shadow-[0_0_20px_rgb(59,130,246,0.2)] border border-white/20 ${color}`}>
@@ -61,23 +63,17 @@ function StatCard({
   const baseClasses = "relative w-full text-left bg-white/70 backdrop-blur-xl p-6 rounded-[2rem] border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(59,130,246,0.1)] transition-all duration-500 overflow-hidden group";
   const glow = <div className="absolute -inset-10 bg-blue-500/10 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />;
 
-  if (onClick) {
-    return (
-      <button 
-        onClick={onClick}
-        className={`${baseClasses} cursor-pointer active:scale-[0.98] ${isActive ? 'ring-2 ring-blue-500/50 bg-blue-50/50' : ''}`}
-      >
-        {glow}
-        {content}
-      </button>
-    );
-  }
+  const Component = onClick ? 'button' : 'div';
+  const interactionClasses = onClick ? `cursor-pointer active:scale-[0.98] ${isActive ? 'ring-2 ring-blue-500/50 bg-blue-50/50' : ''}` : '';
 
   return (
-    <div className={baseClasses}>
+    <Component
+      onClick={onClick}
+      className={`${baseClasses} ${interactionClasses}`}
+    >
       {glow}
       {content}
-    </div>
+    </Component>
   );
 }
 
