@@ -214,7 +214,7 @@ async function main() {
           const safeFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
           const diskFilename = `${uniqueSuffix}-${safeFilename}`;
           
-          const uploadDir = path.join(process.cwd(), 'public/uploads');
+          const uploadDir = path.join(process.cwd(), 'storage/uploads');
           const filepath = path.join(uploadDir, diskFilename);
           const dbFilepath = `/uploads/${diskFilename}`;
           

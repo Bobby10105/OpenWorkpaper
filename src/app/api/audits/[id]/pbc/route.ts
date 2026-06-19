@@ -29,7 +29,7 @@ export async function GET(
       return NextResponse.json({ error: 'PBC attachment not found' }, { status: 404 });
     }
 
-    const filepath = path.join(process.cwd(), 'public', audit.pbcAttachmentUrl);
+    const filepath = path.join(process.cwd(), 'storage', audit.pbcAttachmentUrl);
     const fileBuffer = await fs.readFile(filepath);
     
     // Determine content type based on extension

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 import { canAccessProcedure } from '@/lib/audit-access';
+import DOMPurify from 'isomorphic-dompurify';
 
 export async function GET(
   _req: Request, 
@@ -57,6 +58,22 @@ export async function PUT(
 
     const data = await req.json();
 
+    const existing = await prisma.procedure.findUnique({
+      where: { id: params.id },
+      select: { reviewedBy: true, reviewedDate: true },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: 'Procedure not found' }, { status: 404 });
+    }
+
+    const isLocked = !!(existing.reviewedBy && existing.reviewedDate);
+    if (isLocked) {
+      return NextResponse.json(
+        { error: 'Procedure is locked for review' },
+        { status: 423 }
+      );
+    }
+
     // Map fields from client to Prisma-friendly values
     const updates: Record<string, unknown> = {};
     const stringFields = ['title', 'purpose', 'source', 'scope', 'methodology', 'results', 'conclusions', 'preparedBy', 'reviewedBy', 'status', 'phase'];
@@ -92,6 +109,13 @@ export async function PUT(
     }
     if (updates.reviewedBy && !updates.reviewedDate) {
       updates.reviewedDate = new Date();
+    }
+
+    const RICH_TEXT_FIELDS = ['purpose', 'source', 'scope', 'methodology', 'results', 'conclusions'];
+    for (const field of RICH_TEXT_FIELDS) {
+      if (typeof updates[field] === 'string') {
+        updates[field] = DOMPurify.sanitize(updates[field] as string);
+      }
     }
 
     const procedure = await prisma.procedure.update({

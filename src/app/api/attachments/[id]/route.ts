@@ -30,7 +30,7 @@ export async function GET(
       return NextResponse.json({ error: 'Attachment not found' }, { status: 404 });
     }
 
-    const filepath = path.join(process.cwd(), 'public', attachment.filepath);
+    const filepath = path.join(process.cwd(), 'storage', attachment.filepath);
     const fileBuffer = await fs.readFile(filepath);
     
     return new NextResponse(fileBuffer, {
@@ -77,7 +77,7 @@ export async function PUT(
     }
 
     // Delete old file
-    const oldFilepath = path.join(process.cwd(), 'public', attachment.filepath);
+    const oldFilepath = path.join(process.cwd(), 'storage', attachment.filepath);
     try { await fs.unlink(oldFilepath); } catch { /* ignore */ }
 
     // Save new file
@@ -86,7 +86,7 @@ export async function PUT(
     const uniqueSuffix = crypto.randomUUID();
     const safeFilename = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
     const diskFilename = `${uniqueSuffix}-${safeFilename}`;
-    const uploadDir = path.join(process.cwd(), 'public/uploads');
+    const uploadDir = path.join(process.cwd(), 'storage/uploads');
     const newFilepath = path.join(uploadDir, diskFilename);
 
     await fs.mkdir(uploadDir, { recursive: true });
@@ -177,7 +177,7 @@ export async function DELETE(
     });
 
     if (attachment) {
-      const filepath = path.join(process.cwd(), 'public', attachment.filepath);
+      const filepath = path.join(process.cwd(), 'storage', attachment.filepath);
       try { await fs.unlink(filepath); } catch { /* ignore */ }
       
       await prisma.attachment.delete({

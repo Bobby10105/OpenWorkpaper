@@ -36,12 +36,26 @@ if [ -f "$PRISMA_BIN" ]; then
   echo "Initializing database schema with $PRISMA_BIN..."
   $PRISMA_BIN db push --accept-data-loss
   
-  echo "Seeding database..."
-  $PRISMA_BIN db seed
+  USER_COUNT=$($PRISMA_BIN db execute --stdin <<'SQL' | tail -1
+SELECT COUNT(*) FROM User;
+SQL
+)
+  if [ "$USER_COUNT" = "0" ]; then
+    echo "Empty database detected — running safe admin seed..."
+    node prisma/seed.mjs
+  fi
 else
   echo "WARNING: Prisma binary not found at $PRISMA_BIN. Attempting to use npx prisma..."
   npx prisma db push --accept-data-loss
-  npx prisma db seed
+  
+  USER_COUNT=$(npx prisma db execute --stdin <<'SQL' | tail -1
+SELECT COUNT(*) FROM User;
+SQL
+)
+  if [ "$USER_COUNT" = "0" ]; then
+    echo "Empty database detected — running safe admin seed..."
+    node prisma/seed.mjs
+  fi
 fi
 
 # Start the application

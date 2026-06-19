@@ -8,7 +8,8 @@
     "dev:docker": "docker compose up --build",
     "build": "next build --debug-prerender",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed:demo": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "7.8.0",
@@ -37,6 +38,7 @@
     "picomatch": "4.0.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "sonner": "^2.0.7",
     "sqlite3": "^6.0.1",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
@@ -70,6 +72,6 @@
     "tar": "7.5.16"
   },
   "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "seed": "node prisma/seed.mjs"
   }
 }

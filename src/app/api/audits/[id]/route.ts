@@ -169,7 +169,7 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
       // Delete existing file if any
       const currentAudit = await prisma.audit.findUnique({ where: { id: params.id } });
       if (currentAudit?.milestoneAttachmentUrl) {
-        const fullPath = path.join(process.cwd(), 'public', currentAudit.milestoneAttachmentUrl);
+        const fullPath = path.join(process.cwd(), 'storage', currentAudit.milestoneAttachmentUrl);
         try {
           await fs.unlink(fullPath);
         } catch {
@@ -184,7 +184,7 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
       // Delete existing file if any
       const currentAudit = await prisma.audit.findUnique({ where: { id: params.id } });
       if (currentAudit?.pbcAttachmentUrl) {
-        const fullPath = path.join(process.cwd(), 'public', currentAudit.pbcAttachmentUrl);
+        const fullPath = path.join(process.cwd(), 'storage', currentAudit.pbcAttachmentUrl);
         try {
           await fs.unlink(fullPath);
         } catch {
@@ -276,7 +276,7 @@ export async function DELETE(req: Request, props: { params: Promise<{ id: string
     });
 
     if (audit) {
-      const publicDir = path.join(process.cwd(), 'public');
+      const publicDir = path.join(process.cwd(), 'storage');
       
       // Delete milestone attachment if exists
       if (audit.milestoneAttachmentUrl) {

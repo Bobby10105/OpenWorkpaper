@@ -178,55 +178,68 @@ export default async function DashboardPage() {
     }
   }
 
-  const processedAudits = await Promise.all(audits.map(async (audit) => {
-    const reviewedResults = await prisma.$queryRaw<{ count: bigint }[]>(
-      Prisma.sql`SELECT COUNT(*) as count FROM Procedure 
-      WHERE auditId = ${audit.id} AND reviewedBy IS NOT NULL AND reviewedBy != ''`
-    );
-    const reviewedCount = Number(reviewedResults[0]?.count || 0);
+  let processedAudits = audits.map(a => ({...a, reviewedCount: 0}));
 
-    const pendingResults = await prisma.$queryRaw<{ id: string, auditId: string, title: string | null }[]>(
-      Prisma.sql`SELECT id, auditId, title FROM Procedure 
-      WHERE auditId = ${audit.id} AND preparedBy IS NOT NULL AND preparedBy != '' AND (reviewedBy IS NULL OR reviewedBy = '')`
-    );
-    
-    if (pendingResults.length > 0) {
-      pendingAuditsData.push({
-        id: audit.id,
-        title: audit.title,
-        pendingProcedures: pendingResults.map(p => ({ id: p.id, auditId: p.auditId, title: p.title }))
-      });
-      globalTotalPendingReview += pendingResults.length;
-    }
+  if (audits.length > 0) {
+    const auditIds = audits.map(a => a.id);
 
-    const myTaskResults = await prisma.$queryRaw<{ id: string, auditId: string, title: string | null, assignedToName: string | null }[]>(
-      Prisma.sql`SELECT p.id, p.auditId, p.title, t.name as assignedToName
+    // Batch get reviewed counts
+    const reviewedStats = await prisma.$queryRaw<{ auditId: string, count: bigint }[]>`
+      SELECT auditId, COUNT(*) as count FROM Procedure 
+      WHERE auditId IN (${Prisma.join(auditIds)}) AND reviewedBy IS NOT NULL AND reviewedBy != ''
+      GROUP BY auditId
+    `;
+
+    // Batch get pending procedures
+    const allPendingProcedures = await prisma.$queryRaw<{ id: string, auditId: string, title: string | null }[]>`
+      SELECT id, auditId, title FROM Procedure 
+      WHERE auditId IN (${Prisma.join(auditIds)}) AND preparedBy IS NOT NULL AND preparedBy != '' AND (reviewedBy IS NULL OR reviewedBy = '')
+    `;
+
+    // Batch get my tasks
+    const allMyTasks = await prisma.$queryRaw<{ id: string, auditId: string, title: string | null, assignedToName: string | null }[]>`
+      SELECT p.id, p.auditId, p.title, t.name as assignedToName
        FROM Procedure p 
        LEFT JOIN TeamMember t ON p.assignedToId = t.id
-       WHERE p.auditId = ${audit.id} 
+       WHERE p.auditId IN (${Prisma.join(auditIds)})
          AND (p.preparedBy IS NULL OR p.preparedBy = '') 
-         AND (t.userId = ${userId} OR t.name = ${userMatch} OR t.email = ${userMatch})`
-    );
+         AND (t.userId = ${userId} OR t.name = ${userMatch} OR t.email = ${userMatch})
+    `;
 
-    if (myTaskResults.length > 0) {
-      toCompleteAuditsData.push({
-        id: audit.id,
-        title: audit.title,
-        pendingProcedures: myTaskResults.map(p => ({ 
-          id: p.id, 
-          auditId: p.auditId,
-          title: p.title,
-          assignedTo: { name: p.assignedToName || 'You' }
-        }))
-      });
-      globalTotalToComplete += myTaskResults.length;
-    }
+    processedAudits = audits.map(audit => {
+      const reviewedCount = Number(reviewedStats.find(s => s.auditId === audit.id)?.count || 0);
 
-    globalTotalProcedures += (audit._count?.procedures || 0);
-    globalTotalReviewed += reviewedCount;
+      const pendingResults = allPendingProcedures.filter(p => p.auditId === audit.id);
+      if (pendingResults.length > 0) {
+        pendingAuditsData.push({
+          id: audit.id,
+          title: audit.title,
+          pendingProcedures: pendingResults.map(p => ({ id: p.id, auditId: p.auditId, title: p.title }))
+        });
+        globalTotalPendingReview += pendingResults.length;
+      }
 
-    return { ...audit, reviewedCount };
-  }));
+      const myTaskResults = allMyTasks.filter(p => p.auditId === audit.id);
+      if (myTaskResults.length > 0) {
+        toCompleteAuditsData.push({
+          id: audit.id,
+          title: audit.title,
+          pendingProcedures: myTaskResults.map(p => ({ 
+            id: p.id, 
+            auditId: p.auditId,
+            title: p.title,
+            assignedTo: { name: p.assignedToName || 'You' }
+          }))
+        });
+        globalTotalToComplete += myTaskResults.length;
+      }
+
+      globalTotalProcedures += (audit._count?.procedures || 0);
+      globalTotalReviewed += reviewedCount;
+
+      return { ...audit, reviewedCount };
+    });
+  }
 
   const activeAudits = processedAudits.filter(a => a.status !== 'Completed');
   const completedAudits = processedAudits.filter(a => a.status === 'Completed');

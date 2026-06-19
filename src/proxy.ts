@@ -18,8 +18,7 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/api/login') || 
     pathname.startsWith('/api/auth/sso') ||
     pathname.startsWith('/_next') || 
-    pathname === '/favicon.ico' ||
-    pathname.startsWith('/uploads');
+    pathname === '/favicon.ico';
 
   // If user is logged in and trying to access login page, redirect to home
   if (pathname === '/login' && session) {

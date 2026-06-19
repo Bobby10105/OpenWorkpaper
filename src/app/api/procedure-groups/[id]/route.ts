@@ -33,7 +33,10 @@ export async function PUT(
     const body = await req.json();
     const group = await prisma.procedureGroup.update({
       where: { id: params.id },
-      data: body
+      data: {
+        ...(body.title !== undefined && { title: String(body.title).trim() }),
+        ...(body.displayOrder !== undefined && { displayOrder: Number(body.displayOrder) }),
+      }
     });
     return NextResponse.json(group);
   } catch (error: unknown) {

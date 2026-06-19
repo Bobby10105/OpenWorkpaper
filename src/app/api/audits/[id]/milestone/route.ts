@@ -16,7 +16,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
       return NextResponse.json({ error: 'Milestone attachment not found' }, { status: 404 });
     }
 
-    const filepath = path.join(process.cwd(), 'public', audit.milestoneAttachmentUrl);
+    const filepath = path.join(process.cwd(), 'storage', audit.milestoneAttachmentUrl);
     const fileBuffer = await fs.readFile(filepath);
     
     // Determine content type based on extension
