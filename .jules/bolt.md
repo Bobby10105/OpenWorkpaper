@@ -1,0 +1,3 @@
+## 2024-06-19 - [Optimize DB Insertion with Prisma `createManyAndReturn`]
+**Learning:** For bulk inserts, replacing iterative `.create()` loops with `.createManyAndReturn()` significantly reduces database roundtrips and execution time (e.g., from ~276ms to ~50ms). When legacy IDs need to be correlated to the newly generated database IDs, manual in-memory matching by unique attributes (like name/role/email) handles mapping efficiently.
+**Action:** Use `.createManyAndReturn()` wherever bulk creation is needed, specifically when the generated identifiers are required immediately for downstream foreign key mappings. Make sure to remove matched elements sequentially to handle identical duplicates correctly without overwriting ID maps.

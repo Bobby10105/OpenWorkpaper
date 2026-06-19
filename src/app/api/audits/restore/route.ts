@@ -131,17 +131,27 @@ export async function POST(req: Request) {
       await fs.mkdir(uploadDir, { recursive: true });
 
       // 2. Create Team Members (needed for procedure assignments)
-      if (data.teamMembers && Array.isArray(data.teamMembers)) {
+      if (data.teamMembers && Array.isArray(data.teamMembers) && data.teamMembers.length > 0) {
+        const createdMembers = await tx.teamMember.createManyAndReturn({
+          data: data.teamMembers.map((m) => ({
+            auditId: audit.id,
+            name: m.name,
+            role: m.role,
+            email: m.email,
+          })),
+        });
+
+        const availableMembers = [...createdMembers];
         for (const m of data.teamMembers) {
-          const newMember = await tx.teamMember.create({
-            data: {
-              auditId: audit.id,
-              name: m.name,
-              role: m.role,
-              email: m.email,
+          if (m.id) {
+            const matchIndex = availableMembers.findIndex(
+              (c) => c.name === m.name && c.role === m.role && c.email === m.email
+            );
+            if (matchIndex !== -1) {
+              teamMemberMap.set(m.id, availableMembers[matchIndex].id);
+              availableMembers.splice(matchIndex, 1);
             }
-          });
-          if (m.id) teamMemberMap.set(m.id, newMember.id);
+          }
         }
       }
 
