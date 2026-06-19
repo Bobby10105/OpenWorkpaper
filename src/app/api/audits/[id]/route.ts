@@ -124,8 +124,9 @@ async function getAuditProcedures(auditId: string) {
 }
 
 export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
-  const session = await getSession();
+  try {
+    const params = await props.params;
+    const session = await getSession();
 
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -150,11 +151,15 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
   // 2. Fetch procedure groups and ungrouped procedures
   const { procedureGroups, procedures } = await getAuditProcedures(audit.id);
 
-  return NextResponse.json({
-    ...audit,
-    procedureGroups,
-    procedures
-  });
+    return NextResponse.json({
+      ...audit,
+      procedureGroups,
+      procedures
+    });
+  } catch (error) {
+    console.error('[GET /api/audits/:id] Error:', error);
+    return NextResponse.json({ error: 'Failed to fetch audit details' }, { status: 500 });
+  }
 }
 
 export async function PUT(req: Request, props: { params: Promise<{ id: string }> }) {
