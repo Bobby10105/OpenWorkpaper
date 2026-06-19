@@ -247,6 +247,37 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
   }
 }
 
+type AuditWithAttachments = {
+  milestoneAttachmentUrl: string | null;
+  pbcAttachmentUrl: string | null;
+  procedures: {
+    attachments: { filepath: string }[];
+  }[];
+};
+
+async function deleteAuditFiles(audit: AuditWithAttachments) {
+  const publicDir = path.join(process.cwd(), 'storage');
+
+  // Delete milestone attachment if exists
+  if (audit.milestoneAttachmentUrl) {
+    const milestonePath = path.join(publicDir, audit.milestoneAttachmentUrl);
+    try { await fs.unlink(milestonePath); } catch {}
+  }
+
+  // Delete PBC attachment if exists
+  if (audit.pbcAttachmentUrl) {
+    const pbcPath = path.join(publicDir, audit.pbcAttachmentUrl);
+    try { await fs.unlink(pbcPath); } catch {}
+  }
+
+  for (const procedure of audit.procedures) {
+    for (const attachment of procedure.attachments) {
+      const fullPath = path.join(publicDir, attachment.filepath);
+      try { await fs.unlink(fullPath); } catch {}
+    }
+  }
+}
+
 export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
   try {
     const params = await props.params;
@@ -276,26 +307,7 @@ export async function DELETE(req: Request, props: { params: Promise<{ id: string
     });
 
     if (audit) {
-      const publicDir = path.join(process.cwd(), 'storage');
-      
-      // Delete milestone attachment if exists
-      if (audit.milestoneAttachmentUrl) {
-        const milestonePath = path.join(publicDir, audit.milestoneAttachmentUrl);
-        try { await fs.unlink(milestonePath); } catch {}
-      }
-
-      // Delete PBC attachment if exists
-      if (audit.pbcAttachmentUrl) {
-        const pbcPath = path.join(publicDir, audit.pbcAttachmentUrl);
-        try { await fs.unlink(pbcPath); } catch {}
-      }
-
-      for (const procedure of audit.procedures) {
-        for (const attachment of procedure.attachments) {
-          const fullPath = path.join(publicDir, attachment.filepath);
-          try { await fs.unlink(fullPath); } catch {}
-        }
-      }
+      await deleteAuditFiles(audit);
 
       await prisma.auditLog.create({
         data: {

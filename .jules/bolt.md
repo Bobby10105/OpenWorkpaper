@@ -1,0 +1,3 @@
+## 2024-06-25 - Code Health Refactoring for Long Functions
+**Learning:** Breaking down long functions (like a complex Next.js API `DELETE` handler) by extracting discrete blocks of logic (e.g., file cleanup operations) into clearly named, type-safe asynchronous helper functions significantly improves readability and maintainability without altering existing functionality.
+**Action:** Always verify the structure of refactored code using targeted `sed` commands, ensure the refactoring introduces no new linting errors using isolated file checks if global checks fail, and clean up unintended artifact files like lockfiles (`git restore --staged pnpm-lock.yaml && rm pnpm-lock.yaml`) before concluding the task.
