@@ -103,10 +103,28 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
     audit.id
   );
 
-  const proceduresWithRelations = rawProcedures.map((proc) => {
-    const attachments = allAttachments.filter(a => a.procedureId === proc.id);
-    const messages = allMessages.filter(m => m.procedureId === proc.id);
+  const procedureIds = rawProcedures.map(p => p.id);
 
+  const attachmentsByProcId: Record<string, RawAttachment[]> = {};
+  const messagesByProcId: Record<string, RawMessage[]> = {};
+
+  // Initialize maps
+  for (const id of procedureIds) {
+    attachmentsByProcId[id] = [];
+    messagesByProcId[id] = [];
+  }
+
+  // Populate maps
+  for (const att of allAttachments) {
+    attachmentsByProcId[att.procedureId].push(att);
+  }
+
+  for (const msg of allMessages) {
+    messagesByProcId[msg.procedureId].push(msg);
+  }
+
+  // 4. Map relations to procedures in memory
+  const proceduresWithRelations = rawProcedures.map(proc => {
     return {
       ...proc,
       assignedTo: proc.assignedToId ? {
@@ -115,12 +133,12 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
         role: proc.assignedToRole,
         email: proc.assignedToEmail
       } : null,
-      attachments,
-      messages
+      attachments: attachmentsByProcId[proc.id] || [],
+      messages: messagesByProcId[proc.id] || []
     };
   });
 
-  // 4. Map procedures to groups
+  // 5. Map procedures to groups
   const groupsWithProcedures = rawGroups.map(group => ({
     ...group,
     procedures: proceduresWithRelations.filter(p => p.groupId === group.id)
