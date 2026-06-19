@@ -18,6 +18,53 @@ interface ProcedureExport {
   assignedToName: string | null;
 }
 
+function formatReportData(procedures: ProcedureExport[]) {
+  return procedures.map(p => {
+    const prepDate = p.preparedDate ? new Date(p.preparedDate) : null;
+    const revDate = p.reviewedDate ? new Date(p.reviewedDate) : null;
+
+    let reviewLag = '';
+    if (prepDate && revDate) {
+      const diffTime = Math.abs(revDate.getTime() - prepDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      reviewLag = diffDays.toString();
+    }
+
+    let status = 'Not Started';
+    if (p.reviewedBy && p.reviewedDate) status = 'Completed';
+    else if (p.preparedBy && p.preparedDate) status = 'Pending Review';
+    else if (p.assignedToName) status = 'In Progress';
+
+    return {
+      'Audit Title': p.auditTitle,
+      'Audit Status': p.auditStatus,
+      'Phase': p.phase,
+      'Procedure Title': p.procedureTitle || 'Untitled',
+      'Status': status,
+      'Assigned To': p.assignedToName || 'Unassigned',
+      'Prepared By': p.preparedBy || '',
+      'Prepared Date': p.preparedDate ? new Date(p.preparedDate).toLocaleDateString() : '',
+      'Reviewed By': p.reviewedBy || '',
+      'Reviewed Date': p.reviewedDate ? new Date(p.reviewedDate).toLocaleDateString() : '',
+      'Review Lag (Days)': reviewLag
+    };
+  });
+}
+
+function generateExcelBuffer(reportData: ReturnType<typeof formatReportData>) {
+  const worksheet = XLSX.utils.json_to_sheet(reportData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Global Procedures');
+
+  const colWidths = [
+    { wch: 30 }, { wch: 15 }, { wch: 15 }, { wch: 40 }, { wch: 15 },
+    { wch: 20 }, { wch: 20 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 },
+  ];
+  worksheet['!cols'] = colWidths;
+
+  return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+}
+
 export async function GET() {
   try {
     const session = await getSession();
@@ -43,48 +90,8 @@ export async function GET() {
       ORDER BY a.createdAt DESC, p.phase, p.displayOrder ASC`
     );
 
-    const reportData = procedures.map(p => {
-      const prepDate = p.preparedDate ? new Date(p.preparedDate) : null;
-      const revDate = p.reviewedDate ? new Date(p.reviewedDate) : null;
-      
-      let reviewLag = '';
-      if (prepDate && revDate) {
-        const diffTime = Math.abs(revDate.getTime() - prepDate.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        reviewLag = diffDays.toString();
-      }
-
-      let status = 'Not Started';
-      if (p.reviewedBy && p.reviewedDate) status = 'Completed';
-      else if (p.preparedBy && p.preparedDate) status = 'Pending Review';
-      else if (p.assignedToName) status = 'In Progress';
-
-      return {
-        'Audit Title': p.auditTitle,
-        'Audit Status': p.auditStatus,
-        'Phase': p.phase,
-        'Procedure Title': p.procedureTitle || 'Untitled',
-        'Status': status,
-        'Assigned To': p.assignedToName || 'Unassigned',
-        'Prepared By': p.preparedBy || '',
-        'Prepared Date': p.preparedDate ? new Date(p.preparedDate).toLocaleDateString() : '',
-        'Reviewed By': p.reviewedBy || '',
-        'Reviewed Date': p.reviewedDate ? new Date(p.reviewedDate).toLocaleDateString() : '',
-        'Review Lag (Days)': reviewLag
-      };
-    });
-
-    const worksheet = XLSX.utils.json_to_sheet(reportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Global Procedures');
-
-    const colWidths = [
-      { wch: 30 }, { wch: 15 }, { wch: 15 }, { wch: 40 }, { wch: 15 },
-      { wch: 20 }, { wch: 20 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 },
-    ];
-    worksheet['!cols'] = colWidths;
-
-    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    const reportData = formatReportData(procedures);
+    const buffer = generateExcelBuffer(reportData);
 
     return new Response(buffer, {
       headers: {

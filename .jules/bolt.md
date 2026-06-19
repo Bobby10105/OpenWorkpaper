@@ -42,3 +42,7 @@
 ## 2025-03-01 - Avoid lockfile pollution
 **Learning:** Running `pnpm install` can update lockfiles implicitly. Unrelated lockfile changes should not be included in a PR unless dependencies are actually changed.
 **Action:** When working on code refactors, always make sure to checkout or reset any changes in `pnpm-lock.yaml` if no new dependencies were explicitly added, before running git status or creating commits.
+
+## 2024-05-16 - Clean Commit Hygiene
+**Learning:** Temporary files like scratch scripts and dynamically generated lock files might get caught in a dirty working tree.
+**Action:** Always check `git status` to ensure extraneous files like test scripts or unnecessary lockfiles aren't being tracked and remove them before finishing the PR.
