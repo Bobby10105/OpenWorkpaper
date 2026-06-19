@@ -2,6 +2,64 @@ import Link from 'next/link';
 import { ChevronRight, CheckCircle, Clock, Paperclip, MessageSquare, Trash2, User } from 'lucide-react';
 import type { ProcedureWithRelations } from '@/lib/types';
 
+function ProcedureMetadata({
+  procedure,
+  hasAttachments,
+  hasMessages
+}: {
+  procedure: ProcedureWithRelations;
+  hasAttachments: boolean;
+  hasMessages: boolean;
+}) {
+  return (
+    <div className="flex items-center mt-1.5 space-x-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+      {procedure.assignedTo && (
+        <div className="flex items-center text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+          <User className="w-3 h-3 mr-1" />
+          {procedure.assignedTo.name}
+        </div>
+      )}
+      {hasAttachments && (
+        <div className="flex items-center text-emerald-600">
+          <Paperclip className="w-3 h-3 mr-1" />
+          {procedure.attachments?.length} Files
+        </div>
+      )}
+      {hasMessages && (
+        <div className="flex items-center text-orange-500">
+          <MessageSquare className="w-3 h-3 mr-1" />
+          Active Chat
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProcedureStatus({
+  isReviewed,
+  isPrepared
+}: {
+  isReviewed: boolean | string | Date | null | undefined;
+  isPrepared: boolean | string | Date | null | undefined;
+}) {
+  return (
+    <div className="flex items-center space-x-4 shrink-0">
+      {isReviewed ? (
+        <div className="bg-blue-600 p-1.5 rounded-full shadow-lg shadow-blue-100">
+          <CheckCircle className="w-4 h-4 text-white" />
+        </div>
+      ) : isPrepared ? (
+        <div className="bg-emerald-500 p-1.5 rounded-full shadow-lg shadow-emerald-100">
+          <Clock className="w-4 h-4 text-white" />
+        </div>
+      ) : null}
+      <div className="bg-gray-50 p-2 rounded-xl group-hover:bg-blue-600 transition-all text-gray-300 group-hover:text-white">
+        <ChevronRight className="w-4 h-4" />
+      </div>
+    </div>
+  );
+}
+
 export default function ProcedureItem({ 
   procedure, 
   nomenclature, 
@@ -33,43 +91,15 @@ export default function ProcedureItem({
               <h4 className="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors truncate">
                 {procedure.title || 'Untitled Procedure'}
               </h4>
-              <div className="flex items-center mt-1.5 space-x-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                {procedure.assignedTo && (
-                  <div className="flex items-center text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
-                    <User className="w-3 h-3 mr-1" />
-                    {procedure.assignedTo.name}
-                  </div>
-                )}
-                {hasAttachments && (
-                  <div className="flex items-center text-emerald-600">
-                    <Paperclip className="w-3 h-3 mr-1" />
-                    {procedure.attachments?.length} Files
-                  </div>
-                )}
-                {hasMessages && (
-                  <div className="flex items-center text-orange-500">
-                    <MessageSquare className="w-3 h-3 mr-1" />
-                    Active Chat
-                  </div>
-                )}
-              </div>
+              <ProcedureMetadata
+                procedure={procedure}
+                hasAttachments={hasAttachments}
+                hasMessages={hasMessages}
+              />
             </div>
           </div>
 
-          <div className="flex items-center space-x-4 shrink-0">
-            {isReviewed ? (
-              <div className="bg-blue-600 p-1.5 rounded-full shadow-lg shadow-blue-100">
-                <CheckCircle className="w-4 h-4 text-white" />
-              </div>
-            ) : isPrepared ? (
-              <div className="bg-emerald-500 p-1.5 rounded-full shadow-lg shadow-emerald-100">
-                <Clock className="w-4 h-4 text-white" />
-              </div>
-            ) : null}
-            <div className="bg-gray-50 p-2 rounded-xl group-hover:bg-blue-600 transition-all text-gray-300 group-hover:text-white">
-              <ChevronRight className="w-4 h-4" />
-            </div>
-          </div>
+          <ProcedureStatus isReviewed={isReviewed} isPrepared={isPrepared} />
         </div>
       </Link>
       
