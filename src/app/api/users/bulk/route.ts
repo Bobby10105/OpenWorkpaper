@@ -32,41 +32,69 @@ export async function POST(req: Request) {
       errors: [] as string[],
     };
 
-    for (const userData of users) {
+    // Filter out valid users and handle missing usernames
+    const validUsers = users.map(u => ({
+      username: u.username || u.email,
+      role: u.role || 'Auditor',
+      password: u.password || 'Welcome123!',
+      originalData: u,
+    })).filter(u => {
+      if (!u.username) {
+        results.skipped++;
+        return false;
+      }
+      return true;
+    });
+
+    if (validUsers.length === 0) {
+      return NextResponse.json(results);
+    }
+
+    // Single query to find existing users
+    const usernames = validUsers.map(u => u.username as string);
+    const existingUsers = await prisma.user.findMany({
+      where: {
+        username: {
+          in: usernames,
+        },
+      },
+      select: { username: true },
+    });
+
+    const existingUsernames = new Set(existingUsers.map(u => u.username));
+
+    // Filter for new users only
+    const newUsersToCreate = [];
+    for (const u of validUsers) {
+      if (existingUsernames.has(u.username as string)) {
+        results.skipped++;
+      } else {
+        newUsersToCreate.push(u);
+      }
+    }
+
+    if (newUsersToCreate.length > 0) {
       try {
-        const username = userData.username || userData.email;
-        const role = userData.role || 'Auditor';
-        const password = userData.password || 'Welcome123!'; 
-
-        if (!username) {
-          results.skipped++;
-          continue;
-        }
-
-        const existingUser = await prisma.user.findUnique({
-          where: { username },
-        });
-
-        if (existingUser) {
-          results.skipped++;
-          continue;
-        }
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-        await prisma.user.create({
-          data: {
-            username,
-            password: hashedPassword,
-            role,
+        // Parallelize password hashing
+        const usersWithHashedPasswords = await Promise.all(
+          newUsersToCreate.map(async (u) => ({
+            username: u.username as string,
+            role: u.role,
+            password: await bcrypt.hash(u.password, 10),
             mustChangePassword: true,
-          },
+          }))
+        );
+
+        // Batch insert
+        const createResult = await prisma.user.createMany({
+          data: usersWithHashedPasswords,
         });
 
-        results.created++;
+        results.created += createResult.count;
       } catch (err: unknown) {
         console.error('Bulk import error:', err);
         const message = err instanceof Error ? err.message : 'Unknown error';
-        results.errors.push(`Failed to create ${userData.username}: ${message}`);
+        results.errors.push(`Failed to bulk create users: ${message}`);
       }
     }
 
