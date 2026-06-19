@@ -82,19 +82,25 @@ export async function GET(
       }
     }
 
-    // Add procedure attachments
+    // Add procedure attachments concurrently to optimize I/O performance
+    const attachmentPromises = [];
     for (const procedure of audit.procedures) {
       for (const attachment of procedure.attachments) {
         const fullPath = path.join(publicDir, attachment.filepath);
-        try {
-          const fileBuffer = await fs.readFile(fullPath);
-          const diskFilename = path.basename(attachment.filepath);
-          zip.file(`attachments/${diskFilename}`, fileBuffer);
-        } catch (err) {
-          console.warn(`Could not read file: ${fullPath}`, err);
-        }
+        attachmentPromises.push(
+          (async () => {
+            try {
+              const fileBuffer = await fs.readFile(fullPath);
+              const diskFilename = path.basename(attachment.filepath);
+              zip.file(`attachments/${diskFilename}`, fileBuffer);
+            } catch (err) {
+              console.warn(`Could not read file: ${fullPath}`, err);
+            }
+          })()
+        );
       }
     }
+    await Promise.all(attachmentPromises);
 
     const zipContent = await zip.generateAsync({ type: 'nodebuffer' });
 
