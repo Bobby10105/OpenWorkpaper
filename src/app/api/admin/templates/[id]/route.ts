@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
+import { Prisma } from '@prisma/client';
 
 interface TemplateProcedureInput {
   title: string;
@@ -54,6 +55,66 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
   }
 }
 
+async function updateTemplateTransaction(
+  tx: Prisma.TransactionClient,
+  templateId: string,
+  name: string,
+  description: string,
+  groups: TemplateGroupInput[]
+) {
+  // Update template details
+  await tx.auditTemplate.update({
+    where: { id: templateId },
+    data: { name, description }
+  });
+
+  // Clear existing structure
+  await tx.templateProcedure.deleteMany({ where: { templateId } });
+  await tx.templateGroup.deleteMany({ where: { templateId } });
+
+  // Create new groups and procedures
+  if (groups && Array.isArray(groups)) {
+    await Promise.all(groups.map(async (g, gIndex) => {
+      const group = await tx.templateGroup.create({
+        data: {
+          templateId,
+          phase: g.phase,
+          title: g.title,
+          displayOrder: gIndex
+        }
+      });
+
+      if (g.procedures && Array.isArray(g.procedures)) {
+        await tx.templateProcedure.createMany({
+          data: g.procedures.map((p: TemplateProcedureInput, pIndex: number) => ({
+            templateId,
+            groupId: group.id,
+            phase: g.phase,
+            title: p.title,
+            purpose: p.purpose,
+            displayOrder: pIndex
+          }))
+        });
+      }
+    }));
+  }
+
+  // Fetch and return the fully populated template
+  return await tx.auditTemplate.findUnique({
+    where: { id: templateId },
+    include: {
+      groups: {
+        orderBy: { displayOrder: 'asc' },
+        include: {
+          procedures: {
+            orderBy: { displayOrder: 'asc' }
+          }
+        }
+      }
+    }
+  });
+}
+
 export async function PUT(req: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   const session = await getSession();
@@ -66,59 +127,9 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
   try {
     const { name, description, groups }: { name: string, description: string, groups: TemplateGroupInput[] } = await req.json();
 
-    const result = await prisma.$transaction(async (tx) => {
-      // Update template details
-      await tx.auditTemplate.update({
-        where: { id: params.id },
-        data: { name, description }
-      });
-
-      // Clear existing structure
-      await tx.templateProcedure.deleteMany({ where: { templateId: params.id } });
-      await tx.templateGroup.deleteMany({ where: { templateId: params.id } });
-
-      // Create new groups and procedures
-      if (groups && Array.isArray(groups)) {
-        await Promise.all(groups.map(async (g, gIndex) => {
-          const group = await tx.templateGroup.create({
-            data: {
-              templateId: params.id,
-              phase: g.phase,
-              title: g.title,
-              displayOrder: gIndex
-            }
-          });
-
-          if (g.procedures && Array.isArray(g.procedures)) {
-            await tx.templateProcedure.createMany({
-              data: g.procedures.map((p: TemplateProcedureInput, pIndex: number) => ({
-                templateId: params.id,
-                groupId: group.id,
-                phase: g.phase,
-                title: p.title,
-                purpose: p.purpose,
-                displayOrder: pIndex
-              }))
-            });
-          }
-        }));
-      }
-
-      // Fetch and return the fully populated template
-      return await tx.auditTemplate.findUnique({
-        where: { id: params.id },
-        include: {
-          groups: {
-            orderBy: { displayOrder: 'asc' },
-            include: {
-              procedures: {
-                orderBy: { displayOrder: 'asc' }
-              }
-            }
-          }
-        }
-      });
-    });
+    const result = await prisma.$transaction((tx) =>
+      updateTemplateTransaction(tx, params.id, name, description, groups)
+    );
 
     if (!result) {
       return NextResponse.json({ error: 'Template not found after update' }, { status: 404 });
