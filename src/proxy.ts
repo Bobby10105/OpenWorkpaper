@@ -1,26 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { decrypt } from '@/lib/auth';
 
-/**
- * Next.js Proxy for Authentication and Authorization logic.
- * This was previously called 'middleware'.
- */
-export async function proxy(request: NextRequest) {
-  const session = request.cookies.get('session')?.value;
-  const { pathname } = request.nextUrl;
-
-  const response = NextResponse.next();
-
-  // Authentication Logic
-  // Paths that don't require authentication
-  const isPublicPath = 
-    pathname === '/login' || 
+function isPublicPath(pathname: string) {
+  return pathname === '/login' ||
     pathname.startsWith('/api/login') || 
     pathname.startsWith('/api/auth/sso') ||
     pathname.startsWith('/_next') || 
     pathname === '/favicon.ico';
+}
 
-  // If user is logged in and trying to access login page, redirect to home
+async function handleLoginAccess(request: NextRequest, session: string | undefined, pathname: string) {
   if (pathname === '/login' && session) {
     try {
       await decrypt(session);
@@ -29,15 +18,10 @@ export async function proxy(request: NextRequest) {
       // Session invalid or expired, proceed to login page
     }
   }
+  return null;
+}
 
-  if (isPublicPath) {
-    return response;
-  }
-
-  if (!session) {
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
-
+async function verifyAuth(request: NextRequest, session: string, pathname: string, response: NextResponse) {
   try {
     const decrypted = await decrypt(session);
     const user = (decrypted as { user: { mustChangePassword?: boolean } }).user;
@@ -58,6 +42,29 @@ export async function proxy(request: NextRequest) {
     }
     return NextResponse.redirect(new URL('/login', request.url));
   }
+}
+
+/**
+ * Next.js Proxy for Authentication and Authorization logic.
+ * This was previously called 'middleware'.
+ */
+export async function proxy(request: NextRequest) {
+  const session = request.cookies.get('session')?.value;
+  const { pathname } = request.nextUrl;
+  const response = NextResponse.next();
+
+  const loginRedirect = await handleLoginAccess(request, session, pathname);
+  if (loginRedirect) return loginRedirect;
+
+  if (isPublicPath(pathname)) {
+    return response;
+  }
+
+  if (!session) {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
+
+  return verifyAuth(request, session, pathname, response);
 }
 
 export const config = {
