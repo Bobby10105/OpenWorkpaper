@@ -1,4 +1,4 @@
-import { login, encrypt, decrypt, logout } from '../auth';
+import { login, encrypt, decrypt, logout, getSession } from '../auth';
 import { cookies } from 'next/headers';
 import { vi, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import { SignJWT } from 'jose';
@@ -232,5 +232,93 @@ describe('Auth - logout', () => {
     expect(mockSet).toHaveBeenCalledWith('session', '', expect.objectContaining({
       secure: false,
     }));
+  });
+});
+
+describe('Auth - getSession', () => {
+  const originalConsoleError = console.error;
+  const originalConsoleDebug = console.debug;
+
+  const mockUser = {
+    id: 'test-user-id',
+    username: 'testuser',
+    role: 'Auditor',
+    mustChangePassword: false,
+  };
+
+  beforeAll(() => {
+    console.error = vi.fn();
+    console.debug = vi.fn();
+  });
+
+  afterAll(() => {
+    console.error = originalConsoleError;
+    console.debug = originalConsoleDebug;
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should return null when no session cookie is present', async () => {
+    (cookies as ReturnType<typeof vi.fn>).mockResolvedValue({
+      get: vi.fn().mockReturnValue(undefined),
+    });
+
+    const session = await getSession();
+    expect(session).toBeNull();
+  });
+
+  it('should return null when the session signature is invalid', async () => {
+    (cookies as ReturnType<typeof vi.fn>).mockResolvedValue({
+      get: vi.fn().mockReturnValue({ value: 'invalid.jwt.token' }),
+    });
+
+    const session = await getSession();
+    expect(session).toBeNull();
+  });
+
+  it('should return null and log debug when the session signature verification fails (tampered)', async () => {
+    const differentSecret = new TextEncoder().encode('different-secret');
+    const tamperedSession = await new SignJWT({ user: mockUser })
+      .setProtectedHeader({ alg: 'HS256' })
+      .sign(differentSecret);
+
+    (cookies as ReturnType<typeof vi.fn>).mockResolvedValue({
+      get: vi.fn().mockReturnValue({ value: tamperedSession }),
+    });
+
+    const session = await getSession();
+    expect(session).toBeNull();
+    expect(console.debug).toHaveBeenCalledWith(expect.stringContaining('Invalid session signature'));
+  });
+
+  it('should return null when the session is expired', async () => {
+    const secretKey = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback-secret-for-dev-only');
+    const expiredSession = await new SignJWT({ user: mockUser })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setExpirationTime('-1h')
+      .sign(secretKey);
+
+    (cookies as ReturnType<typeof vi.fn>).mockResolvedValue({
+      get: vi.fn().mockReturnValue({ value: expiredSession }),
+    });
+
+    const session = await getSession();
+    expect(session).toBeNull();
+    expect(console.debug).toHaveBeenCalledWith(expect.stringContaining('expired'));
+  });
+
+  it('should return the session user data when the session is valid', async () => {
+    const validSession = await encrypt(mockUser); // encrypt accepts payload
+
+    (cookies as ReturnType<typeof vi.fn>).mockResolvedValue({
+      get: vi.fn().mockReturnValue({ value: validSession }),
+    });
+
+    const session = await getSession();
+
+    expect(session).not.toBeNull();
+    expect(session?.userId).toEqual(mockUser.userId); // getSession decrypts to payload
   });
 });
