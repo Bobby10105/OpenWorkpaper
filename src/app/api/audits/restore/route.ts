@@ -222,7 +222,7 @@ export async function POST(req: Request) {
 
           // Restore Attachments for this procedure
           if (p.attachments && Array.isArray(p.attachments)) {
-            for (const att of p.attachments) {
+            const attachmentPromises = p.attachments.map(async (att) => {
               // If we have a ZIP, try to restore the file to disk
               let finalFilepath = att.filepath;
               
@@ -247,7 +247,8 @@ export async function POST(req: Request) {
                   displayOrder: att.displayOrder,
                 }
               });
-            }
+            });
+            await Promise.all(attachmentPromises);
           }
         }
       }
