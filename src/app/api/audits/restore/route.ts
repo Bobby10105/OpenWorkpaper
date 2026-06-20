@@ -160,7 +160,7 @@ export async function POST(req: Request) {
       // 3. Create Groups
       if (data.procedureGroups && Array.isArray(data.procedureGroups)) {
         const groupsToCreate = data.procedureGroups.map((group) => {
-          const newId = crypto.crypto.randomUUID();
+          const newId = crypto.randomUUID();
           groupMap.set(group.id, newId);
           return {
             id: newId,
