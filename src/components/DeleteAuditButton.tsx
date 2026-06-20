@@ -59,7 +59,7 @@ export default function DeleteAuditButton({
       className="flex items-center space-x-2 px-4 py-2 border border-red-200 text-red-600 rounded-md hover:bg-red-50 transition-colors disabled:opacity-50"
       title="Delete Audit"
     >
-      <Trash2 className="w-4 h-4" />
+      <Trash2 className="w-4 h-4" aria-hidden="true" />
       <span>{isDeleting ? 'Deleting...' : 'Delete Audit'}</span>
     </button>
   );

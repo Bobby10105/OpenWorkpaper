@@ -292,8 +292,9 @@ export default function ProcedureList({
                     onClick={() => handleDeleteGroup(group.id, group.title)}
                     className="p-2.5 text-gray-300 hover:text-red-500 opacity-0 group-hover/row:opacity-100 transition-all hover:bg-red-50 rounded-xl"
                     title="Delete Group"
+                    aria-label="Delete Group"
                   >
-                    <Trash2 className="w-5 h-5" />
+                    <Trash2 className="w-5 h-5" aria-hidden="true" />
                   </button>
                 </div>
 
