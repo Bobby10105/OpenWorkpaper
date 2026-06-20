@@ -74,29 +74,44 @@ async function updateTemplateTransaction(
 
   // Create new groups and procedures
   if (groups && Array.isArray(groups)) {
-    await Promise.all(groups.map(async (g, gIndex) => {
-      const group = await tx.templateGroup.create({
-        data: {
-          templateId,
-          phase: g.phase,
-          title: g.title,
-          displayOrder: gIndex
-        }
+    const groupsToCreate = [];
+    const proceduresToCreate = [];
+
+    for (let gIndex = 0; gIndex < groups.length; gIndex++) {
+      const g = groups[gIndex];
+      const groupId = crypto.randomUUID();
+
+      groupsToCreate.push({
+        id: groupId,
+        templateId,
+        phase: g.phase,
+        title: g.title,
+        displayOrder: gIndex
       });
 
       if (g.procedures && Array.isArray(g.procedures)) {
-        await tx.templateProcedure.createMany({
-          data: g.procedures.map((p: TemplateProcedureInput, pIndex: number) => ({
+        for (let pIndex = 0; pIndex < g.procedures.length; pIndex++) {
+          const p = g.procedures[pIndex];
+          proceduresToCreate.push({
+            id: crypto.randomUUID(),
             templateId,
-            groupId: group.id,
+            groupId,
             phase: g.phase,
             title: p.title,
             purpose: p.purpose,
             displayOrder: pIndex
-          }))
-        });
+          });
+        }
       }
-    }));
+    }
+
+    if (groupsToCreate.length > 0) {
+      await tx.templateGroup.createMany({ data: groupsToCreate });
+    }
+
+    if (proceduresToCreate.length > 0) {
+      await tx.templateProcedure.createMany({ data: proceduresToCreate });
+    }
   }
 
   // Fetch and return the fully populated template

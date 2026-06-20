@@ -41,49 +41,65 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
         ? template.groups.filter(g => g.phase === phase)
         : template.groups;
 
-      const groupedProcsResults = await Promise.all(templateGroups.map(async (tg) => {
-        const group = await tx.procedureGroup.create({
-          data: {
-            auditId: params.id,
-            phase: tg.phase,
-            title: tg.title,
-            displayOrder: tg.displayOrder
-          }
+      const groupsToCreate = [];
+      const proceduresToCreate = [];
+
+      for (const tg of templateGroups) {
+        const groupId = crypto.randomUUID();
+        groupsToCreate.push({
+          id: groupId,
+          auditId: params.id,
+          phase: tg.phase,
+          title: tg.title,
+          displayOrder: tg.displayOrder
         });
 
-        const procs = await Promise.all(
-          tg.procedures.map(tp => tx.procedure.create({
-            data: {
-              auditId: params.id,
-              groupId: group.id,
-              phase: tp.phase,
-              title: tp.title,
-              purpose: tp.purpose
-            }
-          }))
-        );
-        return procs;
-      }));
-
-      createdProcedures.push(...groupedProcsResults.flat());
+        for (const tp of tg.procedures) {
+          const procedureId = crypto.randomUUID();
+          proceduresToCreate.push({
+            id: procedureId,
+            auditId: params.id,
+            groupId: groupId,
+            phase: tp.phase,
+            title: tp.title,
+            purpose: tp.purpose
+          });
+        }
+      }
 
       // 2. Process Ungrouped Procedures
       const ungroupedToCopy = phase 
         ? template.procedures.filter(p => p.phase === phase)
         : template.procedures;
 
-      if (ungroupedToCopy.length > 0) {
-        const procs = await Promise.all(
-          ungroupedToCopy.map(tp => tx.procedure.create({
-            data: {
-              auditId: params.id,
-              phase: tp.phase,
-              title: tp.title,
-              purpose: tp.purpose
+      for (const tp of ungroupedToCopy) {
+        proceduresToCreate.push({
+          id: crypto.randomUUID(),
+          auditId: params.id,
+          groupId: null,
+          phase: tp.phase,
+          title: tp.title,
+          purpose: tp.purpose
+        });
+      }
+
+      // Execute bulk inserts
+      if (groupsToCreate.length > 0) {
+        await tx.procedureGroup.createMany({ data: groupsToCreate });
+      }
+
+      if (proceduresToCreate.length > 0) {
+        await tx.procedure.createMany({ data: proceduresToCreate });
+
+        // Fetch fully hydrated database objects to return in API response
+        const newProcedures = await tx.procedure.findMany({
+          where: {
+            id: {
+              in: proceduresToCreate.map(p => p.id)
             }
-          }))
-        );
-        createdProcedures.push(...procs);
+          }
+        });
+        createdProcedures.push(...newProcedures);
       }
     });
 
