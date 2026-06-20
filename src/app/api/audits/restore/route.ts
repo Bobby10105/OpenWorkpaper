@@ -6,6 +6,7 @@ import path from 'path';
 import JSZip from 'jszip';
 import crypto from 'crypto';
 
+
 interface RestoreAttachment {
   filename: string;
   filepath: string;
@@ -159,7 +160,7 @@ export async function POST(req: Request) {
       // 3. Create Groups
       if (data.procedureGroups && Array.isArray(data.procedureGroups)) {
         const groupsToCreate = data.procedureGroups.map((group) => {
-          const newId = crypto.randomUUID();
+          const newId = crypto.crypto.randomUUID();
           groupMap.set(group.id, newId);
           return {
             id: newId,
@@ -183,39 +184,44 @@ export async function POST(req: Request) {
         [];
 
       if (Array.isArray(proceduresToRestore)) {
+        const proceduresData = [];
+        const messagesData = [];
+        const attachmentsData = [];
+
+        // Accumulate data for bulk insertion
         for (const p of proceduresToRestore) {
-          const newProcedure = await tx.procedure.create({
-            data: {
-              auditId: audit.id,
-              groupId: p.groupId ? groupMap.get(p.groupId) : null,
-              title: p.title,
-              purpose: p.purpose,
-              source: p.source,
-              scope: p.scope,
-              methodology: p.methodology,
-              results: p.results,
-              conclusions: p.conclusions,
-              status: p.status || 'Not Started',
-              phase: p.phase,
-              preparedBy: p.preparedBy,
-              preparedDate: p.preparedDate ? new Date(p.preparedDate) : null,
-              reviewedBy: p.reviewedBy,
-              reviewedDate: p.reviewedDate ? new Date(p.reviewedDate) : null,
-              displayOrder: p.displayOrder || 0,
-              assignedToId: p.assignedToId ? teamMemberMap.get(p.assignedToId) : null,
-            }
+          const procedureId = crypto.randomUUID();
+
+          proceduresData.push({
+            id: procedureId,
+            auditId: audit.id,
+            groupId: p.groupId ? groupMap.get(p.groupId) : null,
+            title: p.title,
+            purpose: p.purpose,
+            source: p.source,
+            scope: p.scope,
+            methodology: p.methodology,
+            results: p.results,
+            conclusions: p.conclusions,
+            status: p.status || 'Not Started',
+            phase: p.phase,
+            preparedBy: p.preparedBy,
+            preparedDate: p.preparedDate ? new Date(p.preparedDate) : null,
+            reviewedBy: p.reviewedBy,
+            reviewedDate: p.reviewedDate ? new Date(p.reviewedDate) : null,
+            displayOrder: p.displayOrder || 0,
+            assignedToId: p.assignedToId ? teamMemberMap.get(p.assignedToId) : null,
           });
 
           // Restore Messages (Review Notes)
           if (p.messages && Array.isArray(p.messages)) {
             for (const msg of p.messages) {
-              await tx.procedureMessage.create({
-                data: {
-                  procedureId: newProcedure.id,
-                  sender: msg.sender,
-                  text: msg.text,
-                  createdAt: msg.createdAt ? new Date(msg.createdAt) : undefined,
-                }
+              messagesData.push({
+                id: crypto.randomUUID(),
+                procedureId: procedureId,
+                sender: msg.sender,
+                text: msg.text,
+                createdAt: msg.createdAt ? new Date(msg.createdAt) : undefined,
               });
             }
           }
@@ -237,19 +243,29 @@ export async function POST(req: Request) {
                 }
               }
 
-              await tx.attachment.create({
-                data: {
-                  procedureId: newProcedure.id,
-                  filename: att.filename,
-                  filepath: finalFilepath,
-                  mimetype: att.mimetype,
-                  size: att.size,
-                  displayOrder: att.displayOrder,
-                }
+              attachmentsData.push({
+                id: crypto.randomUUID(),
+                procedureId: procedureId,
+                filename: att.filename,
+                filepath: finalFilepath,
+                mimetype: att.mimetype,
+                size: att.size,
+                displayOrder: att.displayOrder,
               });
             });
             await Promise.all(attachmentPromises);
           }
+        }
+
+        // Execute bulk inserts
+        if (proceduresData.length > 0) {
+          await tx.procedure.createMany({ data: proceduresData });
+        }
+        if (messagesData.length > 0) {
+          await tx.procedureMessage.createMany({ data: messagesData });
+        }
+        if (attachmentsData.length > 0) {
+          await tx.attachment.createMany({ data: attachmentsData });
         }
       }
 
