@@ -72,8 +72,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized. Business Operations only.' }, { status: 403 });
     }
 
-    const procedures = await prisma.$queryRawUnsafe<ProcedureExport[]>(
-      `SELECT 
+    const procedures = await prisma.$queryRaw<ProcedureExport[]>`SELECT
         a.title as auditTitle,
         a.status as auditStatus,
         p.id as procedureId,
@@ -87,8 +86,7 @@ export async function GET() {
       FROM Procedure p
       JOIN Audit a ON p.auditId = a.id
       LEFT JOIN TeamMember t ON p.assignedToId = t.id
-      ORDER BY a.createdAt DESC, p.phase, p.displayOrder ASC`
-    );
+      ORDER BY a.createdAt DESC, p.phase, p.displayOrder ASC`;
 
     const reportData = formatReportData(procedures);
     const buffer = generateExcelBuffer(reportData);
