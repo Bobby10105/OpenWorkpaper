@@ -46,38 +46,23 @@ interface RawMessage {
 }
 
 async function getAuditProcedures(auditId: string) {
-  const rawGroups: RawProcedureGroup[] = await prisma.$queryRawUnsafe(
-    `SELECT * FROM ProcedureGroup WHERE auditId = ? ORDER BY displayOrder ASC`,
-    auditId
-  );
+  const rawGroups: RawProcedureGroup[] = await prisma.$queryRaw`SELECT * FROM ProcedureGroup WHERE auditId = ${auditId} ORDER BY displayOrder ASC`;
 
   let rawProcedures: RawProcedure[] = [];
   try {
-    rawProcedures = await prisma.$queryRawUnsafe(
-      `SELECT p.*, t.name as assignedToName, t.role as assignedToRole, t.email as assignedToEmail
+    rawProcedures = await prisma.$queryRaw`SELECT p.*, t.name as assignedToName, t.role as assignedToRole, t.email as assignedToEmail
        FROM Procedure p
        LEFT JOIN TeamMember t ON p.assignedToId = t.id
-       WHERE p.auditId = ?`,
-      auditId
-    );
+       WHERE p.auditId = ${auditId}`;
   } catch {
     console.warn('API AuditDetail: Full procedure join failed (schema syncing?). Falling back to basic fetch.');
-    rawProcedures = await prisma.$queryRawUnsafe(
-      `SELECT * FROM Procedure WHERE auditId = ?`,
-      auditId
-    );
+    rawProcedures = await prisma.$queryRaw`SELECT * FROM Procedure WHERE auditId = ${auditId}`;
   }
 
   // 3. Batch fetch attachments and messages for procedures
-  const allAttachments = await prisma.$queryRawUnsafe<RawAttachment[]>(
-    `SELECT * FROM Attachment WHERE procedureId IN (SELECT id FROM Procedure WHERE auditId = ?) ORDER BY displayOrder ASC`,
-    auditId
-  );
+  const allAttachments = await prisma.$queryRaw<RawAttachment[]>`SELECT * FROM Attachment WHERE procedureId IN (SELECT id FROM Procedure WHERE auditId = ${auditId}) ORDER BY displayOrder ASC`;
 
-  const allMessages = await prisma.$queryRawUnsafe<RawMessage[]>(
-    `SELECT * FROM ProcedureMessage WHERE procedureId IN (SELECT id FROM Procedure WHERE auditId = ?) ORDER BY createdAt ASC`,
-    auditId
-  );
+  const allMessages = await prisma.$queryRaw<RawMessage[]>`SELECT * FROM ProcedureMessage WHERE procedureId IN (SELECT id FROM Procedure WHERE auditId = ${auditId}) ORDER BY createdAt ASC`;
 
   const procedureIds = rawProcedures.map(p => p.id);
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { PUT, GET } from '../route';
+import { PUT, GET } from './route';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 import { canAccessAttachment } from '@/lib/audit-access';
