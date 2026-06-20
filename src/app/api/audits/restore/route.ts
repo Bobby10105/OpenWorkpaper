@@ -184,9 +184,9 @@ export async function POST(req: Request) {
         [];
 
       if (Array.isArray(proceduresToRestore)) {
-        const proceduresData = [];
-        const messagesData = [];
-        const attachmentsData = [];
+        const proceduresData: any[] = [];
+        const messagesData: any[] = [];
+        const attachmentsData: any[] = [];
 
         // Accumulate data for bulk insertion
         for (const p of proceduresToRestore) {
