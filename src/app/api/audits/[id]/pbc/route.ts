@@ -39,10 +39,14 @@ export async function GET(
     else if (ext === '.xls') contentType = 'application/vnd.ms-excel';
     else if (ext === '.csv') contentType = 'text/csv';
 
+    const sanitizedName = audit.pbcAttachmentName 
+      ? audit.pbcAttachmentName.replace(/[\r\n]/g, '') 
+      : 'pbc_requests' + ext;
+
     return new NextResponse(fileBuffer, {
       headers: {
         'Content-Type': contentType,
-        'Content-Disposition': `attachment; filename="${audit.pbcAttachmentName || 'pbc_requests' + ext}"`,
+        'Content-Disposition': `attachment; filename="${sanitizedName}"`,
       },
     });
   } catch (error) {

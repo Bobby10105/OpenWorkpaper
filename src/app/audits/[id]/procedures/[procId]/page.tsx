@@ -49,14 +49,12 @@ export default async function ProcedurePage(props: { params: Promise<{ id: strin
 
   try {
     // 1. Fetch Procedure with relations using RAW SQL for robustness
-    const procedures = await prisma.$queryRawUnsafe<RawProcedure[]>(
-      `SELECT p.*, t.name as assignedToName, t.role as assignedToRole, t.email as assignedToEmail
+    const procedures = await prisma.$queryRaw<RawProcedure[]>`
+       SELECT p.*, t.name as assignedToName, t.role as assignedToRole, t.email as assignedToEmail
        FROM Procedure p
        LEFT JOIN TeamMember t ON p.assignedToId = t.id
-       WHERE p.id = ? AND p.auditId = ? LIMIT 1`,
-      params.procId,
-      params.id
-    );
+       WHERE p.id = ${params.procId} AND p.auditId = ${params.id} LIMIT 1
+    `;
 
     if (!procedures || procedures.length === 0) {
       notFound();
@@ -65,15 +63,9 @@ export default async function ProcedurePage(props: { params: Promise<{ id: strin
     const proc = procedures[0];
 
     // 2. Fetch attachments and messages
-    const attachments = await prisma.$queryRawUnsafe<Attachment[]>(
-      `SELECT * FROM Attachment WHERE procedureId = ? ORDER BY displayOrder ASC`,
-      proc.id
-    );
+    const attachments = await prisma.$queryRaw<Attachment[]>`SELECT * FROM Attachment WHERE procedureId = ${proc.id} ORDER BY displayOrder ASC`;
     
-    const messages = await prisma.$queryRawUnsafe<ProcedureMessage[]>(
-      `SELECT * FROM ProcedureMessage WHERE procedureId = ? ORDER BY createdAt ASC`,
-      proc.id
-    );
+    const messages = await prisma.$queryRaw<ProcedureMessage[]>`SELECT * FROM ProcedureMessage WHERE procedureId = ${proc.id} ORDER BY createdAt ASC`;
 
     // 3. Fetch team members for the assignment dropdown
     const teamMembers = await prisma.teamMember.findMany({
@@ -93,11 +85,7 @@ export default async function ProcedurePage(props: { params: Promise<{ id: strin
       // 4. Calculate nomenclature (Phase.Group.Index)
       let nomenclature = "?";
       if (proc.groupId) {
-        const allGroups = await prisma.$queryRawUnsafe<{ id: string }[]>(
-          `SELECT id FROM ProcedureGroup WHERE auditId = ? AND phase = ? ORDER BY displayOrder ASC`,
-          params.id,
-          proc.phase
-        );
+        const allGroups = await prisma.$queryRaw<{ id: string }[]>`SELECT id FROM ProcedureGroup WHERE auditId = ${params.id} AND phase = ${proc.phase} ORDER BY displayOrder ASC`;
         const groupIndex = allGroups.findIndex(g => g.id === proc.groupId);
         const phaseMap: Record<string, number> = { 'Planning': 1, 'Fieldwork': 2, 'Reporting': 3 };
         const phaseNum = phaseMap[proc.phase] || 0;
@@ -105,16 +93,10 @@ export default async function ProcedurePage(props: { params: Promise<{ id: strin
         // Find procedure index in group
         let groupProcs: { id: string }[] = [];
         try {
-          groupProcs = await prisma.$queryRawUnsafe<{ id: string }[]>(
-            `SELECT id FROM Procedure WHERE groupId = ? ORDER BY displayOrder ASC, createdAt ASC`,
-            proc.groupId
-          );
+          groupProcs = await prisma.$queryRaw<{ id: string }[]>`SELECT id FROM Procedure WHERE groupId = ${proc.groupId} ORDER BY displayOrder ASC, createdAt ASC`;
         } catch (e) {
           console.warn("[ProcedurePage] displayOrder column missing, falling back to createdAt", e);
-          groupProcs = await prisma.$queryRawUnsafe<{ id: string }[]>(
-            `SELECT id FROM Procedure WHERE groupId = ? ORDER BY createdAt ASC`,
-            proc.groupId
-          );
+          groupProcs = await prisma.$queryRaw<{ id: string }[]>`SELECT id FROM Procedure WHERE groupId = ${proc.groupId} ORDER BY createdAt ASC`;
         }
         const procIndex = groupProcs.findIndex(p => p.id === proc.id);
         const getLetter = (index: number) => String.fromCharCode(97 + index);

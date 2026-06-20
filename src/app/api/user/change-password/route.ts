@@ -3,6 +3,11 @@ import { prisma } from '@/lib/prisma';
 import { getSession, logout } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 
+function validatePassword(password: string): boolean {
+  const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{12,}$/;
+  return regex.test(password);
+}
+
 // Define user type instead of using 'any'
 interface UserWithPassword {
   id: string;
@@ -58,6 +63,10 @@ export async function POST(req: Request) {
     }
 
     const { currentPassword, newPassword } = await req.json();
+
+    if (!validatePassword(newPassword)) {
+      return NextResponse.json({ error: 'Password does not meet complexity requirements' }, { status: 400 });
+    }
 
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },

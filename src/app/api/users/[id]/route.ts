@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 
+const ALLOWED_ROLES = ['Auditor', 'Specialist', 'IT Administrator', 'Business Operations', 'Audit Manager', 'Audit Director'];
+
 export async function PATCH(
   req: Request,
   props: { params: Promise<{ id: string }> }
@@ -19,6 +21,10 @@ export async function PATCH(
 
     const params = await props.params;
     const { role } = await req.json();
+
+    if (!ALLOWED_ROLES.includes(role)) {
+      return NextResponse.json({ error: 'Invalid role provided' }, { status: 400 });
+    }
 
     const user = await prisma.user.update({
       where: { id: params.id },

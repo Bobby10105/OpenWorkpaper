@@ -7,6 +7,7 @@ import bcrypt from 'bcryptjs';
 
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const MAX_FAILED_ATTEMPTS = 5;
+// TODO: Migrate failedAttempts to a distributed store like Redis for rate limiting in clustered environments
 const failedAttempts = new Map<string, { count: number; lockedUntil: number }>();
 
 // Periodic cleanup of expired locks to prevent memory leaks from unbounded map

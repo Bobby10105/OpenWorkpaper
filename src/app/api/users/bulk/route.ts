@@ -3,6 +3,13 @@ import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 
+const ALLOWED_ROLES = ['Auditor', 'Specialist', 'IT Administrator', 'Business Operations', 'Audit Manager', 'Audit Director'];
+
+function validatePassword(password: string): boolean {
+  const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{12,}$/;
+  return regex.test(password);
+}
+
 interface BulkUser {
   username?: string;
   email?: string;
@@ -26,6 +33,17 @@ export async function processBulkUsers(users: BulkUser[]) {
   })).filter(u => {
     if (!u.username) {
       results.skipped++;
+      results.errors.push('Skipped entry with missing username or email.');
+      return false;
+    }
+    if (!ALLOWED_ROLES.includes(u.role)) {
+      results.skipped++;
+      results.errors.push(`Skipped ${u.username}: Invalid role.`);
+      return false;
+    }
+    if (!validatePassword(u.password)) {
+      results.skipped++;
+      results.errors.push(`Skipped ${u.username}: Password does not meet complexity requirements.`);
       return false;
     }
     return true;

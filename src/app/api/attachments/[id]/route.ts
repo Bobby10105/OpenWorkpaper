@@ -33,10 +33,14 @@ export async function GET(
     const filepath = path.join(process.cwd(), 'storage', attachment.filepath);
     const fileBuffer = await fs.readFile(filepath);
     
+    const sanitizedName = attachment.filename 
+      ? attachment.filename.replace(/[\r\n]/g, '') 
+      : 'attachment';
+
     return new NextResponse(fileBuffer, {
       headers: {
         'Content-Type': attachment.mimetype || 'application/octet-stream',
-        'Content-Disposition': `inline; filename="${attachment.filename}"`,
+        'Content-Disposition': `inline; filename="${sanitizedName}"`,
       },
     });
   } catch (error: unknown) {
@@ -125,23 +129,22 @@ export async function PATCH(
 
     const body = await req.json();
     
-    // Sanitize incoming data to avoid Prisma validation errors
-    const updates: Record<string, unknown> = { ...body };
-    const dateFields = ['preparedDate', 'reviewedDate'];
-    const optionalStringFields = ['preparedBy', 'reviewedBy'];
+    // Explicitly allow only specific fields for mass assignment protection
+    const { preparedBy, preparedDate, reviewedBy, reviewedDate, status } = body;
+    const updates: Record<string, unknown> = {};
+    if (preparedBy !== undefined) updates.preparedBy = preparedBy === '' ? null : preparedBy;
+    if (reviewedBy !== undefined) updates.reviewedBy = reviewedBy === '' ? null : reviewedBy;
+    if (status !== undefined) updates.status = status;
     
-    dateFields.forEach(field => {
-      if (updates[field] === '') {
-        updates[field] = null;
-      } else if (updates[field]) {
-        const d = new Date(updates[field] as string | number);
-        if (!isNaN(d.getTime())) updates[field] = d;
-      }
-    });
-
-    optionalStringFields.forEach(field => {
-      if (updates[field] === '') {
-        updates[field] = null;
+    const dateFields = [{ key: 'preparedDate', value: preparedDate }, { key: 'reviewedDate', value: reviewedDate }];
+    dateFields.forEach(({ key, value }) => {
+      if (value !== undefined) {
+        if (value === '') {
+          updates[key] = null;
+        } else if (value) {
+          const d = new Date(value as string | number);
+          if (!isNaN(d.getTime())) updates[key] = d;
+        }
       }
     });
 
@@ -150,6 +153,20 @@ export async function PATCH(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       data: updates as any
     });
+
+    try {
+      await prisma.auditLog.create({
+        data: {
+          action: 'UPDATE',
+          entityType: 'ATTACHMENT',
+          entityId: params.id,
+          details: `Updated attachment properties`,
+          performedBy: session.user.username,
+        }
+      });
+    } catch (logErr) {
+      console.warn('Log error (non-critical):', logErr);
+    }
 
     return NextResponse.json(attachment);
   } catch (error: unknown) {
@@ -183,6 +200,20 @@ export async function DELETE(
       await prisma.attachment.delete({
         where: { id: params.id }
       });
+
+      try {
+        await prisma.auditLog.create({
+          data: {
+            action: 'DELETE',
+            entityType: 'ATTACHMENT',
+            entityId: params.id,
+            details: `Deleted attachment: ${attachment.filename}`,
+            performedBy: session.user.username,
+          }
+        });
+      } catch (logErr) {
+        console.warn('Log error (non-critical):', logErr);
+      }
     }
 
     return NextResponse.json({ success: true });

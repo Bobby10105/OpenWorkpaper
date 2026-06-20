@@ -9,8 +9,9 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (session.user.role === 'Specialist') {
-      return NextResponse.json({ error: 'Forbidden: Specialists cannot manage team members' }, { status: 403 });
+    const isGlobalManager = session.user.role === 'IT Administrator' || session.user.role === 'Business Operations';
+    if (!isGlobalManager) {
+      return NextResponse.json({ error: 'Forbidden: Only managers can manage team members' }, { status: 403 });
     }
 
     const params = await props.params;
@@ -37,8 +38,24 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
         role: data.role,
         email: data.email,
         userId: userId,
-      }
+      },
+      include: { audit: { select: { title: true } } }
     });
+
+    try {
+      await prisma.auditLog.create({
+        data: {
+          action: 'UPDATE',
+          entityType: 'TEAM_MEMBER',
+          entityId: params.id,
+          details: `Updated team member: ${teamMember.name} in audit: ${teamMember.audit?.title || teamMember.auditId}`,
+          performedBy: session.user.username,
+        }
+      });
+    } catch (logErr) {
+      console.warn('Log error (non-critical):', logErr);
+    }
+
     return NextResponse.json(teamMember);
   } catch (error: unknown) {
     console.error('Update team member error:', error);
@@ -53,8 +70,9 @@ export async function DELETE(_req: Request, props: { params: Promise<{ id: strin
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (session.user.role === 'Specialist') {
-      return NextResponse.json({ error: 'Forbidden: Specialists cannot manage team members' }, { status: 403 });
+    const isGlobalManager = session.user.role === 'IT Administrator' || session.user.role === 'Business Operations';
+    if (!isGlobalManager) {
+      return NextResponse.json({ error: 'Forbidden: Only managers can manage team members' }, { status: 403 });
     }
 
     const params = await props.params;

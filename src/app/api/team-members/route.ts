@@ -9,8 +9,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (session.user.role === 'Specialist') {
-      return NextResponse.json({ error: 'Forbidden: Specialists cannot manage team members' }, { status: 403 });
+    const isGlobalManager = session.user.role === 'IT Administrator' || session.user.role === 'Business Operations';
+    if (!isGlobalManager) {
+      return NextResponse.json({ error: 'Forbidden: Only managers can manage team members' }, { status: 403 });
     }
 
     let data;

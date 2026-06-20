@@ -1,10 +1,22 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getSession } from '@/lib/auth';
+import { canAccessAudit } from '@/lib/audit-access';
 import fs from 'fs/promises';
 import path from 'path';
 
 export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
+  const session = await getSession();
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const params = await props.params;
+
+  const allowed = await canAccessAudit(session.user, params.id);
+  if (!allowed) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
   
   try {
     const audit = await prisma.audit.findUnique({
@@ -26,10 +38,14 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
     else if (ext === '.xls') contentType = 'application/vnd.ms-excel';
     else if (ext === '.csv') contentType = 'text/csv';
 
+    const sanitizedName = audit.milestoneAttachmentName 
+      ? audit.milestoneAttachmentName.replace(/[\r\n]/g, '') 
+      : 'milestones' + ext;
+
     return new NextResponse(fileBuffer, {
       headers: {
         'Content-Type': contentType,
-        'Content-Disposition': `attachment; filename="${audit.milestoneAttachmentName || 'milestones' + ext}"`,
+        'Content-Disposition': `attachment; filename="${sanitizedName}"`,
       },
     });
   } catch (error) {

@@ -85,6 +85,8 @@ export async function logout() {
     expires: new Date(0),
     secure: isProduction && isSecureEnv,
     path: '/',
+    httpOnly: true,
+    sameSite: 'lax',
   });
 }
 

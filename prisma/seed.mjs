@@ -13,7 +13,12 @@ const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log('Running safe admin seed...');
-  const hashedPassword = await bcrypt.hash('password123', 10);
+  const seedPassword = process.env.ADMIN_SEED_PASSWORD;
+  if (!seedPassword && process.env.NODE_ENV === 'production') {
+    throw new Error('ADMIN_SEED_PASSWORD environment variable must be set in production');
+  }
+  const passwordToUse = seedPassword || 'random' + Math.random().toString(36).substring(7);
+  const hashedPassword = await bcrypt.hash(passwordToUse, 10);
 
   const admins = [
     { username: 'it.admin', role: 'IT Administrator', fullName: 'IT Admin', email: 'it.admin@example.com' },

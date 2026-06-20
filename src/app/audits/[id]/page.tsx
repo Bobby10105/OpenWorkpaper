@@ -104,10 +104,7 @@ export default async function AuditDetail(props: { params: Promise<{ id: string 
   let errorMessage: string | null = null;
 
   try {
-    const audits = await prisma.$queryRawUnsafe<AuditRaw[]>(
-      `SELECT * FROM Audit WHERE id = ? LIMIT 1`,
-      params.id
-    );
+    const audits = await prisma.$queryRaw<AuditRaw[]>`SELECT * FROM Audit WHERE id = ${params.id} LIMIT 1`;
     
     if (!audits || audits.length === 0) {
       notFound();
@@ -129,48 +126,34 @@ export default async function AuditDetail(props: { params: Promise<{ id: string 
     if (!isUnauthorized) {
       let rawGroups: ProcedureGroupRaw[] = [];
       try {
-        rawGroups = await prisma.$queryRawUnsafe<ProcedureGroupRaw[]>(
-          `SELECT * FROM ProcedureGroup WHERE auditId = ? ORDER BY displayOrder ASC, createdAt ASC`,
-          auditBase.id
-        );
+        rawGroups = await prisma.$queryRaw<ProcedureGroupRaw[]>`SELECT * FROM ProcedureGroup WHERE auditId = ${auditBase.id} ORDER BY displayOrder ASC, createdAt ASC`;
       } catch {
-        rawGroups = await prisma.$queryRawUnsafe<ProcedureGroupRaw[]>(
-          `SELECT * FROM ProcedureGroup WHERE auditId = ? ORDER BY createdAt ASC`,
-          auditBase.id
-        );
+        rawGroups = await prisma.$queryRaw<ProcedureGroupRaw[]>`SELECT * FROM ProcedureGroup WHERE auditId = ${auditBase.id} ORDER BY createdAt ASC`;
       }
 
       let rawProcedures: ProcedureRaw[] = [];
       try {
-        rawProcedures = await prisma.$queryRawUnsafe<ProcedureRaw[]>(
-          `SELECT p.*, t.name as assignedToName, t.role as assignedToRole, t.email as assignedToEmail
+        rawProcedures = await prisma.$queryRaw<ProcedureRaw[]>`
+           SELECT p.*, t.name as assignedToName, t.role as assignedToRole, t.email as assignedToEmail
            FROM Procedure p
            LEFT JOIN TeamMember t ON p.assignedToId = t.id
-           WHERE p.auditId = ?
-           ORDER BY p.displayOrder ASC, p.createdAt ASC`,
-          auditBase.id
-        );
+           WHERE p.auditId = ${auditBase.id}
+           ORDER BY p.displayOrder ASC, p.createdAt ASC
+        `;
       } catch {
-        rawProcedures = await prisma.$queryRawUnsafe<ProcedureRaw[]>(
-          `SELECT p.*, t.name as assignedToName, t.role as assignedToRole, t.email as assignedToEmail
+        rawProcedures = await prisma.$queryRaw<ProcedureRaw[]>`
+           SELECT p.*, t.name as assignedToName, t.role as assignedToRole, t.email as assignedToEmail
            FROM Procedure p
            LEFT JOIN TeamMember t ON p.assignedToId = t.id
-           WHERE p.auditId = ?
-           ORDER BY p.createdAt ASC`,
-          auditBase.id
-        );
+           WHERE p.auditId = ${auditBase.id}
+           ORDER BY p.createdAt ASC
+        `;
       }
 
       // Batch fetch attachments and messages to avoid N+1 queries
-      const allAttachments = await prisma.$queryRawUnsafe<AttachmentRaw[]>(
-        `SELECT * FROM Attachment WHERE procedureId IN (SELECT id FROM Procedure WHERE auditId = ?) ORDER BY displayOrder ASC`,
-        auditBase.id
-      );
+      const allAttachments = await prisma.$queryRaw<AttachmentRaw[]>`SELECT * FROM Attachment WHERE procedureId IN (SELECT id FROM Procedure WHERE auditId = ${auditBase.id}) ORDER BY displayOrder ASC`;
 
-      const allMessages = await prisma.$queryRawUnsafe<ProcedureMessageRaw[]>(
-        `SELECT * FROM ProcedureMessage WHERE procedureId IN (SELECT id FROM Procedure WHERE auditId = ?) ORDER BY createdAt ASC`,
-        auditBase.id
-      );
+      const allMessages = await prisma.$queryRaw<ProcedureMessageRaw[]>`SELECT * FROM ProcedureMessage WHERE procedureId IN (SELECT id FROM Procedure WHERE auditId = ${auditBase.id}) ORDER BY createdAt ASC`;
 
       const proceduresWithRelations = rawProcedures.map((proc) => {
         const attachments = allAttachments.filter(a => a.procedureId === proc.id);
