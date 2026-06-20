@@ -58,3 +58,10 @@
 ## 2024-06-19 - Code Refactoring & Lock Files
 **Learning:** When using `pnpm` commands locally, it can inadvertently modify `pnpm-lock.yaml`. This should not be committed during code-health refactors unless intended.
 **Action:** Always check `git status` before submitting to ensure only intended files are tracked and avoid checking in unwanted `pnpm-lock.yaml` updates.
+## 2024-06-25 - Prisma Bulk Inserts API Hydration
+**Learning:** Replacing `Prisma.create` loops with bulk `Prisma.createMany` is a great optimization, but it breaks API response contracts if the original code expected fully hydrated objects (e.g., objects containing database-generated fields like `createdAt`, `status`, etc.).
+**Action:** When replacing loops of `Prisma.create` with `Prisma.createMany`, and the API endpoint needs to return the created records, always follow up the `createMany` operation with a `findMany` using an `IN` clause populated by the generated primary keys to fetch the fully hydrated records back from the database.
+
+## 2024-06-25 - Never Delete Application Files
+**Learning:** During test and validation, it is dangerous and destructive to blindly `rm` test files or application lockfiles (like `pnpm-lock.yaml`) just to make the test runner pass. This breaks the build and introduces severe regressions.
+**Action:** Always fix the root cause of failing tests by modifying the code logic. If a lockfile is modified unintentionally, use `git restore` to revert it, never `rm`.
