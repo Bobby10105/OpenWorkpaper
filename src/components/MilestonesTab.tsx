@@ -226,8 +226,9 @@ export default function MilestonesTab({ audit }: { audit: Audit }) {
                     onClick={handleDeleteAttachment}
                     className="p-3 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-2xl transition-all active:scale-90"
                     title="Remove attachment"
+                    aria-label="Remove attachment"
                   >
-                    <Trash2 className="w-5 h-5" />
+                    <Trash2 className="w-5 h-5" aria-hidden="true" />
                   </button>
                 </div>
                 <div className="flex justify-center">

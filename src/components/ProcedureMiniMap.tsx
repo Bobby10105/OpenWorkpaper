@@ -111,7 +111,7 @@ export default function ProcedureMiniMap({
           aria-label="Minimize navigator"
           title="Minimize navigator"
         >
-          <ChevronDown className="w-4 h-4 rotate-90" />
+          <ChevronDown className="w-4 h-4 rotate-90" aria-hidden="true" />
         </button>
       </div>
       

@@ -131,8 +131,9 @@ export default function EditableAuditHeader({
               onClick={() => setIsEditing(true)}
               className="p-2.5 text-slate-400 hover:text-blue-600 bg-slate-50 hover:bg-slate-100 rounded-xl transition-all opacity-0 group-hover:opacity-100 active:scale-90 shadow-sm border border-slate-200"
               title="Edit Audit Details"
+              aria-label="Edit Audit Details"
             >
-              <Edit2 className="w-5 h-5" />
+              <Edit2 className="w-5 h-5" aria-hidden="true" />
             </button>
           </div>
           

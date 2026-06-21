@@ -291,8 +291,9 @@ export default function TeamMembersTab({
                         onClick={() => handleDeleteMember(member.id, member.name)}
                         className="p-3.5 text-gray-400 hover:text-red-600 bg-gray-50 hover:bg-red-50 rounded-2xl transition-all active:scale-90 border border-transparent hover:border-red-200 shadow-sm"
                         title="Revoke Access"
+                        aria-label="Revoke Access"
                       >
-                        <Trash2 className="w-5 h-5" />
+                        <Trash2 className="w-5 h-5" aria-hidden="true" />
                       </button>
                     )}
                   </div>

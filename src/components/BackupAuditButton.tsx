@@ -46,9 +46,9 @@ export default function BackupAuditButton({ auditId, auditTitle }: BackupAuditBu
       title="Download full audit data and attachments as ZIP"
     >
       {isBackingUp ? (
-        <Loader2 className="w-4 h-4 animate-spin" />
+        <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
       ) : (
-        <Download className="w-4 h-4" />
+        <Download className="w-4 h-4" aria-hidden="true" />
       )}
       <span>{isBackingUp ? 'Preparing...' : 'Backup (.zip)'}</span>
     </button>

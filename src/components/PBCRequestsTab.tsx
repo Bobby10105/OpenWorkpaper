@@ -128,8 +128,9 @@ export default function PBCRequestsTab({ audit }: { audit: Audit }) {
                   onClick={handleDeleteAttachment}
                   className="p-3 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-2xl transition-all active:scale-90"
                   title="Remove PBC spreadsheet"
+                  aria-label="Remove PBC spreadsheet"
                 >
-                  <Trash2 className="w-6 h-6" />
+                  <Trash2 className="w-6 h-6" aria-hidden="true" />
                 </button>
               </div>
               <div className="flex justify-center">

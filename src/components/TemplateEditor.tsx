@@ -265,8 +265,9 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
                         onClick={() => addGroup(phaseName)} 
                         className="p-1 text-blue-400 hover:text-blue-600 transition-colors"
                         title={`Add group to ${phaseName}`}
+                        aria-label={`Add group to ${phaseName}`}
                       >
-                        <Plus className="w-3 h-3" />
+                        <Plus className="w-4 h-4" aria-hidden="true" />
                       </button>
                     </div>
                     <div className="space-y-1">
@@ -291,11 +292,11 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
                                   <span className="text-[10px] opacity-60 font-black">{(group.procedures || []).length}</span>
                                 </button>
                                 <div className={`absolute right-10 top-1/2 -translate-y-1/2 flex items-center opacity-0 group-hover:opacity-100 transition-opacity ${isActive ? 'text-white' : 'text-gray-400'}`}>
-                                  <button onClick={(e) => { e.stopPropagation(); moveGroup(index, 'up'); }} className="p-1 hover:scale-125 transition-transform" disabled={index === 0}>
-                                    <ArrowUp className="w-3 h-3" />
+                                  <button onClick={(e) => { e.stopPropagation(); moveGroup(index, 'up'); }} className="p-1 hover:scale-125 transition-transform" disabled={index === 0} title="Move phase up" aria-label="Move phase up">
+                                    <ArrowUp className="w-3 h-3" aria-hidden="true" />
                                   </button>
-                                  <button onClick={(e) => { e.stopPropagation(); moveGroup(index, 'down'); }} className="p-1 hover:scale-125 transition-transform" disabled={index === groups.length - 1}>
-                                    <ArrowDown className="w-3 h-3" />
+                                  <button onClick={(e) => { e.stopPropagation(); moveGroup(index, 'down'); }} className="p-1 hover:scale-125 transition-transform" disabled={index === groups.length - 1} title="Move phase down" aria-label="Move phase down">
+                                    <ArrowDown className="w-3 h-3" aria-hidden="true" />
                                   </button>
                                 </div>
                               </div>
@@ -350,8 +351,9 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
                       onClick={() => deleteGroup(currentGroup.id)}
                       className="p-2 text-gray-400 hover:text-red-600 transition-colors"
                       title="Delete Phase"
+                      aria-label="Delete Phase"
                     >
-                      <Trash2 className="w-5 h-5" />
+                      <Trash2 className="w-5 h-5" aria-hidden="true" />
                     </button>
                     <div className="w-px h-6 bg-gray-100 mx-2" />
                     <button
@@ -413,15 +415,15 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
                         />
                       </div>
                       <div className="flex items-center space-x-1 opacity-0 group-hover/proc:opacity-100 transition-opacity">
-                        <button onClick={() => moveProcedure(currentGroup.id, index, 'up')} className="p-2 text-gray-400 hover:text-blue-600" disabled={index === 0}>
-                          <ArrowUp className="w-4 h-4" />
+                        <button onClick={() => moveProcedure(currentGroup.id, index, 'up')} className="p-2 text-gray-400 hover:text-blue-600" disabled={index === 0} title="Move procedure up" aria-label="Move procedure up">
+                          <ArrowUp className="w-4 h-4" aria-hidden="true" />
                         </button>
-                        <button onClick={() => moveProcedure(currentGroup.id, index, 'down')} className="p-2 text-gray-400 hover:text-blue-600" disabled={index === (currentGroup.procedures || []).length - 1}>
-                          <ArrowDown className="w-4 h-4" />
+                        <button onClick={() => moveProcedure(currentGroup.id, index, 'down')} className="p-2 text-gray-400 hover:text-blue-600" disabled={index === (currentGroup.procedures || []).length - 1} title="Move procedure down" aria-label="Move procedure down">
+                          <ArrowDown className="w-4 h-4" aria-hidden="true" />
                         </button>
                         <div className="w-px h-4 bg-gray-200 mx-1" />
-                        <button onClick={() => deleteProcedure(currentGroup.id, proc.id)} className="p-2 text-gray-400 hover:text-red-600">
-                          <Trash2 className="w-4 h-4" />
+                        <button onClick={() => deleteProcedure(currentGroup.id, proc.id)} className="p-2 text-gray-400 hover:text-red-600" title="Delete procedure" aria-label="Delete procedure">
+                          <Trash2 className="w-4 h-4" aria-hidden="true" />
                         </button>
                       </div>
                     </div>

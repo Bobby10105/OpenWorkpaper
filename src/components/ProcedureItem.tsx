@@ -114,7 +114,7 @@ export default function ProcedureItem({
           aria-label="Delete procedure"
           title="Delete procedure"
         >
-          <Trash2 className="w-4 h-4" />
+          <Trash2 className="w-4 h-4" aria-hidden="true" />
         </button>
       )}
     </div>
