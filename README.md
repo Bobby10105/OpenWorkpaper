@@ -87,6 +87,14 @@ OpenWorkpaper was built with the specific needs of **CPA Firms** and **Internal 
 
 For production deployments, it is critical to secure the application with HTTPS and properly configure Single Sign-On (SSO) if required.
 
+### 🖥️ Recommended System Specifications
+OpenWorkpaper is highly efficient and designed to scale vertically. For an organization with up to **200 concurrent auditors**, we recommend the following minimum server specifications to ensure a fast, responsive user experience:
+*   **CPU:** 2 to 4 vCPUs
+*   **Memory:** 4GB to 8GB RAM
+*   **Storage:** 20GB+ SSD (Storage needs will scale depending on the size and volume of uploaded attachments)
+
+*Note: Because OpenWorkpaper utilizes a highly optimized SQLite Write-Ahead Log (WAL) architecture, the database natively supports high-concurrency read/write operations without locking. The recommended specifications primarily ensure the Node.js frontend and API can seamlessly handle the concurrent traffic volume.*
+
 ### 🌐 HTTPS & Reverse Proxy (Recommended)
 OpenWorkpaper provides a streamlined way to deploy with HTTPS using a built-in Nginx reverse proxy configuration. This method handles SSL/TLS termination and automatically redirects insecure HTTP traffic to HTTPS.
 
