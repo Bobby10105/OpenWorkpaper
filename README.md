@@ -169,8 +169,9 @@ OpenWorkpaper is designed for complete infrastructure-agnostic flexibility. Whet
 To use the Docker methods below, you must have [Docker](https://www.docker.com/) installed on your server or local machine.
 > **Note**: For a complete list of all internal libraries, security dependencies, and infrastructure requirements for IT approval, please see **[DEPENDENCIES.md](DEPENDENCIES.md)**.
 
-### 🐳 Method 1: Docker Deployment (Recommended)
-This is the professional standard for deploying OpenWorkpaper. We recommend Option A for all production environments.
+### 🫙 Method 1: Docker or Podman Deployment (Recommended)
+This is the professional standard for deploying OpenWorkpaper. We recommend Option A for all production environments. (Note for Podman users: The commands below use ⁠docker compose⁠, but you can seamlessly substitute ⁠podman compose⁠ or rely on your Docker alias.)
+
 
 1.  **Clone & Prepare**:
     ```bash
@@ -189,6 +190,7 @@ This is the professional standard for deploying OpenWorkpaper. We recommend Opti
         ```bash
         docker compose -f docker-compose.secure.yml up -d --build
         ```
+Note for rootless Podman users: Binding to port 443 requires elevated privileges.
 
     *   **Option B: Standard Production (HTTP - Port 3000)**
         *Best for local testing or if you already have an external load balancer/reverse proxy.*
