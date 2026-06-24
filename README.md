@@ -186,12 +186,11 @@ This is the professional standard for deploying OpenWorkpaper. We recommend Opti
     Edit the `.env` file and configure your settings. At a minimum, you **must** update **`JWT_SECRET`**. The other defaults are already pre-configured for a standard production Docker deployment. If you are using SSO, configure those variables as described in the [Environment Variables Reference](#-environment-variables-reference) above.
 3.  **Launch**:
 
-    *   **Option A: Secure Production (HTTPS - Port 443)**
+    *   **Option A: Secure Production (HTTPS - Port 443)** Note for rootless Podman users: Binding to port 443 requires elevated privileges.
         *Best for direct production exposure. Handles SSL/TLS termination automatically. Requires SSL certificates in the `certs/` folder (see [Production Configuration](#-production-configuration)).*
         ```bash
         docker compose -f docker-compose.secure.yml up -d --build
         ```
-Note for rootless Podman users: Binding to port 443 requires elevated privileges.
 
     *   **Option B: Standard Production (HTTP - Port 3000)**
         *Best for local testing or if you already have an external load balancer/reverse proxy.*
