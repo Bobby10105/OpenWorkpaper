@@ -6,7 +6,7 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - .:/app
+      - .:/app:z
       - /app/node_modules
       - /app/.next
       - uploads-data:/app/public/uploads
