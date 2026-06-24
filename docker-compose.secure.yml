@@ -23,8 +23,8 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./certs:/etc/nginx/certs:ro
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro,z
+      - ./certs:/etc/nginx/certs:ro,z
     depends_on:
       app:
         condition: service_healthy

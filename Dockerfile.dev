@@ -6,8 +6,8 @@ RUN apt-get update && apt-get install -y python3 make g++ openssl libsqlite3-dev
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
-COPY package.json package-lock.json* ./
-RUN npm install
+COPY package.json pnpm-lock.yaml ./
+RUN npm install -g pnpm && pnpm i --frozen-lockfile
 
 # Copy everything else
 COPY . .
@@ -22,5 +22,5 @@ ENV HOSTNAME "0.0.0.0"
 
 # Use the existing entrypoint script to set up the DB, 
 # but override the final process to use the dev server
-CMD npx prisma db push --accept-data-loss && npx prisma db seed && npm run dev
+CMD npx prisma db push --accept-data-loss && npx prisma db seed && pnpm run dev
 
