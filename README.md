@@ -166,7 +166,8 @@ OpenWorkpaper provides robust data portability and recovery options:
 OpenWorkpaper is designed for complete infrastructure-agnostic flexibility. Whether you are a solo practitioner or a large firm, choose the method that fits your IT environment.
 
 ### ✅ Prerequisites (Docker Methods)
-To use the Docker methods below, you must have [Docker](https://www.docker.com/) installed on your server or local machine.
+To use the container deployment methods below, you must have Docker or Podman (with compose support) installed on your server or local machine. 
+
 > **Note**: For a complete list of all internal libraries, security dependencies, and infrastructure requirements for IT approval, please see **[DEPENDENCIES.md](DEPENDENCIES.md)**.
 
 ### 🫙 Method 1: Docker or Podman Deployment (Recommended)
