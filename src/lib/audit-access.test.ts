@@ -39,7 +39,7 @@ describe('audit-access', () => {
     });
 
     it('returns true if user is a team member for the audit', async () => {
-      vi.mocked(prisma.teamMember.findFirst).mockResolvedValue({ id: 'member-1' } as any);
+      vi.mocked(prisma.teamMember.findFirst).mockResolvedValue({ id: 'member-1' } as never);
       const result = await canAccessAudit({ id: '1', role: 'User' }, 'audit-1');
       expect(result).toBe(true);
       expect(prisma.teamMember.findFirst).toHaveBeenCalledWith({
@@ -57,6 +57,11 @@ describe('audit-access', () => {
         select: { id: true },
       });
     });
+
+    it('throws an error if prisma query fails', async () => {
+      vi.mocked(prisma.teamMember.findFirst).mockRejectedValue(new Error('Database error'));
+      await expect(canAccessAudit({ id: '1', role: 'User' }, 'audit-1')).rejects.toThrow('Database error');
+    });
   });
 
   describe('canAccessProcedure', () => {
@@ -67,8 +72,8 @@ describe('audit-access', () => {
     });
 
     it('delegates to canAccessAudit if procedure exists', async () => {
-      vi.mocked(prisma.procedure.findUnique).mockResolvedValue({ auditId: 'audit-1' } as any);
-      vi.mocked(prisma.teamMember.findFirst).mockResolvedValue({ id: 'member-1' } as any);
+      vi.mocked(prisma.procedure.findUnique).mockResolvedValue({ auditId: 'audit-1' } as never);
+      vi.mocked(prisma.teamMember.findFirst).mockResolvedValue({ id: 'member-1' } as never);
       const result = await canAccessProcedure({ id: '1', role: 'User' }, 'proc-1');
       expect(result).toBe(true);
       expect(prisma.teamMember.findFirst).toHaveBeenCalledWith({
@@ -99,7 +104,7 @@ describe('audit-access', () => {
     });
 
     it('should return false if attachment has no procedure', async () => {
-      // @ts-ignore
+      // @ts-expect-error mock
       vi.mocked(prisma.attachment.findUnique).mockResolvedValue({
         id: 'attachment1',
         procedure: null,
@@ -110,7 +115,7 @@ describe('audit-access', () => {
     });
 
     it('should return false if procedure has no auditId', async () => {
-      // @ts-ignore
+      // @ts-expect-error mock
       vi.mocked(prisma.attachment.findUnique).mockResolvedValue({
         id: 'attachment1',
         procedure: { auditId: null },
@@ -121,7 +126,7 @@ describe('audit-access', () => {
     });
 
     it('should return true if user has global audit access', async () => {
-      // @ts-ignore
+      // @ts-expect-error mock
       vi.mocked(prisma.attachment.findUnique).mockResolvedValue({
         id: 'attachment1',
         procedure: { auditId: 'audit1' },
@@ -132,12 +137,12 @@ describe('audit-access', () => {
     });
 
     it('should return true if user is a team member for the audit', async () => {
-      // @ts-ignore
+      // @ts-expect-error mock
       vi.mocked(prisma.attachment.findUnique).mockResolvedValue({
         id: 'attachment1',
         procedure: { auditId: 'audit1' },
       });
-      // @ts-ignore
+      // @ts-expect-error mock
       vi.mocked(prisma.teamMember.findFirst).mockResolvedValue({ id: 'membership1' });
       const user: SessionUserLike = { id: 'user1', role: 'Staff' };
       const result = await canAccessAttachment(user, 'attachment1');
@@ -152,7 +157,7 @@ describe('audit-access', () => {
     });
 
     it('should return false if user is not a team member and has no global access', async () => {
-      // @ts-ignore
+      // @ts-expect-error mock
       vi.mocked(prisma.attachment.findUnique).mockResolvedValue({
         id: 'attachment1',
         procedure: { auditId: 'audit1' },
