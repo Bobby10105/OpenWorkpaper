@@ -16,7 +16,13 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - SESSION_DURATION_SECONDS=${SESSION_DURATION_SECONDS:-3600}
       - NODE_ENV=${NODE_ENV:-development}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
     restart: always
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
 
 volumes:
   uploads-data:

@@ -1,33 +1,48 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { login } from '@/lib/auth';
+import { redis } from '@/lib/redis';
 import bcrypt from 'bcryptjs';
 
-
-
-const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+const RATE_LIMIT_WINDOW_SEC = 15 * 60; // 15 minutes in seconds
 const MAX_FAILED_ATTEMPTS = 5;
-// TODO: Migrate failedAttempts to a distributed store like Redis for rate limiting in clustered environments
-const failedAttempts = new Map<string, { count: number; lockedUntil: number }>();
 
-// Periodic cleanup of expired locks to prevent memory leaks from unbounded map
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, attempt] of failedAttempts.entries()) {
-    if (attempt.lockedUntil < now && attempt.lockedUntil !== 0) {
-      failedAttempts.delete(key);
+async function handleFailedLogin(username: string) {
+  const attemptsKey = `login_attempts:${username}`;
+  const lockedKey = `account_locked:${username}`;
+
+  try {
+    const attempts = await redis.incr(attemptsKey);
+    if (attempts === 1) {
+      await redis.expire(attemptsKey, RATE_LIMIT_WINDOW_SEC);
     }
-  }
-}, 60 * 60 * 1000); // Clean up every hour
 
-function handleFailedLogin(username: string) {
-  const currentAttempt = failedAttempts.get(username) || { count: 0, lockedUntil: 0 };
-  currentAttempt.count += 1;
-  if (currentAttempt.count >= MAX_FAILED_ATTEMPTS) {
-    currentAttempt.lockedUntil = Date.now() + RATE_LIMIT_WINDOW_MS;
-    console.warn(`[Login] Account locked for user: ${username}`);
+    if (attempts >= MAX_FAILED_ATTEMPTS) {
+      await redis.set(lockedKey, '1', 'EX', RATE_LIMIT_WINDOW_SEC);
+      console.warn(`[Login] Account locked for user: ${username}`);
+    }
+  } catch (error) {
+    console.error('[Login] Failed to record login attempt to Redis', error);
   }
-  failedAttempts.set(username, currentAttempt);
+}
+
+async function isAccountLocked(username: string): Promise<boolean> {
+  try {
+    const locked = await redis.get(`account_locked:${username}`);
+    return locked !== null;
+  } catch (error) {
+    console.error('[Login] Failed to check lock status from Redis', error);
+    return false;
+  }
+}
+
+async function clearFailedAttempts(username: string) {
+  try {
+    await redis.del(`login_attempts:${username}`);
+    await redis.del(`account_locked:${username}`);
+  } catch (error) {
+    console.error('[Login] Failed to clear failed attempts from Redis', error);
+  }
 }
 
 export async function POST(req: Request) {
@@ -39,11 +54,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Username and password are required' }, { status: 400 });
     }
 
-    const attempt = failedAttempts.get(username);
-    if (attempt && attempt.lockedUntil > Date.now()) {
+    const locked = await isAccountLocked(username);
+    if (locked) {
       return NextResponse.json({ error: 'Account locked due to too many failed attempts. Try again later.' }, { status: 429 });
     }
-
 
     const user = await prisma.user.findUnique({
       where: { username },
@@ -52,7 +66,7 @@ export async function POST(req: Request) {
     if (!user || !user.password) {
       console.warn(`[Login] User not found or has no password: ${username}`);
 
-    handleFailedLogin(username);
+      await handleFailedLogin(username);
       return NextResponse.json({ error: 'Invalid username or password' }, { status: 401 });
     }
 
@@ -61,12 +75,11 @@ export async function POST(req: Request) {
     if (!isPasswordValid) {
       console.warn(`[Login] Invalid password for user: ${username}`);
 
-    handleFailedLogin(username);
+      await handleFailedLogin(username);
       return NextResponse.json({ error: 'Invalid username or password' }, { status: 401 });
     }
     // Reset failed attempts on success
-    failedAttempts.delete(username);
-
+    await clearFailedAttempts(username);
 
     await login({ 
       id: user.id, 
