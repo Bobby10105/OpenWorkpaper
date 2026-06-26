@@ -83,11 +83,19 @@ export async function POST(req: Request) {
         role,
         mustChangePassword: true,
       },
+      select: {
+        id: true,
+        username: true,
+        role: true,
+        mustChangePassword: true,
+        ssoProvider: true,
+        ssoId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password: _, ...userWithoutPassword } = user;
-    return NextResponse.json(userWithoutPassword);
+    return NextResponse.json(user);
   } catch (error: unknown) {
     console.error('Create user error:', error);
     const message = error instanceof Error ? error.message : 'Creation failed';
