@@ -58,6 +58,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Failed to read file', details: msg }, { status: 500 });
     }
     
+    const ALLOWED_EXTENSIONS = [
+      '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+      '.csv', '.json', '.zip', '.txt', '.png', '.jpg', '.jpeg'
+    ];
+    const ext = path.extname(filenameAttr).toLowerCase();
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      return NextResponse.json({ error: 'File type not allowed' }, { status: 400 });
+    }
+
     const uniqueSuffix = crypto.randomUUID();
     const safeFilename = filenameAttr.replace(/[^a-zA-Z0-9.-]/g, '_');
     const diskFilename = `${uniqueSuffix}-${safeFilename}`;
