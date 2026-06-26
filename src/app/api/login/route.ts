@@ -2,23 +2,16 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { login } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
-
-
+import { LRUCache } from 'lru-cache';
 
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const MAX_FAILED_ATTEMPTS = 5;
 // TODO: Migrate failedAttempts to a distributed store like Redis for rate limiting in clustered environments
-const failedAttempts = new Map<string, { count: number; lockedUntil: number }>();
-
-// Periodic cleanup of expired locks to prevent memory leaks from unbounded map
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, attempt] of failedAttempts.entries()) {
-    if (attempt.lockedUntil < now && attempt.lockedUntil !== 0) {
-      failedAttempts.delete(key);
-    }
-  }
-}, 60 * 60 * 1000); // Clean up every hour
+const failedAttempts = new LRUCache<string, { count: number; lockedUntil: number }>({
+  max: 1000,
+  ttl: RATE_LIMIT_WINDOW_MS,
+  ttlAutopurge: true,
+});
 
 function handleFailedLogin(username: string) {
   const currentAttempt = failedAttempts.get(username) || { count: 0, lockedUntil: 0 };
