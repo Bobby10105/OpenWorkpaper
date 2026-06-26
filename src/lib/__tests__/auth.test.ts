@@ -2,7 +2,16 @@ import { login, encrypt, decrypt, logout, getSession, updateSession } from '../a
 import { cookies } from 'next/headers';
 import { vi, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import { SignJWT } from 'jose';
+import * as jose from 'jose';
 import { NextRequest } from "next/server";
+
+vi.mock('jose', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('jose')>();
+  return {
+    ...actual,
+    jwtVerify: vi.fn().mockImplementation(actual.jwtVerify),
+  };
+});
 
 vi.mock('next/headers', () => ({
   cookies: vi.fn(),
@@ -160,6 +169,28 @@ describe('Auth - JWT encryption and decryption', () => {
     await expect(decrypt(expiredToken)).rejects.toThrowError(
       'Session has expired.'
     );
+  });
+});
+
+describe('Auth - JWT validation edge cases', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should throw Invalid session signature error for ERR_JWS_SIGNATURE_VERIFICATION_FAILED', async () => {
+    (jose.jwtVerify as never as ReturnType<typeof vi.fn>).mockRejectedValueOnce({ code: 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED' });
+    await expect(decrypt('some.token')).rejects.toThrowError('Invalid session signature. The secret key may have changed.');
+  });
+
+  it('should throw Session has expired error for ERR_JWT_EXPIRED', async () => {
+    (jose.jwtVerify as never as ReturnType<typeof vi.fn>).mockRejectedValueOnce({ code: 'ERR_JWT_EXPIRED' });
+    await expect(decrypt('some.token')).rejects.toThrowError('Session has expired.');
+  });
+
+  it('should rethrow unknown errors', async () => {
+    const err = new Error('Unknown error');
+    (jose.jwtVerify as never as ReturnType<typeof vi.fn>).mockRejectedValueOnce(err);
+    await expect(decrypt('some.token')).rejects.toThrowError('Unknown error');
   });
 });
 
