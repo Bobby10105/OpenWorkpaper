@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getSession, logout } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 
-function validatePassword(password: string): boolean {
+export function validatePassword(password: string): boolean {
   const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{12,}$/;
   return regex.test(password);
 }
