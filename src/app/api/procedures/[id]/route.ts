@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import { getSession } from '@/lib/auth';
 import { canAccessProcedure } from '@/lib/audit-access';
 import DOMPurify from 'isomorphic-dompurify';
@@ -75,9 +76,9 @@ export async function PUT(
     }
 
     // Map fields from client to Prisma-friendly values
-    const updates: Record<string, unknown> = {};
-    const stringFields = ['title', 'purpose', 'source', 'scope', 'methodology', 'results', 'conclusions', 'preparedBy', 'reviewedBy', 'status', 'phase'];
-    const optionalFields = ['groupId', 'assignedToId', 'preparedDate', 'reviewedDate'];
+    const updates: Prisma.ProcedureUncheckedUpdateInput = {};
+    const stringFields = ['title', 'purpose', 'source', 'scope', 'methodology', 'results', 'conclusions', 'preparedBy', 'reviewedBy', 'status', 'phase'] as const;
+    const optionalFields = ['groupId', 'assignedToId', 'preparedDate', 'reviewedDate'] as const;
 
     // Copy over standard string fields
     stringFields.forEach(field => {
@@ -111,7 +112,7 @@ export async function PUT(
       updates.reviewedDate = new Date();
     }
 
-    const RICH_TEXT_FIELDS = ['purpose', 'source', 'scope', 'methodology', 'results', 'conclusions'];
+    const RICH_TEXT_FIELDS = ['purpose', 'source', 'scope', 'methodology', 'results', 'conclusions'] as const;
     for (const field of RICH_TEXT_FIELDS) {
       if (typeof updates[field] === 'string') {
         updates[field] = DOMPurify.sanitize(updates[field] as string);
@@ -120,8 +121,7 @@ export async function PUT(
 
     const procedure = await prisma.procedure.update({
       where: { id: params.id },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      data: updates as any,
+      data: updates,
     });
 
     return NextResponse.json(procedure);
