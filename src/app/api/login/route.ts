@@ -3,7 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { login } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 
-
+// Hardcoded hash for dummy comparison to mitigate timing attacks during login
+const DUMMY_PASSWORD_HASH = '$2b$10$i1pF5K6RK94rBZy2aYarOOzzRSojq1KKekFDSwayUO8n28vZmTytO';
 
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const MAX_FAILED_ATTEMPTS = 5;
@@ -50,9 +51,12 @@ export async function POST(req: Request) {
     });
 
     if (!user || !user.password) {
+      // Perform a dummy compare to mitigate user enumeration timing attacks
+      await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
+
       console.warn(`[Login] User not found or has no password: ${username}`);
 
-    handleFailedLogin(username);
+      handleFailedLogin(username);
       return NextResponse.json({ error: 'Invalid username or password' }, { status: 401 });
     }
 

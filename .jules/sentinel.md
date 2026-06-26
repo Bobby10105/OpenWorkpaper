@@ -1,4 +1,4 @@
-## 2025-02-14 - Add rate limiting to Login Endpoint
-**Vulnerability:** The login endpoint at `src/app/api/login/route.ts` did not limit the number of authentication attempts per user, making it vulnerable to credential stuffing and password brute force attacks.
-**Learning:** Next.js App Router API routes can utilize simple in-memory Map structures for rudimentary rate limiting if external stores (like Redis) are not available, though these lack cross-instance state sharing. Care must be taken to clear locks periodically via `setInterval` to prevent unbounded Maps from causing memory leaks.
-**Prevention:** Always implement rate limiting on authentication routes by default to mitigate credential stuffing.
+## 2025-02-18 - [Mitigate user enumeration timing attack in login route]
+**Vulnerability:** A timing attack in the login route allowed attackers to enumerate valid usernames. The application only executed the computationally expensive `bcrypt.compare` operation if the requested username was found in the database.
+**Learning:** Always normalize computational time for sensitive operations like authentication. Even if early exits seem efficient, they can leak state information via response timing.
+**Prevention:** Perform dummy operations (e.g., comparing the input password against a hardcoded valid hash) when the real operation cannot be performed (e.g., when a user is not found) to equalize response times across code paths.
