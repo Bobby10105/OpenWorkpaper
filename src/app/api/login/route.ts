@@ -1,17 +1,20 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { login } from '@/lib/auth';
+import { redis } from '@/lib/redis';
 import bcrypt from 'bcryptjs';
 
 
 
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const MAX_FAILED_ATTEMPTS = 5;
-// TODO: Migrate failedAttempts to a distributed store like Redis for rate limiting in clustered environments
+
+// Fallback in-memory map if Redis is not configured
 const failedAttempts = new Map<string, { count: number; lockedUntil: number }>();
 
 // Periodic cleanup of expired locks to prevent memory leaks from unbounded map
 setInterval(() => {
+  if (redis) return; // Redis handles expiry naturally
   const now = Date.now();
   for (const [key, attempt] of failedAttempts.entries()) {
     if (attempt.lockedUntil < now && attempt.lockedUntil !== 0) {
@@ -20,14 +23,50 @@ setInterval(() => {
   }
 }, 60 * 60 * 1000); // Clean up every hour
 
-function handleFailedLogin(username: string) {
-  const currentAttempt = failedAttempts.get(username) || { count: 0, lockedUntil: 0 };
-  currentAttempt.count += 1;
-  if (currentAttempt.count >= MAX_FAILED_ATTEMPTS) {
-    currentAttempt.lockedUntil = Date.now() + RATE_LIMIT_WINDOW_MS;
-    console.warn(`[Login] Account locked for user: ${username}`);
+async function isLocked(username: string): Promise<boolean> {
+  if (redis) {
+    const lockedUntilStr = await redis.get(`lock:${username}`);
+    if (lockedUntilStr) {
+      return parseInt(lockedUntilStr, 10) > Date.now();
+    }
+    return false;
+  } else {
+    const attempt = failedAttempts.get(username);
+    return !!(attempt && attempt.lockedUntil > Date.now());
   }
-  failedAttempts.set(username, currentAttempt);
+}
+
+async function handleFailedLogin(username: string) {
+  if (redis) {
+    const attemptsStr = await redis.get(`attempts:${username}`);
+    const attempts = attemptsStr ? parseInt(attemptsStr, 10) : 0;
+    const newAttempts = attempts + 1;
+
+    if (newAttempts >= MAX_FAILED_ATTEMPTS) {
+      const lockedUntil = Date.now() + RATE_LIMIT_WINDOW_MS;
+      await redis.set(`lock:${username}`, lockedUntil.toString(), 'PX', RATE_LIMIT_WINDOW_MS);
+      console.warn(`[Login] Account locked for user: ${username}`);
+    } else {
+      await redis.set(`attempts:${username}`, newAttempts.toString(), 'PX', RATE_LIMIT_WINDOW_MS);
+    }
+  } else {
+    const currentAttempt = failedAttempts.get(username) || { count: 0, lockedUntil: 0 };
+    currentAttempt.count += 1;
+    if (currentAttempt.count >= MAX_FAILED_ATTEMPTS) {
+      currentAttempt.lockedUntil = Date.now() + RATE_LIMIT_WINDOW_MS;
+      console.warn(`[Login] Account locked for user: ${username}`);
+    }
+    failedAttempts.set(username, currentAttempt);
+  }
+}
+
+async function clearFailedAttempts(username: string) {
+  if (redis) {
+    await redis.del(`attempts:${username}`);
+    await redis.del(`lock:${username}`);
+  } else {
+    failedAttempts.delete(username);
+  }
 }
 
 export async function POST(req: Request) {
@@ -39,8 +78,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Username and password are required' }, { status: 400 });
     }
 
-    const attempt = failedAttempts.get(username);
-    if (attempt && attempt.lockedUntil > Date.now()) {
+    const locked = await isLocked(username);
+    if (locked) {
       return NextResponse.json({ error: 'Account locked due to too many failed attempts. Try again later.' }, { status: 429 });
     }
 
@@ -52,7 +91,7 @@ export async function POST(req: Request) {
     if (!user || !user.password) {
       console.warn(`[Login] User not found or has no password: ${username}`);
 
-    handleFailedLogin(username);
+      await handleFailedLogin(username);
       return NextResponse.json({ error: 'Invalid username or password' }, { status: 401 });
     }
 
@@ -61,11 +100,12 @@ export async function POST(req: Request) {
     if (!isPasswordValid) {
       console.warn(`[Login] Invalid password for user: ${username}`);
 
-    handleFailedLogin(username);
+      await handleFailedLogin(username);
       return NextResponse.json({ error: 'Invalid username or password' }, { status: 401 });
     }
+
     // Reset failed attempts on success
-    failedAttempts.delete(username);
+    await clearFailedAttempts(username);
 
 
     await login({ 
