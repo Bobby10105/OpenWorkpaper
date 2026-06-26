@@ -34,7 +34,7 @@ export async function GET(
     const fileBuffer = await fs.readFile(filepath);
     
     const sanitizedName = attachment.filename 
-      ? attachment.filename.replace(/[\r\n]/g, '') 
+      ? path.basename(attachment.filename.replace(/\\/g, '/')).replace(/[\r\n"]/g, '_')
       : 'attachment';
 
     return new NextResponse(fileBuffer, {

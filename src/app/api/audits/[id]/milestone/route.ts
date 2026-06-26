@@ -39,7 +39,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
     else if (ext === '.csv') contentType = 'text/csv';
 
     const sanitizedName = audit.milestoneAttachmentName 
-      ? audit.milestoneAttachmentName.replace(/[\r\n]/g, '') 
+      ? path.basename(audit.milestoneAttachmentName.replace(/\\/g, '/')).replace(/[\r\n"]/g, '_')
       : 'milestones' + ext;
 
     return new NextResponse(fileBuffer, {

@@ -40,7 +40,7 @@ export async function GET(
     else if (ext === '.csv') contentType = 'text/csv';
 
     const sanitizedName = audit.pbcAttachmentName 
-      ? audit.pbcAttachmentName.replace(/[\r\n]/g, '') 
+      ? path.basename(audit.pbcAttachmentName.replace(/\\/g, '/')).replace(/[\r\n"]/g, '_')
       : 'pbc_requests' + ext;
 
     return new NextResponse(fileBuffer, {
