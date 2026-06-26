@@ -168,14 +168,12 @@ export default function ProcedureList({
     
     setCreating(true);
     try {
-      // Delete groups (cascade will delete procedures)
-      for (const group of groups) {
-        await fetch(`/api/procedure-groups/${group.id}`, { method: 'DELETE' });
-      }
-      // Delete ungrouped procedures
-      for (const proc of ungroupedProcedures) {
-        await fetch(`/api/procedures/${proc.id}`, { method: 'DELETE' });
-      }
+      // Delete groups (cascade will delete procedures) and ungrouped procedures in parallel
+      const deletePromises = [
+        ...groups.map(group => fetch(`/api/procedure-groups/${group.id}`, { method: 'DELETE' })),
+        ...ungroupedProcedures.map(proc => fetch(`/api/procedures/${proc.id}`, { method: 'DELETE' }))
+      ];
+      await Promise.all(deletePromises);
       router.refresh();
     } finally {
       setCreating(false);
