@@ -184,8 +184,11 @@ export async function POST(req: Request) {
         [];
 
       if (Array.isArray(proceduresToRestore)) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const proceduresData: any[] = [];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const messagesData: any[] = [];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const attachmentsData: any[] = [];
 
         // Accumulate data for bulk insertion
@@ -276,7 +279,7 @@ export async function POST(req: Request) {
           { url: data.milestoneAttachmentUrl, name: 'Milestone' }
         ];
 
-        for (const f of filesToRestore) {
+        const restorePromises = filesToRestore.map(async (f) => {
           if (f.url) {
             const diskFilename = path.basename(f.url);
             const zipFile = zip.file(`attachments/${diskFilename}`);
@@ -285,7 +288,8 @@ export async function POST(req: Request) {
               await fs.writeFile(path.join(uploadDir, diskFilename), fileBuffer);
             }
           }
-        }
+        });
+        await Promise.all(restorePromises);
       }
 
       return audit;
