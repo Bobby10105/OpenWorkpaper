@@ -65,3 +65,4 @@
 ## 2024-06-25 - Never Delete Application Files
 **Learning:** During test and validation, it is dangerous and destructive to blindly `rm` test files or application lockfiles (like `pnpm-lock.yaml`) just to make the test runner pass. This breaks the build and introduces severe regressions.
 **Action:** Always fix the root cause of failing tests by modifying the code logic. If a lockfile is modified unintentionally, use `git restore` to revert it, never `rm`.
+## 2026-06-26 - Optimize clear all procedure deletions\n**Optimization:** Replaced sequential API requests with concurrent `Promise.all`.\n**Learning:** Next.js build requires a `JWT_SECRET` environment variable, even in debug mode. Prefix `pnpm build` with it if it is missing.\n**Prevention:** Avoid writing blocking network request loops in user-facing UI actions when the requests are independent.
