@@ -64,7 +64,7 @@ export default function TemplateEditor({ templateId }: { templateId: string }) {
     const currentGroupTitle = groups.find(g => g.id === activeGroup)?.title;
 
     // Deep clone and sanitize before saving
-    const sanitizedTemplate = JSON.parse(JSON.stringify(template));
+    const sanitizedTemplate = structuredClone(template);
     (sanitizedTemplate.groups || []).forEach((group: TemplateGroup) => {
       (group.procedures || []).forEach((proc: TemplateProcedure) => {
         if (proc.purpose) {
