@@ -6,105 +6,38 @@ import type { Audit } from '@prisma/client';
 import fs from 'fs/promises';
 import path from 'path';
 
-interface RawProcedureGroup {
-  id: string;
-  auditId: string;
-  title: string;
-  phase: string;
-  displayOrder: number;
-}
-
-interface RawProcedure {
-  id: string;
-  auditId: string;
-  groupId: string | null;
-  phase: string;
-  title: string;
-  purpose: string | null;
-  status: string;
-  displayOrder: number;
-  assignedToId: string | null;
-  assignedToName?: string;
-  assignedToRole?: string;
-  assignedToEmail?: string;
-}
-
-interface RawAttachment {
-  id: string;
-  procedureId: string;
-  filename: string;
-  filepath: string;
-  displayOrder: number;
-}
-
-interface RawMessage {
-  id: string;
-  procedureId: string;
-  text: string;
-  sender: string;
-  createdAt: Date;
-}
-
 async function getAuditProcedures(auditId: string) {
-  const rawGroups: RawProcedureGroup[] = await prisma.$queryRaw`SELECT * FROM ProcedureGroup WHERE auditId = ${auditId} ORDER BY displayOrder ASC`;
+  const groups = await prisma.procedureGroup.findMany({
+    where: { auditId },
+    orderBy: { displayOrder: 'asc' }
+  });
 
-  let rawProcedures: RawProcedure[] = [];
-  try {
-    rawProcedures = await prisma.$queryRaw`SELECT p.*, t.name as assignedToName, t.role as assignedToRole, t.email as assignedToEmail
-       FROM Procedure p
-       LEFT JOIN TeamMember t ON p.assignedToId = t.id
-       WHERE p.auditId = ${auditId}`;
-  } catch {
-    console.warn('API AuditDetail: Full procedure join failed (schema syncing?). Falling back to basic fetch.');
-    rawProcedures = await prisma.$queryRaw`SELECT * FROM Procedure WHERE auditId = ${auditId}`;
-  }
-
-  // 3. Batch fetch attachments and messages for procedures
-  const allAttachments = await prisma.$queryRaw<RawAttachment[]>`SELECT * FROM Attachment WHERE procedureId IN (SELECT id FROM Procedure WHERE auditId = ${auditId}) ORDER BY displayOrder ASC`;
-
-  const allMessages = await prisma.$queryRaw<RawMessage[]>`SELECT * FROM ProcedureMessage WHERE procedureId IN (SELECT id FROM Procedure WHERE auditId = ${auditId}) ORDER BY createdAt ASC`;
-
-  const procedureIds = rawProcedures.map(p => p.id);
-
-  const attachmentsByProcId: Record<string, RawAttachment[]> = {};
-  const messagesByProcId: Record<string, RawMessage[]> = {};
-
-  // Initialize maps
-  for (const id of procedureIds) {
-    attachmentsByProcId[id] = [];
-    messagesByProcId[id] = [];
-  }
-
-  // Populate maps
-  for (const att of allAttachments) {
-    attachmentsByProcId[att.procedureId].push(att);
-  }
-
-  for (const msg of allMessages) {
-    messagesByProcId[msg.procedureId].push(msg);
-  }
-
-  // 4. Map relations to procedures in memory
-  const proceduresWithRelations = rawProcedures.map(proc => {
-    return {
-      ...proc,
-      assignedTo: proc.assignedToId ? {
-        id: proc.assignedToId,
-        name: proc.assignedToName,
-        role: proc.assignedToRole,
-        email: proc.assignedToEmail
-      } : null,
-      attachments: attachmentsByProcId[proc.id] || [],
-      messages: messagesByProcId[proc.id] || []
-    };
+  const procedures = await prisma.procedure.findMany({
+    where: { auditId },
+    include: {
+      assignedTo: {
+        select: {
+          id: true,
+          name: true,
+          role: true,
+          email: true
+        }
+      },
+      attachments: {
+        orderBy: { displayOrder: 'asc' }
+      },
+      messages: {
+        orderBy: { createdAt: 'asc' }
+      }
+    }
   });
 
   return {
-    procedureGroups: rawGroups.map(group => ({
+    procedureGroups: (groups || []).map(group => ({
       ...group,
-      procedures: proceduresWithRelations.filter(p => p.groupId === group.id)
+      procedures: (procedures || []).filter(p => p.groupId === group.id)
     })),
-    procedures: proceduresWithRelations.filter(p => !p.groupId)
+    procedures: (procedures || []).filter(p => !p.groupId)
   };
 }
 

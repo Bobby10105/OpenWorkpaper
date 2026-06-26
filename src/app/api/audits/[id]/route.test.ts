@@ -15,8 +15,16 @@ vi.mock('@/lib/prisma', () => ({
     auditLog: {
       create: vi.fn(),
     },
+
     $executeRaw: vi.fn(),
     $queryRaw: vi.fn(),
+    procedureGroup: {
+      findMany: vi.fn(),
+    },
+    procedure: {
+      findMany: vi.fn(),
+    },
+
   }
 }));
 
@@ -158,7 +166,7 @@ describe('GET /api/audits/:id', () => {
 
   it('returns 500 when database throws an error', async () => {
     // 1. Mock authentication session
-    (getSession as any).mockResolvedValue({
+    (getSession as never).mockResolvedValue({
       user: {
         id: 'user-1',
         role: 'Internal Auditor',
@@ -167,11 +175,11 @@ describe('GET /api/audits/:id', () => {
     });
 
     // 2. Mock access permission
-    (canAccessAudit as any).mockResolvedValue(true);
+    (canAccessAudit as never).mockResolvedValue(true);
 
     // 3. Mock prisma.audit.findUnique to throw an error intentionally
     const errorMessage = 'Database connection failed';
-    (prisma.audit.findUnique as any).mockRejectedValue(new Error(errorMessage));
+    (prisma.audit.findUnique as never).mockRejectedValue(new Error(errorMessage));
 
     // Suppress console.error in this test as it's expected
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -216,7 +224,7 @@ describe('Audit Detail API Route', () => {
     });
 
     it('should return 403 if forbidden', async () => {
-      vi.mocked(getSession).mockResolvedValue({ user: { id: 'user-1', role: 'Auditor', username: 'testuser' } } as any);
+      vi.mocked(getSession).mockResolvedValue({ user: { id: 'user-1', role: 'Auditor', username: 'testuser' } } as never);
       vi.mocked(canAccessAudit).mockResolvedValue(false);
 
       const response = await GET(mockReq, mockProps);
@@ -227,7 +235,7 @@ describe('Audit Detail API Route', () => {
     });
 
     it('should return 404 if audit not found', async () => {
-      vi.mocked(getSession).mockResolvedValue({ user: { id: 'user-1', role: 'Auditor', username: 'testuser' } } as any);
+      vi.mocked(getSession).mockResolvedValue({ user: { id: 'user-1', role: 'Auditor', username: 'testuser' } } as never);
       vi.mocked(canAccessAudit).mockResolvedValue(true);
       vi.mocked(prisma.audit.findUnique).mockResolvedValue(null);
 
@@ -238,17 +246,15 @@ describe('Audit Detail API Route', () => {
       expect(data).toEqual({ error: 'Audit not found' });
     });
 
+
     it('should return 200 and correctly mapped data for valid request', async () => {
       // Mock session and access
-      vi.mocked(getSession).mockResolvedValue({ user: { id: 'user-1', role: 'Auditor', username: 'testuser' } } as any);
+      vi.mocked(getSession).mockResolvedValue({ user: { id: 'user-1', role: 'Auditor', username: 'testuser' } } as never);
       vi.mocked(canAccessAudit).mockResolvedValue(true);
 
       // Mock audit findUnique
       const mockAudit = { id: 'audit-123', title: 'Test Audit' };
-      vi.mocked(prisma.audit.findUnique).mockResolvedValue(mockAudit as any);
-
-      // Setup $queryRaw mock
-      const queryRawUnsafeMock = vi.mocked(prisma.$queryRaw);
+      vi.mocked(prisma.audit.findUnique).mockResolvedValue(mockAudit as never);
 
       // We need to mock different responses based on the query being executed.
       // 1. Groups
@@ -260,19 +266,18 @@ describe('Audit Detail API Route', () => {
       ];
       // 3. Attachments (called for each procedure)
       const mockAttachmentsProc1 = [{ id: 'att-1', procedureId: 'proc-1', filename: 'file1.pdf' }];
-      const mockAttachmentsProc2 = [] as any[];
+      const mockAttachmentsProc2 = [] as never[];
       // 4. Messages (called for each procedure)
       const mockMessagesProc1 = [{ id: 'msg-1', procedureId: 'proc-1', text: 'Hello' }];
-      const mockMessagesProc2 = [] as any[];
+      const mockMessagesProc2 = [] as never[];
 
-      queryRawUnsafeMock.mockImplementation(async (query: unknown, ...args: any[]) => {
-        const q = Array.isArray(query) ? query.join('') : String(query);
-        if (q.includes('FROM ProcedureGroup')) return mockGroups;
-        if (q.includes('FROM ProcedureMessage')) return [...mockMessagesProc1, ...mockMessagesProc2];
-        if (q.includes('FROM Attachment')) return [...mockAttachmentsProc1, ...mockAttachmentsProc2];
-        if (q.includes('FROM Procedure')) return mockProcedures;
-        return [];
-      });
+      vi.mocked(prisma.procedureGroup.findMany).mockResolvedValue(mockGroups as never);
+      vi.mocked(prisma.procedure.findMany).mockResolvedValue(mockProcedures.map(p => ({
+        ...p,
+        attachments: p.id === 'proc-1' ? mockAttachmentsProc1 : mockAttachmentsProc2,
+        messages: p.id === 'proc-1' ? mockMessagesProc1 : mockMessagesProc2,
+        assignedTo: null,
+      })) as never);
 
       const response = await GET(mockReq, mockProps);
       const data = await response.json();
