@@ -237,9 +237,6 @@ describe('Auth - logout', () => {
 });
 
 describe('Auth - getSession', () => {
-  const originalConsoleError = console.error;
-  const originalConsoleDebug = console.debug;
-
   const mockUser = {
     id: 'test-user-id',
     username: 'testuser',
@@ -248,13 +245,12 @@ describe('Auth - getSession', () => {
   };
 
   beforeAll(() => {
-    console.error = vi.fn();
-    console.debug = vi.fn();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'debug').mockImplementation(() => {});
   });
 
   afterAll(() => {
-    console.error = originalConsoleError;
-    console.debug = originalConsoleDebug;
+    vi.restoreAllMocks();
   });
 
   beforeEach(() => {
