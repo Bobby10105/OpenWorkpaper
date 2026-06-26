@@ -26,8 +26,16 @@ describe('audit-access', () => {
       expect(hasGlobalAuditAccess({ id: '1', role: 'Business Operations' })).toBe(true);
     });
 
-    it('returns false for other roles', () => {
-      expect(hasGlobalAuditAccess({ id: '1', role: 'User' })).toBe(false);
+    it.each([
+      ['User'],
+      ['Admin'],
+      ['Auditor'],
+      ['business operations'],
+      ['BusinessOperations'],
+      [' Business Operations '],
+      [''],
+    ])('returns false for role "%s"', (role) => {
+      expect(hasGlobalAuditAccess({ id: '1', role })).toBe(false);
     });
   });
 
