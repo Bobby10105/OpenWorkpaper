@@ -5,5 +5,12 @@ export const SignJWT = jest.fn().mockImplementation(() => ({
   sign: jest.fn().mockResolvedValue('mock-token'),
 }));
 export const jwtVerify = jest.fn();
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type JWTPayload = any;
+export type JWTPayload = {
+  user?: {
+    id: string;
+    username: string;
+    role: string;
+    mustChangePassword?: boolean;
+  };
+  [key: string]: unknown;
+};
