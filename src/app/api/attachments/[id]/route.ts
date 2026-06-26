@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import { getSession } from '@/lib/auth';
 import { canAccessAttachment } from '@/lib/audit-access';
 import fs from 'fs/promises';
@@ -131,27 +132,37 @@ export async function PATCH(
     
     // Explicitly allow only specific fields for mass assignment protection
     const { preparedBy, preparedDate, reviewedBy, reviewedDate, status } = body;
-    const updates: Record<string, unknown> = {};
+    const updates: Prisma.AttachmentUpdateInput & { status?: string } = {};
     if (preparedBy !== undefined) updates.preparedBy = preparedBy === '' ? null : preparedBy;
     if (reviewedBy !== undefined) updates.reviewedBy = reviewedBy === '' ? null : reviewedBy;
     if (status !== undefined) updates.status = status;
     
-    const dateFields = [{ key: 'preparedDate', value: preparedDate }, { key: 'reviewedDate', value: reviewedDate }];
-    dateFields.forEach(({ key, value }) => {
-      if (value !== undefined) {
-        if (value === '') {
-          updates[key] = null;
-        } else if (value) {
-          const d = new Date(value as string | number);
-          if (!isNaN(d.getTime())) updates[key] = d;
-        }
+    if (preparedDate !== undefined) {
+      if (preparedDate === '') {
+        updates.preparedDate = null;
+      } else if (preparedDate) {
+        const d = new Date(preparedDate as string | number);
+        if (!isNaN(d.getTime())) updates.preparedDate = d;
       }
-    });
+    }
+
+    if (reviewedDate !== undefined) {
+      if (reviewedDate === '') {
+        updates.reviewedDate = null;
+      } else if (reviewedDate) {
+        const d = new Date(reviewedDate as string | number);
+        if (!isNaN(d.getTime())) updates.reviewedDate = d;
+      }
+    }
+
+    // Since 'status' is not a field in the Attachment schema but clients might send it,
+    // we omit it when passing 'updates' to Prisma.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { status: _status, ...prismaUpdates } = updates;
 
     const attachment = await prisma.attachment.update({
       where: { id: params.id },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      data: updates as any
+      data: prismaUpdates
     });
 
     try {
