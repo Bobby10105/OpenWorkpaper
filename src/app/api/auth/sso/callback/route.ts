@@ -73,9 +73,12 @@ export async function GET(req: Request) {
       return NextResponse.redirect(new URL('/login?error=oidc_metadata_invalid', req.url));
     }
     const jwks = createRemoteJWKSet(new URL(discovery.jwks_uri));
+    // jose v3+ removed the built-in nonce checking from jwtVerify options,
+    // so we explicitly enforce its presence using requiredClaims and validate its value strictly.
     const { payload } = await jwtVerify(id_token, jwks, {
       issuer: discovery.issuer,
       audience: clientId,
+      requiredClaims: ['nonce'],
     });
     const tokenPayload = payload as {
       sub: string;
@@ -84,6 +87,7 @@ export async function GET(req: Request) {
       preferred_username?: string;
       nonce?: string;
     };
+
     if (tokenPayload.nonce !== expectedNonce) {
       return NextResponse.redirect(new URL('/login?error=invalid_nonce', req.url));
     }
