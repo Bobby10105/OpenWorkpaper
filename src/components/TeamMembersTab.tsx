@@ -28,10 +28,16 @@ export default function TeamMembersTab({
   user?: { username: string; role: string; id: string }
 }) {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(initialTeamMembers);
+  const [prevInitialTeamMembers, setPrevInitialTeamMembers] = useState(initialTeamMembers);
   const [systemUsers, setSystemUsers] = useState<SystemUser[]>([]);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+
+  if (initialTeamMembers !== prevInitialTeamMembers) {
+    setPrevInitialTeamMembers(initialTeamMembers);
+    setTeamMembers(initialTeamMembers);
+  }
 
   // Relaxed permissions: Any role except Specialist can manage the team
   const canManageTeam = user && user.role !== 'Specialist';
@@ -51,11 +57,6 @@ export default function TeamMembersTab({
     }
     fetchUsers();
   }, []);
-
-  // Sync state if props change
-  useEffect(() => {
-    setTeamMembers(initialTeamMembers);
-  }, [initialTeamMembers]);
 
   const handleAddMember = async () => {
     if (!canManageTeam) return;

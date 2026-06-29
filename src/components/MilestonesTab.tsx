@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Save, Calendar, Upload, FileSpreadsheet, Trash2, Loader2, RefreshCw } from 'lucide-react';
 import type { Audit } from '@prisma/client';
@@ -24,6 +24,7 @@ const getInitialState = (a: Audit) => ({
 
 export default function MilestonesTab({ audit }: { audit: Audit }) {
   const [data, setData] = useState(getInitialState(audit));
+  const [prevAuditId, setPrevAuditId] = useState(audit.id);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [attachmentUrl, setAttachmentUrl] = useState<string | null>(audit.milestoneAttachmentUrl);
@@ -31,11 +32,12 @@ export default function MilestonesTab({ audit }: { audit: Audit }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  useEffect(() => {
+  if (audit.id !== prevAuditId) {
+    setPrevAuditId(audit.id);
     setData(getInitialState(audit));
     setAttachmentUrl(audit.milestoneAttachmentUrl);
     setAttachmentName(audit.milestoneAttachmentName);
-  }, [audit]);
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setData({ ...data, [e.target.name]: e.target.value });

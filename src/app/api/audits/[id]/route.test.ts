@@ -158,20 +158,21 @@ describe('GET /api/audits/:id', () => {
 
   it('returns 500 when database throws an error', async () => {
     // 1. Mock authentication session
-    (getSession as any).mockResolvedValue({
+    vi.mocked(getSession).mockResolvedValue({
       user: {
         id: 'user-1',
         role: 'Internal Auditor',
         username: 'testuser',
+        mustChangePassword: false,
       },
     });
 
     // 2. Mock access permission
-    (canAccessAudit as any).mockResolvedValue(true);
+    vi.mocked(canAccessAudit).mockResolvedValue(true);
 
     // 3. Mock prisma.audit.findUnique to throw an error intentionally
     const errorMessage = 'Database connection failed';
-    (prisma.audit.findUnique as any).mockRejectedValue(new Error(errorMessage));
+    vi.mocked(prisma.audit.findUnique).mockRejectedValue(new Error(errorMessage));
 
     // Suppress console.error in this test as it's expected
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -216,7 +217,7 @@ describe('Audit Detail API Route', () => {
     });
 
     it('should return 403 if forbidden', async () => {
-      vi.mocked(getSession).mockResolvedValue({ user: { id: 'user-1', role: 'Auditor', username: 'testuser' } } as any);
+      vi.mocked(getSession).mockResolvedValue({ user: { id: 'user-1', role: 'Auditor', username: 'testuser', mustChangePassword: false } });
       vi.mocked(canAccessAudit).mockResolvedValue(false);
 
       const response = await GET(mockReq, mockProps);
@@ -227,7 +228,7 @@ describe('Audit Detail API Route', () => {
     });
 
     it('should return 404 if audit not found', async () => {
-      vi.mocked(getSession).mockResolvedValue({ user: { id: 'user-1', role: 'Auditor', username: 'testuser' } } as any);
+      vi.mocked(getSession).mockResolvedValue({ user: { id: 'user-1', role: 'Auditor', username: 'testuser', mustChangePassword: false } });
       vi.mocked(canAccessAudit).mockResolvedValue(true);
       vi.mocked(prisma.audit.findUnique).mockResolvedValue(null);
 
@@ -240,12 +241,12 @@ describe('Audit Detail API Route', () => {
 
     it('should return 200 and correctly mapped data for valid request', async () => {
       // Mock session and access
-      vi.mocked(getSession).mockResolvedValue({ user: { id: 'user-1', role: 'Auditor', username: 'testuser' } } as any);
+      vi.mocked(getSession).mockResolvedValue({ user: { id: 'user-1', role: 'Auditor', username: 'testuser', mustChangePassword: false } });
       vi.mocked(canAccessAudit).mockResolvedValue(true);
 
       // Mock audit findUnique
       const mockAudit = { id: 'audit-123', title: 'Test Audit' };
-      vi.mocked(prisma.audit.findUnique).mockResolvedValue(mockAudit as any);
+      vi.mocked(prisma.audit.findUnique).mockResolvedValue(mockAudit as never);
 
       // Setup $queryRaw mock
       const queryRawUnsafeMock = vi.mocked(prisma.$queryRaw);
@@ -260,12 +261,12 @@ describe('Audit Detail API Route', () => {
       ];
       // 3. Attachments (called for each procedure)
       const mockAttachmentsProc1 = [{ id: 'att-1', procedureId: 'proc-1', filename: 'file1.pdf' }];
-      const mockAttachmentsProc2 = [] as any[];
+      const mockAttachmentsProc2: never[] = [];
       // 4. Messages (called for each procedure)
       const mockMessagesProc1 = [{ id: 'msg-1', procedureId: 'proc-1', text: 'Hello' }];
-      const mockMessagesProc2 = [] as any[];
+      const mockMessagesProc2: never[] = [];
 
-      queryRawUnsafeMock.mockImplementation(async (query: unknown, ...args: any[]) => {
+      queryRawUnsafeMock.mockImplementation(async (query: unknown) => {
         const q = Array.isArray(query) ? query.join('') : String(query);
         if (q.includes('FROM ProcedureGroup')) return mockGroups;
         if (q.includes('FROM ProcedureMessage')) return [...mockMessagesProc1, ...mockMessagesProc2];

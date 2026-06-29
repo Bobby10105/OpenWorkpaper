@@ -14,15 +14,14 @@ export function ProcedureChat({
   setMessages: (msg: ProcedureMessage[]) => void;
   user?: { username: string; role: string; id: string };
 }) {
-  const [newMessage, setNewMessage] = useState('');
+  const [newMessage, setNewMessage] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(`draft-note-${procedureId}`) || '';
+    }
+    return '';
+  });
   const [sendingMessage, setSendingMessage] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
-
-  // Load draft message from localStorage
-  useEffect(() => {
-    const draft = localStorage.getItem(`draft-note-${procedureId}`);
-    if (draft) setNewMessage(draft);
-  }, [procedureId]);
 
   // Save draft message to localStorage
   useEffect(() => {

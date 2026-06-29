@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable react-hooks/set-state-in-effect */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { UserPlus, Trash2, Shield, Loader2, AlertCircle, Users, FileUp, KeyRound, Mail, Briefcase, ChevronDown, X, Edit2 } from 'lucide-react';

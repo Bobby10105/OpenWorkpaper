@@ -92,6 +92,7 @@ export default function ProcedureDetail({
 
         <div className="space-y-8">
           <ProcedureChat
+            key={procedure.id}
             procedureId={procedure.id}
             messages={state.messages}
             setMessages={state.setMessages}

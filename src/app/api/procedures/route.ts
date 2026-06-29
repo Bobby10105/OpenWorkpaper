@@ -84,13 +84,14 @@ interface CreateProcedureInput {
 }
 
 // Type guard for strict input validation
-function isValidCreateInput(data: any): data is CreateProcedureInput {
+function isValidCreateInput(data: unknown): data is CreateProcedureInput {
   if (!data || typeof data !== 'object') return false;
-  if (typeof data.auditId !== 'string' || data.auditId.trim() === '') return false;
-  if (typeof data.phase !== 'string' || data.phase.trim() === '') return false;
-  if (data.groupId !== undefined && data.groupId !== null && typeof data.groupId !== 'string') return false;
-  if (data.title !== undefined && typeof data.title !== 'string') return false;
-  if (data.purpose !== undefined && typeof data.purpose !== 'string') return false;
+  const obj = data as Record<string, unknown>;
+  if (typeof obj.auditId !== 'string' || obj.auditId.trim() === '') return false;
+  if (typeof obj.phase !== 'string' || obj.phase.trim() === '') return false;
+  if (obj.groupId !== undefined && obj.groupId !== null && typeof obj.groupId !== 'string') return false;
+  if (obj.title !== undefined && typeof obj.title !== 'string') return false;
+  if (obj.purpose !== undefined && typeof obj.purpose !== 'string') return false;
   return true;
 }
 
@@ -101,7 +102,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    let data: any;
+    let data: unknown;
     try {
       data = await req.json();
     } catch {

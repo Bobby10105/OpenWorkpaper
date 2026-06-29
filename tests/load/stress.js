@@ -11,7 +11,7 @@ export const options = {
 
 const BASE_URL = __ENV.API_URL || 'http://localhost:3000';
 
-export default function () {
+export default function runStressTest() {
   // Simulate user browsing procedures
   const res = http.get(`${BASE_URL}/api/procedures`);
   

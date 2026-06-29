@@ -5,6 +5,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import JSZip from 'jszip';
 import crypto from 'crypto';
+import { Prisma } from '@prisma/client';
 
 
 interface RestoreAttachment {
@@ -184,9 +185,9 @@ export async function POST(req: Request) {
         [];
 
       if (Array.isArray(proceduresToRestore)) {
-        const proceduresData: any[] = [];
-        const messagesData: any[] = [];
-        const attachmentsData: any[] = [];
+        const proceduresData: Prisma.ProcedureCreateManyInput[] = [];
+        const messagesData: Prisma.ProcedureMessageCreateManyInput[] = [];
+        const attachmentsData: Prisma.AttachmentCreateManyInput[] = [];
 
         // Accumulate data for bulk insertion
         for (const p of proceduresToRestore) {

@@ -1,21 +1,23 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Upload, FileSpreadsheet, Trash2, Loader2, RefreshCw, HelpCircle } from 'lucide-react';
 import type { Audit } from '@prisma/client';
 
 export default function PBCRequestsTab({ audit }: { audit: Audit }) {
+  const [prevAuditId, setPrevAuditId] = useState(audit.id);
   const [uploading, setUploading] = useState(false);
   const [attachmentUrl, setAttachmentUrl] = useState<string | null>(audit.pbcAttachmentUrl);
   const [attachmentName, setAttachmentName] = useState<string | null>(audit.pbcAttachmentName);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  useEffect(() => {
+  if (audit.id !== prevAuditId) {
+    setPrevAuditId(audit.id);
     setAttachmentUrl(audit.pbcAttachmentUrl);
     setAttachmentName(audit.pbcAttachmentName);
-  }, [audit]);
+  }
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!audit.id) {

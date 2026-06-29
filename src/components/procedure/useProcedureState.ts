@@ -55,7 +55,6 @@ export function useProcedureState({
   const [lastSavedData, setLastSavedData] = useState(normalizeData(procedure));
   const [attachments, setAttachments] = useState<Attachment[]>(procedure.attachments || []);
   const [messages, setMessages] = useState<ProcedureMessage[]>(procedure.messages || []);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isUnlocking, setIsUnlocking] = useState(false);
 
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -69,6 +68,7 @@ export function useProcedureState({
   const isLocked = !!(procedure.reviewedBy && procedure.reviewedDate);
   const isReviewed = !!(data.reviewedBy && data.reviewedDate);
   const isPrepared = !!(data.preparedBy && data.preparedDate);
+  const hasUnsavedChanges = normalizeData(data) !== lastSavedData;
 
   useEffect(() => {
     const normalizedProp = normalizeData(procedure);
@@ -79,7 +79,6 @@ export function useProcedureState({
       setAttachments(procedure.attachments || []);
       setMessages(procedure.messages || []);
       setLastSavedData(normalizedProp);
-      setHasUnsavedChanges(false);
     }
   }, [procedure, normalizeData]);
 
@@ -90,7 +89,6 @@ export function useProcedureState({
     const currentDataStr = normalizeData(rawData);
 
     if (currentDataStr === lastSavedDataRef.current) {
-      setHasUnsavedChanges(false);
       return;
     }
 
@@ -109,7 +107,6 @@ export function useProcedureState({
         
         const parsedSaved = JSON.parse(savedNormalized);
         setData(prev => ({ ...prev, ...parsedSaved }));
-        setHasUnsavedChanges(false);
         
         router.refresh();
       } else if (res.status === 423) {
@@ -132,20 +129,16 @@ export function useProcedureState({
     const isDirty = currentDataStr !== lastSavedData;
 
     if (isDirty) {
-      if (!hasUnsavedChanges) setHasUnsavedChanges(true);
-      
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
       autoSaveTimerRef.current = setTimeout(() => {
         handleSave();
       }, 3000);
-    } else {
-      if (hasUnsavedChanges) setHasUnsavedChanges(false);
     }
 
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
-  }, [data, lastSavedData, handleSave, isLocked, hasUnsavedChanges, normalizeData]);
+  }, [data, lastSavedData, handleSave, isLocked, normalizeData]);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
     if (isLocked) return;
