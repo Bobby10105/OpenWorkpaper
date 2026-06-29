@@ -4,7 +4,7 @@ RUN apt-get update && apt-get install -y python3 make g++ openssl libsqlite3-dev
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .pnpmfile.cjs ./
 RUN npm install -g pnpm && pnpm i --frozen-lockfile
 
 # Stage 2: Rebuild the source code only when needed

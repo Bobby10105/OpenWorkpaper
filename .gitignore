@@ -56,3 +56,6 @@ next-env.d.ts
 /src/generated/prisma
 /storage/uploads/*
 !/storage/uploads/.gitkeep
+
+# pnpm store
+/.pnpm-store
