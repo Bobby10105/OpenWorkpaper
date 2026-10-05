@@ -33,7 +33,7 @@ async function main() {
         username: admin.username,
         password: hashedPassword,
         role: admin.role,
-        mustChangePassword: false,
+        mustChangePassword: true,
       }
     });
     console.log(`Ensured user: ${user.username} | Role: ${user.role}`);

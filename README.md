@@ -122,6 +122,7 @@ This command starts both the OpenWorkpaper application and an Nginx container. T
 | :--- | :--- | :--- |
 | **`DATABASE_URL`** | **Required** | Path to the SQLite database. <br>• **Docker (All Modes)**: `file:/app/prisma/data/dev.db`<br>• **Manual/Host**: `file:./prisma/data/dev.db` |
 | **`JWT_SECRET`** | **Required** | A secure random string used to sign session tokens. **Must be changed for production** to prevent session hijacking. |
+| **`ADMIN_SEED_PASSWORD`** | **Required (Prod)** | Initial password used to seed default accounts (`it.admin` and `biz.ops`). **Must be set before first run.** |
 | **`SESSION_DURATION_SECONDS`** | Optional | How long a user remains logged in (default `3600` or 1 hour). |
 | **`NODE_ENV`** | **Required** | Set to `production` for live deployments to enable optimizations and strict security checks. Use `development` for local coding. |
 | **`PORT`** | Optional | The internal port the app listens on (default `3000`). Even with HTTPS, this internal port usually stays as `3000`. |
@@ -183,7 +184,7 @@ This is the professional standard for deploying OpenWorkpaper. We recommend Opti
     ```bash
     cp .env.example .env
     ```
-    Edit the `.env` file and configure your settings. At a minimum, you **must** update **`JWT_SECRET`**. The other defaults are already pre-configured for a standard production Docker deployment. If you are using SSO, configure those variables as described in the [Environment Variables Reference](#-environment-variables-reference) above.
+    Edit the `.env` file and configure your settings. At a minimum, you **must** update **`JWT_SECRET`** and set your desired **`ADMIN_SEED_PASSWORD`** (used to initialize `it.admin` and `biz.ops`). The other defaults are already pre-configured for a standard production Docker deployment. If you are using SSO, configure those variables as described in the [Environment Variables Reference](#-environment-variables-reference) above.
 3.  **Launch**:
 
     *   **Option A: Secure Production (HTTPS - Port 443)** Note for rootless Podman users: Binding to port 443 requires elevated privileges.
@@ -225,7 +226,7 @@ Set up your local `.env` file by copying the template:
 ```bash
 cp .env.example .env
 ```
-Open the `.env` file and **update** the **`DATABASE_URL`** to `file:./dev.db` and set a secure **`JWT_SECRET`**.
+Open the `.env` file and **update** the **`DATABASE_URL`** to `file:./dev.db`, set a secure **`JWT_SECRET`**, and configure **`ADMIN_SEED_PASSWORD`**.
 
 #### 4. Database & Launch
 ```bash
@@ -239,8 +240,8 @@ npm run start
 
 ### 🔑 Initial Login
 Once running, sign in with:
-*   **IT Administrator**: `it.admin` / `admin` (Password change required)
-*   **Business Operations**: `biz.ops` / `admin` (Password change required)
+*   **IT Administrator**: `it.admin` / `<ADMIN_SEED_PASSWORD>` (default `admin`, password change required)
+*   **Business Operations**: `biz.ops` / `<ADMIN_SEED_PASSWORD>` (default `admin`, password change required)
 
 ## 🛠 Maintenance & Updates
 
