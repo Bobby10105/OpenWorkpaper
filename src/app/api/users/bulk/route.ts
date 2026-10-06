@@ -28,7 +28,7 @@ export async function processBulkUsers(users: BulkUser[]) {
   const validUsers = users.map(u => ({
     username: u.username || u.email,
     role: u.role || 'Auditor',
-    password: u.password || 'Welcome123!',
+    password: u.password || 'Welcome1234!',
     originalData: u,
   })).filter(u => {
     if (!u.username) {

@@ -271,6 +271,7 @@ export default function UserManagementPage() {
                   placeholder="••••••••"
                 />
               </div>
+              <span className="text-[10px] text-slate-400 mt-1 px-1">Min 12 chars (A-Z, a-z, 0-9, symbol)</span>
             </div>
             <div className="flex flex-col">
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">Access Tier</label>
