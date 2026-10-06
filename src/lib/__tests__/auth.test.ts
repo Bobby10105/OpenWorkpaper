@@ -161,6 +161,19 @@ describe('Auth - JWT encryption and decryption', () => {
       'Session has expired.'
     );
   });
+
+  it('should throw an error if JWT_SECRET is not set when encrypting', async () => {
+    delete process.env.JWT_SECRET;
+    await expect(encrypt({ userId: '123' })).rejects.toThrowError('[Auth] JWT_SECRET must be set.');
+    process.env.JWT_SECRET = 'test-secret-key';
+  });
+
+  it('should throw an error if JWT_SECRET is not set when decrypting', async () => {
+    const token = await encrypt({ userId: '123' });
+    delete process.env.JWT_SECRET;
+    await expect(decrypt(token)).rejects.toThrowError('[Auth] JWT_SECRET must be set.');
+    process.env.JWT_SECRET = 'test-secret-key';
+  });
 });
 
 describe('Auth - logout', () => {

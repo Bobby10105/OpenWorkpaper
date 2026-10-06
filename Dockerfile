@@ -20,6 +20,7 @@ RUN npx prisma generate
 # Next.js collects completely anonymous telemetry data about general usage.
 # Learn more here: https://nextjs.org/telemetry
 ENV NEXT_TELEMETRY_DISABLED 1
+ENV JWT_SECRET="build-placeholder"
 
 RUN npm install -g pnpm@9 && pnpm run build
 

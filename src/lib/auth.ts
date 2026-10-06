@@ -2,12 +2,14 @@ import { SignJWT, jwtVerify, JWTPayload } from 'jose';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
-const secretValue = process.env.JWT_SECRET;
-if (!secretValue) {
-  throw new Error('[Auth] JWT_SECRET must be set.');
+function getSecretKey(): Uint8Array {
+  const secretValue = process.env.JWT_SECRET;
+  if (!secretValue) {
+    throw new Error('[Auth] JWT_SECRET must be set.');
+  }
+  return new TextEncoder().encode(secretValue);
 }
 
-const secretKey = new TextEncoder().encode(secretValue);
 const SESSION_DURATION = parseInt(process.env.SESSION_DURATION_SECONDS || '3600', 10); // Default 1 hour
 
 export async function encrypt(payload: JWTPayload) {
@@ -15,12 +17,12 @@ export async function encrypt(payload: JWTPayload) {
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(`${SESSION_DURATION}s`)
-    .sign(secretKey);
+    .sign(getSecretKey());
 }
 
 export async function decrypt(input: string): Promise<JWTPayload> {
   try {
-    const { payload } = await jwtVerify(input, secretKey, {
+    const { payload } = await jwtVerify(input, getSecretKey(), {
       algorithms: ['HS256'],
     });
     return payload;
