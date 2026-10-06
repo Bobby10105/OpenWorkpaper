@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 
 const prismaClientSingleton = () => {
-  const dbUrl = process.env.DATABASE_URL || 'file:dev.db';
+  const dbUrl = process.env.DATABASE_URL || 'file:./prisma/data/dev.db';
   
   const sqliteInput = {
     url: dbUrl.replace(/^file:/, ''),

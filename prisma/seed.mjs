@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 import bcrypt from 'bcryptjs';
@@ -17,7 +18,7 @@ async function main() {
   if (!seedPassword && process.env.NODE_ENV === 'production') {
     throw new Error('ADMIN_SEED_PASSWORD environment variable must be set in production');
   }
-  const passwordToUse = seedPassword || 'random' + Math.random().toString(36).substring(7);
+  const passwordToUse = seedPassword || 'admin';
   const hashedPassword = await bcrypt.hash(passwordToUse, 10);
 
   const admins = [
@@ -25,18 +26,35 @@ async function main() {
     { username: 'biz.ops', role: 'Business Operations', fullName: 'Biz Ops', email: 'biz.ops@example.com' }
   ];
 
+  const forceReset = process.env.RESET_ADMIN_CREDENTIALS === 'true';
+
   for (const admin of admins) {
-    const user = await prisma.user.upsert({
+    const existing = await prisma.user.findUnique({
       where: { username: admin.username },
-      update: {},
-      create: {
-        username: admin.username,
-        password: hashedPassword,
-        role: admin.role,
-        mustChangePassword: true,
-      }
     });
-    console.log(`Ensured user: ${user.username} | Role: ${user.role}`);
+
+    if (!existing) {
+      const user = await prisma.user.create({
+        data: {
+          username: admin.username,
+          password: hashedPassword,
+          role: admin.role,
+          mustChangePassword: true,
+        },
+      });
+      console.log(`Created user: ${user.username} | Role: ${user.role}`);
+    } else if (existing.mustChangePassword || forceReset) {
+      const user = await prisma.user.update({
+        where: { username: admin.username },
+        data: {
+          password: hashedPassword,
+          mustChangePassword: true,
+        },
+      });
+      console.log(`Updated user credentials: ${user.username} | Role: ${user.role}`);
+    } else {
+      console.log(`Ensured user: ${existing.username} (password already customized)`);
+    }
   }
 }
 

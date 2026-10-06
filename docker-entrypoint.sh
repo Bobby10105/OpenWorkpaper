@@ -35,28 +35,13 @@ PRISMA_BIN="./node_modules/.bin/prisma"
 if [ -f "$PRISMA_BIN" ]; then
   echo "Initializing database schema with $PRISMA_BIN..."
   $PRISMA_BIN db push --accept-data-loss
-  
-  USER_COUNT=$($PRISMA_BIN db execute --stdin <<'SQL' | tail -1
-SELECT COUNT(*) FROM User;
-SQL
-)
-  if [ "$USER_COUNT" = "0" ]; then
-    echo "Empty database detected — running safe admin seed..."
-    node prisma/seed.mjs
-  fi
 else
   echo "WARNING: Prisma binary not found at $PRISMA_BIN. Attempting to use npx prisma..."
   npx prisma db push --accept-data-loss
-  
-  USER_COUNT=$(npx prisma db execute --stdin <<'SQL' | tail -1
-SELECT COUNT(*) FROM User;
-SQL
-)
-  if [ "$USER_COUNT" = "0" ]; then
-    echo "Empty database detected — running safe admin seed..."
-    node prisma/seed.mjs
-  fi
 fi
+
+echo "Ensuring safe admin accounts..."
+node prisma/seed.mjs
 
 # Start the application
 echo "Starting OpenWorkpaper application..."

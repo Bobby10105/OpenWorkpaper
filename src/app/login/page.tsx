@@ -23,7 +23,12 @@ export default function LoginPage() {
       });
 
       if (res.ok) {
-        window.location.href = '/';
+        const data = await res.json();
+        if (data.mustChangePassword) {
+          window.location.href = '/settings/password';
+        } else {
+          window.location.href = '/';
+        }
       } else {
         const data = await res.json();
         setError(data.error || 'Login failed');

@@ -39,8 +39,9 @@ export default function ChangePasswordPage() {
       return;
     }
 
-    if (newPassword.length < 8) {
-      setError('New password must be at least 8 characters long');
+    const complexityRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{12,}$/;
+    if (!complexityRegex.test(newPassword)) {
+      setError('New password must be at least 12 characters long and include uppercase, lowercase, numbers, and special characters.');
       setLoading(false);
       return;
     }
@@ -129,7 +130,7 @@ export default function ChangePasswordPage() {
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
             />
-            <p className="mt-1 text-xs text-gray-500">Minimum 8 characters</p>
+            <p className="mt-1 text-xs text-gray-500">Minimum 12 characters with uppercase, lowercase, number, and special character</p>
           </div>
 
           <div>

@@ -8,6 +8,7 @@ services:
       - openworkpaper-db:/app/prisma/data
     environment:
       - JWT_SECRET=${JWT_SECRET}
+      - ADMIN_SEED_PASSWORD=${ADMIN_SEED_PASSWORD}
       - DATABASE_URL=${DATABASE_URL:-file:/app/prisma/data/dev.db}
       - NODE_ENV=${NODE_ENV:-production}
       - SSO_CLIENT_ID=${SSO_CLIENT_ID}
