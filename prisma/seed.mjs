@@ -43,17 +43,29 @@ async function main() {
         },
       });
       console.log(`Created user: ${user.username} | Role: ${user.role}`);
-    } else if (existing.mustChangePassword || forceReset) {
-      const user = await prisma.user.update({
-        where: { username: admin.username },
-        data: {
-          password: hashedPassword,
-          mustChangePassword: true,
+    } else {
+      const isMatch = existing.password ? await bcrypt.compare(passwordToUse, existing.password) : false;
+      const hasPasswordChangeLog = await prisma.auditLog.findFirst({
+        where: {
+          entityType: 'USER',
+          entityId: existing.id,
+          action: 'UPDATE',
+          details: { contains: 'password' },
         },
       });
-      console.log(`Updated user credentials: ${user.username} | Role: ${user.role}`);
-    } else {
-      console.log(`Ensured user: ${existing.username} (password already customized)`);
+
+      if (!isMatch && (existing.mustChangePassword || !hasPasswordChangeLog || forceReset)) {
+        const user = await prisma.user.update({
+          where: { username: admin.username },
+          data: {
+            password: hashedPassword,
+            mustChangePassword: true,
+          },
+        });
+        console.log(`Updated user credentials: ${user.username} | Role: ${user.role}`);
+      } else {
+        console.log(`Ensured user: ${existing.username} (password already customized)`);
+      }
     }
   }
 }

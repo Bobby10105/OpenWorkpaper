@@ -1,5 +1,5 @@
 import { SignJWT, jwtVerify, JWTPayload } from 'jose';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
 function getSecretKey(): Uint8Array {
@@ -58,15 +58,24 @@ export async function getSession(): Promise<{ user: { id: string; username: stri
   }
 }
 
+async function isHttpsRequest(): Promise<boolean> {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+  if (baseUrl.startsWith('https://')) return true;
+  try {
+    const headerStore = await headers();
+    return headerStore.get('x-forwarded-proto') === 'https';
+  } catch {
+    return false;
+  }
+}
+
 export async function login(user: { id: string; username: string; role: string; mustChangePassword: boolean }) {
   const expires = new Date(Date.now() + SESSION_DURATION * 1000);
   const session = await encrypt({ user, expires: Math.floor(expires.getTime() / 1000) });
 
   const cookieStore = await cookies();
-  
   const isProduction = process.env.NODE_ENV === 'production';
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
-  const isSecureEnv = baseUrl.startsWith('https://');
+  const isSecureEnv = await isHttpsRequest();
 
   cookieStore.set('session', session, { 
     expires, 
@@ -80,8 +89,7 @@ export async function login(user: { id: string; username: string; role: string; 
 export async function logout() {
   const cookieStore = await cookies();
   const isProduction = process.env.NODE_ENV === 'production';
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
-  const isSecureEnv = baseUrl.startsWith('https://');
+  const isSecureEnv = await isHttpsRequest();
 
   cookieStore.set('session', '', { 
     expires: new Date(0),
@@ -102,7 +110,7 @@ export async function updateSession(request: NextRequest) {
     parsed.expires = Math.floor(expires.getTime() / 1000);
     
     const isProduction = process.env.NODE_ENV === 'production';
-    const isSecureEnv = request.nextUrl.protocol === 'https:';
+    const isSecureEnv = request.nextUrl.protocol === 'https:' || request.headers.get('x-forwarded-proto') === 'https';
 
     const res = NextResponse.next();
     res.cookies.set({
